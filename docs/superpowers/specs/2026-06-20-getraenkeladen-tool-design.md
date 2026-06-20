@@ -17,6 +17,19 @@ Das Tool soll keine revisionssichere Vollhistorie fuehren. Es ist ein pragmatisc
 - Rechnungsnummern bleiben in Phase 1 manuell, passend zum bestehenden Papierzettel
 - Das Tool soll intern nicht als nachvollziehbares ERP oder Buchhaltungssystem auftreten
 - Perspektivisch soll spaeter eine Erweiterung fuer E-Rechnungen, insbesondere ZUGFeRD, moeglich sein
+- Die Bedienoberflaeche soll sich optisch an der bestehenden Winklmeier-Website orientieren
+
+## Corporate Design
+
+Die App soll die bestehende Winklmeier-Wirkung aufgreifen: familiaer, regional, klar und serviceorientiert. Als Referenz dient die Website https://www.getraenke-winklmeier.de mit sichtbaren Elementen wie dem Getraenke-Winklmeier-Logo, dem Claim "Wir bringen's einfach", dem Lieferservice-Fokus, Schwarz-Weiss-Logoeinsatz und regionalen/familiaeren Akzenten.
+
+Fuer die Umsetzung gilt:
+
+- echtes Logo nur aus einer bereitgestellten Originaldatei oder mit ausdruecklicher Freigabe verwenden
+- Website nicht 1:1 kopieren, sondern als Corporate-Design-Referenz nutzen
+- UI bleibt ein Arbeitswerkzeug, keine Marketingseite
+- Farben, Schriftwirkung, Buttons und PDF-Briefkopf sollen zum bestehenden Auftritt passen
+- Belege und PDFs sollen langfristig denselben Wiedererkennungswert wie Website und Briefpapier haben
 
 ## Empfohlener Ansatz
 

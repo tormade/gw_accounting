@@ -56,6 +56,8 @@
   Responsibility: delivery-note workbook template.
 - `templates/briefkopf.json`
   Responsibility: configurable PDF letterhead settings.
+- `assets/brand/`
+  Responsibility: provided Winklmeier logo files and brand assets for UI and document output.
 - `tests/conftest.py`
   Responsibility: shared fixtures for temp directories, test DB, and Qt app.
 - `tests/test_customer_service.py`
@@ -812,6 +814,8 @@ git commit -m "feat: add reporting queries for operations"
 - Create: `src/getraenkeladen_tool/ui/product_panel.py`
 - Create: `src/getraenkeladen_tool/ui/document_panel.py`
 - Create: `src/getraenkeladen_tool/ui/report_panel.py`
+- Create: `src/getraenkeladen_tool/ui/theme.py`
+- Create: `assets/brand/README.md`
 - Create: `tests/test_main_window.py`
 - Modify: `src/getraenkeladen_tool/app.py`
 - Modify: `pyproject.toml`
@@ -866,14 +870,31 @@ class MainWindow(QMainWindow):
 ```
 
 ```python
+APP_STYLESHEET = """
+QMainWindow {
+    background: #f5f5f2;
+}
+QTabWidget::pane {
+    border: 1px solid #d8d6cf;
+}
+QTabBar::tab:selected {
+    background: #111111;
+    color: #ffffff;
+}
+"""
+```
+
+```python
 from PySide6.QtWidgets import QApplication
 
 from .ui.main_window import MainWindow
+from .ui.theme import APP_STYLESHEET
 
 
 def create_app() -> QApplication:
     app = QApplication.instance() or QApplication([])
     app.setApplicationName("Getraenkeladen Tool")
+    app.setStyleSheet(APP_STYLESHEET)
     return app
 
 
@@ -890,8 +911,64 @@ Expected: PASS
 - [ ] **Step 5: Commit**
 
 ```bash
-git add pyproject.toml src/getraenkeladen_tool/ui/main_window.py src/getraenkeladen_tool/ui/customer_panel.py src/getraenkeladen_tool/ui/product_panel.py src/getraenkeladen_tool/ui/document_panel.py src/getraenkeladen_tool/ui/report_panel.py src/getraenkeladen_tool/app.py tests/test_main_window.py
+git add pyproject.toml src/getraenkeladen_tool/ui/main_window.py src/getraenkeladen_tool/ui/customer_panel.py src/getraenkeladen_tool/ui/product_panel.py src/getraenkeladen_tool/ui/document_panel.py src/getraenkeladen_tool/ui/report_panel.py src/getraenkeladen_tool/ui/theme.py assets/brand/README.md src/getraenkeladen_tool/app.py tests/test_main_window.py
 git commit -m "feat: add desktop navigation shell"
+```
+
+### Task 9a: Apply Winklmeier Brand Direction To UI And Documents
+
+**Files:**
+- Create: `assets/brand/README.md`
+- Modify: `src/getraenkeladen_tool/ui/theme.py`
+- Modify: `src/getraenkeladen_tool/services/pdf_service.py`
+- Modify: `templates/briefkopf.json`
+- Test: `tests/test_brand_assets.py`
+- Test: `tests/test_pdf_service.py`
+- Test: `tests/test_main_window.py`
+
+- [ ] **Step 1: Write the failing brand asset note test**
+
+```python
+from pathlib import Path
+
+
+def test_brand_readme_mentions_original_logo_requirement():
+    text = Path("assets/brand/README.md").read_text(encoding="utf-8")
+    assert "Originaldatei" in text
+    assert "getraenke-winklmeier.de" in text
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `pytest tests/test_brand_assets.py -v`
+Expected: FAIL because `assets/brand/README.md` does not exist yet
+
+- [ ] **Step 3: Add brand usage note**
+
+```markdown
+# Brand Assets
+
+Use this folder for logo and brand assets provided by Getränke Winklmeier.
+
+Reference: https://www.getraenke-winklmeier.de
+
+Rules:
+
+- Use the real logo only from an approved Originaldatei.
+- Do not scrape or redraw the logo from the website for production use.
+- Keep the app utilitarian and work-focused while matching the Winklmeier tone: familiar, regional, clear, service-oriented.
+```
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `pytest tests/test_brand_assets.py -v`
+Expected: PASS
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add assets/brand/README.md tests/test_brand_assets.py src/getraenkeladen_tool/ui/theme.py templates/briefkopf.json src/getraenkeladen_tool/services/pdf_service.py tests/test_pdf_service.py tests/test_main_window.py
+git commit -m "feat: add winklmeier brand direction"
 ```
 
 ### Task 10: Package The App For Windows And Document Operator Workflow
@@ -991,4 +1068,3 @@ No `TODO`, `TBD`, or unresolved “add later” instructions remain in the task 
 - `CustomerCreate`, `ProductCreate`, `DocumentCreate`, and `DocumentResult` are introduced before their service usage.
 - `create_app()` and `create_main_window()` names are consistent between tests and implementation steps.
 - `build_invoice_workbook()` and `build_invoice_pdf()` are reused consistently in document workflow tasks.
-
