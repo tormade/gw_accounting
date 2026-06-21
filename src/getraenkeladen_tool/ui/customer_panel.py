@@ -1,5 +1,8 @@
 from PySide6.QtWidgets import QFileDialog, QFormLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QVBoxLayout, QWidget
 
+from ..schemas import CustomerCreate
+from ..services.customer_service import create_customer
+
 
 CUSTOMER_PANEL_ACTIONS = {
     "saveCustomerButton": "Kunde speichern",
@@ -53,6 +56,7 @@ class CustomerPanel(QWidget):
         layout.addLayout(action_row)
         layout.addWidget(self.status_label)
         layout.addStretch()
+        self.save_button.clicked.connect(self.save_customer)
 
     def _folder_row(self) -> QWidget:
         row = QWidget()
@@ -73,3 +77,25 @@ class CustomerPanel(QWidget):
         folder = QFileDialog.getExistingDirectory(self, "Kundenordner waehlen")
         if folder:
             self.folder_path.setText(folder)
+
+    def save_customer(self) -> None:
+        if self.session_factory is None:
+            self.status_label.setText("Keine Datenbankverbindung vorhanden.")
+            return
+
+        session = self.session_factory()
+        try:
+            customer = create_customer(
+                session,
+                CustomerCreate(
+                    name=self.customer_name.text().strip(),
+                    folder_path=self.folder_path.text().strip(),
+                    address=self.address.text().strip() or None,
+                    payment_method=self.payment_method.text().strip() or None,
+                    next_contact_date=self.next_contact_date.text().strip() or None,
+                    delivery_notes=self.delivery_notes.text().strip() or None,
+                ),
+            )
+            self.status_label.setText(f"Kunde gespeichert: {customer.name}")
+        finally:
+            session.close()

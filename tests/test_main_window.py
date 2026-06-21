@@ -23,6 +23,9 @@ def test_document_tab_exposes_first_document_form_actions():
     assert DOCUMENT_FORM_ACTIONS == {
         "sampleDocumentButton": "Beispiel laden",
         "chooseCustomerFolderButton": "Ordner waehlen",
+        "refreshMasterDataButton": "Stammdaten laden",
+        "addLineItemButton": "Position hinzufuegen",
+        "removeLineItemButton": "Position entfernen",
         "createDocumentButton": "Excel erstellen",
     }
 

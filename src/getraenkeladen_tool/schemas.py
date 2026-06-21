@@ -18,6 +18,8 @@ class ProductCreate(BaseModel):
     name: str = Field(min_length=1)
     unit: str = Field(min_length=1)
     standard_price_cents: int = Field(ge=0)
+    article_number: str | None = None
+    is_active: bool = True
 
 
 class DocumentLineItem(BaseModel):
