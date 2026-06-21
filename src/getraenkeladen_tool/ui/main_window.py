@@ -1,7 +1,15 @@
-from PySide6.QtWidgets import QLabel, QMainWindow, QTabWidget, QVBoxLayout, QWidget
+from pathlib import Path
+
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QPixmap
+from PySide6.QtWidgets import QLabel, QMainWindow, QPushButton, QTabWidget, QVBoxLayout, QWidget
 
 
 MAIN_TABS = ("Kunden", "Produkte", "Belege", "Listen")
+BRAND_DIR = Path(__file__).resolve().parents[3] / "assets" / "brand"
+LOGO_PATH = BRAND_DIR / "logo_winklmeier_30px.bmp"
+CLAIM_PATH = BRAND_DIR / "wir-bringens-einfach-schwarz.png"
+BADGE_PATH = BRAND_DIR / "fair-familiaer-regional-button.png"
 
 
 class MainWindow(QMainWindow):
@@ -10,16 +18,47 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Getraenke Winklmeier")
         self.resize(1040, 680)
 
+        root = QWidget()
+        root_layout = QVBoxLayout(root)
+        root_layout.setContentsMargins(0, 0, 0, 0)
+        root_layout.setSpacing(0)
+        root_layout.addWidget(self._header())
+
         self.tabs = QTabWidget()
         self.tabs.addTab(self._panel("Kunden", "Stammdaten, Lieferhinweise und Kontakttermine"), "Kunden")
         self.tabs.addTab(self._panel("Produkte", "Zentrale Artikelliste und Standardpreise"), "Produkte")
         self.tabs.addTab(self._panel("Belege", "Rechnungen und Lieferscheine vorbereiten"), "Belege")
         self.tabs.addTab(self._panel("Listen", "Offene Posten, Tageslieferungen und Kontaktliste"), "Listen")
-        self.setCentralWidget(self.tabs)
+        root_layout.addWidget(self.tabs)
+        self.setCentralWidget(root)
+
+    def _header(self) -> QWidget:
+        header = QWidget()
+        header.setObjectName("brandHeader")
+        layout = QVBoxLayout(header)
+        layout.setContentsMargins(28, 20, 28, 18)
+        layout.setSpacing(8)
+
+        logo = QLabel("Getraenke Winklmeier")
+        logo.setObjectName("brandLogo")
+        if LOGO_PATH.exists():
+            logo.setPixmap(QPixmap(str(LOGO_PATH)))
+        layout.addWidget(logo)
+
+        claim = QLabel("Wir bringen's einfach")
+        claim.setObjectName("brandClaim")
+        if CLAIM_PATH.exists():
+            claim_pixmap = QPixmap(str(CLAIM_PATH)).scaledToWidth(220, Qt.TransformationMode.SmoothTransformation)
+            claim.setPixmap(claim_pixmap)
+        layout.addWidget(claim)
+
+        return header
 
     def _panel(self, title: str, subtitle: str) -> QWidget:
         widget = QWidget()
         layout = QVBoxLayout(widget)
+        layout.setContentsMargins(32, 28, 32, 28)
+        layout.setSpacing(14)
 
         headline = QLabel(title)
         headline.setObjectName("headline")
@@ -28,6 +67,18 @@ class MainWindow(QMainWindow):
         muted = QLabel(subtitle)
         muted.setObjectName("muted")
         layout.addWidget(muted)
+
+        action = QPushButton("Neu anlegen")
+        action.setObjectName("primaryAction")
+        action.setFixedWidth(160)
+        layout.addWidget(action)
+
+        badge = QLabel()
+        badge.setObjectName("brandBadge")
+        if BADGE_PATH.exists():
+            badge.setPixmap(QPixmap(str(BADGE_PATH)).scaledToWidth(96, Qt.TransformationMode.SmoothTransformation))
+        layout.addWidget(badge)
+
         layout.addStretch()
 
         return widget
