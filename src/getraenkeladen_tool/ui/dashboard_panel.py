@@ -1,12 +1,13 @@
 from datetime import date
 
 from PySide6.QtCore import Signal
-from PySide6.QtWidgets import QGridLayout, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QGridLayout, QHBoxLayout, QLabel, QMessageBox, QPushButton, QVBoxLayout, QWidget
 
 from ..services.report_service import DashboardSummary, get_dashboard_summary
 
 
 DASHBOARD_ACTIONS = {
+    "dashboardHelpButton": "?",
     "newDeliveryButton": "Neue Lieferung erfassen",
     "refreshDashboardButton": "Heute aktualisieren",
 }
@@ -15,6 +16,11 @@ DASHBOARD_GUIDANCE_STEPS = (
     "Neue Lieferung erfassen starten.",
     "Kunde auswaehlen und bei Bedarf letzte Bestellung uebernehmen.",
     "PDF-Belege erzeugen oder offene Aufgaben ueber die Karten pruefen.",
+)
+DASHBOARD_HELP_TEXT = (
+    "Start: Hier sehen Sie die wichtigsten Tageszahlen.\n\n"
+    "Neue Lieferung erfassen: Startet den normalen Arbeitsablauf fuer einen neuen Auftrag.\n\n"
+    "Die Karten zeigen, ob heute Lieferungen, offene Posten oder Kontaktanfragen anstehen."
 )
 
 
@@ -31,19 +37,28 @@ class DashboardPanel(QWidget):
         layout.setContentsMargins(32, 28, 32, 28)
         layout.setSpacing(16)
 
+        header_row = QHBoxLayout()
+        title_column = QVBoxLayout()
         headline = QLabel("Start")
         headline.setObjectName("headline")
-        layout.addWidget(headline)
-
+        title_column.addWidget(headline)
         muted = QLabel("Tagesueberblick: Was ist heute wichtig?")
         muted.setObjectName("muted")
-        layout.addWidget(muted)
-
-        layout.addWidget(self._guidance_box())
+        title_column.addWidget(muted)
+        header_row.addLayout(title_column)
+        header_row.addStretch()
+        self.help_button = QPushButton(DASHBOARD_ACTIONS["dashboardHelpButton"])
+        self.help_button.setObjectName("helpButton")
+        header_row.addWidget(self.help_button)
+        layout.addLayout(header_row)
 
         self.new_delivery_button = QPushButton(DASHBOARD_ACTIONS["newDeliveryButton"])
         self.new_delivery_button.setObjectName("newDeliveryButton")
-        layout.addWidget(self.new_delivery_button)
+        self.new_delivery_button.setMaximumWidth(260)
+        start_row = QHBoxLayout()
+        start_row.addWidget(self.new_delivery_button)
+        start_row.addStretch()
+        layout.addLayout(start_row)
 
         layout.addLayout(self._cards_grid())
 
@@ -61,6 +76,7 @@ class DashboardPanel(QWidget):
         layout.addStretch()
 
         self.new_delivery_button.clicked.connect(self.new_delivery_requested.emit)
+        self.help_button.clicked.connect(self.show_help)
         self.refresh_button.clicked.connect(self.refresh_dashboard)
         self.refresh_dashboard()
 
@@ -124,3 +140,6 @@ class DashboardPanel(QWidget):
         for label in self.card_values:
             label.setText("0")
         self.next_steps_label.setText(message)
+
+    def show_help(self) -> None:
+        QMessageBox.information(self, "Hilfe: Start", DASHBOARD_HELP_TEXT)

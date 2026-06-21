@@ -4,11 +4,11 @@ from datetime import date
 from PySide6.QtWidgets import (
     QComboBox,
     QFormLayout,
-    QGroupBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
     QMenu,
+    QMessageBox,
     QPushButton,
     QSpinBox,
     QTableWidget,
@@ -27,6 +27,7 @@ from .date_input import DateInput, to_display_date
 
 
 ORDER_PANEL_ACTIONS = {
+    "orderHelpButton": "?",
     "refreshOrderDataButton": "Stammdaten laden",
     "suggestOrderNumberButton": "Auftragsnummer vorschlagen",
     "suggestDeliveryNoteNumberButton": "Lieferscheinnummer vorschlagen",
@@ -41,10 +42,15 @@ ORDER_PANEL_ACTIONS = {
 ORDER_LINE_COLUMNS = ("Produkt", "Menge", "Preis EUR", "Pfand EUR")
 ORDER_COLUMNS = ("Auftrag", "Kunde", "Lieferdatum", "Zeitfenster", "Status")
 ORDER_PANEL_SECTIONS = (
-    "1. Kunde und Lieferung",
-    "2. Produkte im Auftrag",
-    "3. Speichern und Belege",
-    "Offene Auftraege",
+    "Kopfdaten",
+    "Positionen",
+    "Belegabschluss",
+    "Bestehende Auftraege",
+)
+ORDER_HELP_TEXT = (
+    "Kopfdaten: Kunde, Lieferdatum, Zeitfenster und Auftragsnummer pruefen.\n\n"
+    "Positionen: Produkt waehlen, Menge eintragen und Position hinzufuegen.\n\n"
+    "Belegabschluss: Erst speichern, danach Lieferschein- oder Rechnungsnummer vorschlagen und Belege erzeugen."
 )
 ORDER_GUIDANCE_STEPS = (
     "Kunden suchen und Lieferdatum pruefen.",
@@ -105,15 +111,20 @@ class OrderPanel(QWidget):
         layout.setContentsMargins(32, 28, 32, 28)
         layout.setSpacing(14)
 
+        header_row = QHBoxLayout()
+        title_column = QVBoxLayout()
         headline = QLabel("Auftraege")
         headline.setObjectName("headline")
-        layout.addWidget(headline)
-
-        muted = QLabel("Normaler Ablauf: Auftrag erfassen und daraus Lieferschein plus Rechnung erzeugen")
+        title_column.addWidget(headline)
+        muted = QLabel("Kopfdaten erfassen, Positionen pruefen, Belege erzeugen")
         muted.setObjectName("muted")
-        layout.addWidget(muted)
-
-        layout.addWidget(self._guidance_box())
+        title_column.addWidget(muted)
+        header_row.addLayout(title_column)
+        header_row.addStretch()
+        self.help_button = QPushButton(ORDER_PANEL_ACTIONS["orderHelpButton"])
+        self.help_button.setObjectName("helpButton")
+        header_row.addWidget(self.help_button)
+        layout.addLayout(header_row)
 
         self.refresh_data_button = self._button("refreshOrderDataButton")
         self.suggest_order_number_button = self._button("suggestOrderNumberButton")
@@ -125,19 +136,9 @@ class OrderPanel(QWidget):
         self.create_documents_button = self._button("createOrderDocumentsButton")
         self.refresh_orders_button = self._button("refreshOrdersButton")
 
-        workspace = QHBoxLayout()
-        workspace.setSpacing(18)
-        left_column = QVBoxLayout()
-        left_column.setSpacing(14)
-        right_column = QVBoxLayout()
-        right_column.setSpacing(14)
-        workspace.addLayout(left_column, 2)
-        workspace.addLayout(right_column, 1)
-        layout.addLayout(workspace)
-
         customer_box, customer_layout = self._section(
             ORDER_PANEL_SECTIONS[0],
-            "Kunde suchen, auswaehlen und Lieferdaten pruefen. Erst die Auftragsnummer wird direkt gebraucht.",
+            "Wie beim Rechnungsformular: oben stehen Kunde, Lieferdatum, Zeitfenster und Auftragsnummer.",
         )
         customer_form = QFormLayout()
         customer_form.addRow("Kunde suchen", self.customer_search)
@@ -151,11 +152,15 @@ class OrderPanel(QWidget):
         customer_actions.addWidget(self.refresh_data_button)
         customer_actions.addStretch()
         customer_layout.addLayout(customer_actions)
-        left_column.addWidget(customer_box)
+        layout.addWidget(customer_box)
+
+        middle_row = QHBoxLayout()
+        middle_row.setSpacing(18)
+        layout.addLayout(middle_row)
 
         position_box, position_layout = self._section(
             ORDER_PANEL_SECTIONS[1],
-            "Produkt waehlen, Menge pruefen und unten die Positionen kontrollieren.",
+            "Links Produkt erfassen, rechts die Positionen wie in einer Belegliste kontrollieren.",
         )
         position_form = QFormLayout()
         position_form.addRow("Produkt", self.product_select)
@@ -168,13 +173,19 @@ class OrderPanel(QWidget):
         position_actions.addWidget(self.remove_line_button)
         position_actions.addStretch()
         position_layout.addLayout(position_actions)
-        position_layout.addWidget(QLabel("Positionen im Auftrag"))
-        position_layout.addWidget(self.order_lines_table)
-        left_column.addWidget(position_box)
+        middle_row.addWidget(position_box, 1)
+
+        line_box, line_layout = self._section("Belegpositionen", "Alle hinzugefuegten Artikel dieses Auftrags.")
+        line_layout.addWidget(self.order_lines_table)
+        middle_row.addWidget(line_box, 2)
+
+        bottom_row = QHBoxLayout()
+        bottom_row.setSpacing(18)
+        layout.addLayout(bottom_row)
 
         document_box, document_layout = self._section(
             ORDER_PANEL_SECTIONS[2],
-            "Wenn alle Positionen stimmen: Auftrag speichern. Belegnummern erst hier vorbereiten.",
+            "Wenn die Positionen stimmen: speichern und danach Lieferschein/Rechnung erzeugen.",
         )
         document_form = QFormLayout()
         document_form.addRow(
@@ -191,21 +202,22 @@ class OrderPanel(QWidget):
         document_actions.addWidget(self.create_documents_button)
         document_actions.addStretch()
         document_layout.addLayout(document_actions)
-        right_column.addWidget(document_box)
+        bottom_row.addWidget(document_box, 1)
 
         orders_box, orders_layout = self._section(
             ORDER_PANEL_SECTIONS[3],
-            "Vorhandenen Auftrag doppelt anklicken, um danach die Belege zu erzeugen.",
+            "Vorhandenen Auftrag doppelt anklicken oder per Rechtsklick weiterbearbeiten.",
         )
         orders_actions = QHBoxLayout()
         orders_actions.addWidget(self.refresh_orders_button)
         orders_actions.addStretch()
         orders_layout.addLayout(orders_actions)
         orders_layout.addWidget(self.orders_table)
-        right_column.addWidget(orders_box)
+        bottom_row.addWidget(orders_box, 2)
 
         layout.addWidget(self.status_label)
 
+        self.help_button.clicked.connect(self.show_help)
         self.refresh_data_button.clicked.connect(self.refresh_master_data)
         self.suggest_order_number_button.clicked.connect(self.suggest_order_number)
         self.suggest_delivery_note_number_button.clicked.connect(self.suggest_delivery_note_number)
@@ -287,17 +299,24 @@ class OrderPanel(QWidget):
 
         return box
 
-    def _section(self, title: str, subtitle: str) -> tuple[QGroupBox, QVBoxLayout]:
-        box = QGroupBox(title)
+    def _section(self, title: str, subtitle: str) -> tuple[QWidget, QVBoxLayout]:
+        box = QWidget()
         box.setObjectName("sectionBox")
         layout = QVBoxLayout(box)
         layout.setSpacing(10)
+
+        title_label = QLabel(title)
+        title_label.setObjectName("sectionTitle")
+        layout.addWidget(title_label)
 
         subtitle_label = QLabel(subtitle)
         subtitle_label.setObjectName("sectionSubtitle")
         subtitle_label.setWordWrap(True)
         layout.addWidget(subtitle_label)
         return box, layout
+
+    def show_help(self) -> None:
+        QMessageBox.information(self, "Hilfe: Auftrag erfassen", ORDER_HELP_TEXT)
 
     def refresh_master_data(self) -> None:
         if self.session_factory is None:

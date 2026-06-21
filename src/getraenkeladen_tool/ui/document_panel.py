@@ -8,6 +8,7 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QMessageBox,
     QPushButton,
     QSpinBox,
     QTableWidget,
@@ -28,6 +29,7 @@ from .date_input import DateInput
 
 
 DOCUMENT_FORM_ACTIONS = {
+    "documentHelpButton": "?",
     "sampleDocumentButton": "Beispiel laden",
     "chooseCustomerFolderButton": "Ordner waehlen",
     "refreshMasterDataButton": "Stammdaten laden",
@@ -39,6 +41,13 @@ DOCUMENT_FORM_ACTIONS = {
 }
 
 LINE_ITEM_COLUMNS = ("Produkt", "Menge", "Preis EUR", "Pfand EUR")
+DOCUMENT_PANEL_SECTIONS = ("Kopfdaten", "Positionen", "Belegabschluss")
+DOCUMENT_HELP_TEXT = (
+    "Direktbelege sind ein Sonderweg, wenn ohne gespeicherten Auftrag schnell ein einzelner Beleg entstehen soll.\n\n"
+    "Kopfdaten: Belegtyp, Kunde, Nummern und Lieferdatum erfassen.\n\n"
+    "Positionen: Produkt, Menge, Preis und Pfand eintragen und in die Liste uebernehmen.\n\n"
+    "Belegabschluss: Danach Excel/PDF erzeugen oder bei Stammdatenkunden erst einen Auftrag speichern."
+)
 DATE_FIELD_WIDGETS = ("delivery_date",)
 
 
@@ -88,32 +97,20 @@ class DocumentPanel(QWidget):
         layout.setContentsMargins(32, 28, 32, 28)
         layout.setSpacing(14)
 
+        header_row = QHBoxLayout()
+        title_column = QVBoxLayout()
         headline = QLabel("Direktbelege")
         headline.setObjectName("headline")
-        layout.addWidget(headline)
-
+        title_column.addWidget(headline)
         muted = QLabel("Sonderweg fuer einzelne Rechnung oder einzelnen Lieferschein ohne gespeicherten Auftrag")
         muted.setObjectName("muted")
-        layout.addWidget(muted)
-
-        form = QFormLayout()
-        form.addRow("Belegtyp", self.document_type)
-        form.addRow("Kunde aus Stammdaten", self.customer_select)
-        form.addRow("Kunde", self.customer_name)
-        form.addRow("Kundenordner", self._folder_row())
-        form.addRow("Belegnummer", self.document_number)
-        form.addRow("Auftragsnummer", self.order_number)
-        form.addRow("Lieferscheinnummer", self.delivery_note_number)
-        form.addRow("Rechnungsnummer", self.invoice_number)
-        form.addRow("Lieferdatum", self.delivery_date)
-        form.addRow("Zeitfenster", self.delivery_slot)
-        form.addRow("Produkt aus Preisliste", self.product_select)
-        form.addRow("Produkt", self.product_name)
-        form.addRow("Menge", self.quantity)
-        form.addRow("Preis EUR", self.unit_price_eur)
-        form.addRow("Pfand EUR", self.deposit_eur)
-        layout.addLayout(form)
-        layout.addWidget(self.line_items_table)
+        title_column.addWidget(muted)
+        header_row.addLayout(title_column)
+        header_row.addStretch()
+        self.help_button = QPushButton(DOCUMENT_FORM_ACTIONS["documentHelpButton"])
+        self.help_button.setObjectName("helpButton")
+        header_row.addWidget(self.help_button)
+        layout.addLayout(header_row)
 
         action_row = QHBoxLayout()
         self.sample_button = self._button("sampleDocumentButton")
@@ -123,18 +120,68 @@ class DocumentPanel(QWidget):
         self.save_order_button = self._button("saveOrderButton")
         self.create_order_documents_button = self._button("createOrderDocumentsButton")
         self.create_button = self._button("createDocumentButton")
+
+        header_box, header_layout = self._section(
+            DOCUMENT_PANEL_SECTIONS[0],
+            "Alles, was oben auf dem Beleg steht: Kunde, Nummern und Lieferdatum.",
+            "documentHeaderCard",
+        )
+        header_form = QFormLayout()
+        header_form.addRow("Belegtyp", self.document_type)
+        header_form.addRow("Kunde aus Stammdaten", self.customer_select)
+        header_form.addRow("Kunde", self.customer_name)
+        header_form.addRow("Kundenordner", self._folder_row())
+        header_form.addRow("Belegnummer", self.document_number)
+        header_form.addRow("Auftragsnummer", self.order_number)
+        header_form.addRow("Lieferscheinnummer", self.delivery_note_number)
+        header_form.addRow("Rechnungsnummer", self.invoice_number)
+        header_form.addRow("Lieferdatum", self.delivery_date)
+        header_form.addRow("Zeitfenster", self.delivery_slot)
+        header_layout.addLayout(header_form)
+        layout.addWidget(header_box)
+
+        middle_row = QHBoxLayout()
+        middle_row.setSpacing(18)
+        layout.addLayout(middle_row)
+
+        position_box, position_layout = self._section(
+            DOCUMENT_PANEL_SECTIONS[1],
+            "Position links erfassen und rechts in der Belegliste kontrollieren.",
+        )
+        position_form = QFormLayout()
+        position_form.addRow("Produkt aus Preisliste", self.product_select)
+        position_form.addRow("Produkt", self.product_name)
+        position_form.addRow("Menge", self.quantity)
+        position_form.addRow("Preis EUR", self.unit_price_eur)
+        position_form.addRow("Pfand EUR", self.deposit_eur)
+        position_layout.addLayout(position_form)
+        position_actions = QHBoxLayout()
+        position_actions.addWidget(self.add_line_item_button)
+        position_actions.addWidget(self.remove_line_item_button)
+        position_actions.addStretch()
+        position_layout.addLayout(position_actions)
+        middle_row.addWidget(position_box, 1)
+
+        line_box, line_layout = self._section("Belegpositionen", "Alle Positionen, die in Excel und PDF ausgegeben werden.")
+        line_layout.addWidget(self.line_items_table)
+        middle_row.addWidget(line_box, 2)
+
+        finish_box, finish_layout = self._section(
+            DOCUMENT_PANEL_SECTIONS[2],
+            "Beleg erzeugen oder aus den Daten erst einen Auftrag speichern.",
+        )
         action_row.addWidget(self.sample_button)
         action_row.addWidget(self.refresh_master_data_button)
-        action_row.addWidget(self.add_line_item_button)
-        action_row.addWidget(self.remove_line_item_button)
         action_row.addWidget(self.save_order_button)
         action_row.addWidget(self.create_order_documents_button)
         action_row.addWidget(self.create_button)
         action_row.addStretch()
-        layout.addLayout(action_row)
+        finish_layout.addLayout(action_row)
+        layout.addWidget(finish_box)
         layout.addWidget(self.status_label)
         layout.addStretch()
 
+        self.help_button.clicked.connect(self.show_help)
         self.sample_button.clicked.connect(self.load_sample)
         self.refresh_master_data_button.clicked.connect(self.refresh_master_data)
         self.add_line_item_button.clicked.connect(self.add_line_item)
@@ -160,6 +207,25 @@ class DocumentPanel(QWidget):
         button = QPushButton(DOCUMENT_FORM_ACTIONS[object_name])
         button.setObjectName(object_name)
         return button
+
+    def _section(self, title: str, subtitle: str, object_name: str = "sectionBox") -> tuple[QWidget, QVBoxLayout]:
+        box = QWidget()
+        box.setObjectName(object_name)
+        layout = QVBoxLayout(box)
+        layout.setSpacing(10)
+
+        title_label = QLabel(title)
+        title_label.setObjectName("sectionTitle")
+        layout.addWidget(title_label)
+
+        subtitle_label = QLabel(subtitle)
+        subtitle_label.setObjectName("sectionSubtitle")
+        subtitle_label.setWordWrap(True)
+        layout.addWidget(subtitle_label)
+        return box, layout
+
+    def show_help(self) -> None:
+        QMessageBox.information(self, "Hilfe: Direktbeleg", DOCUMENT_HELP_TEXT)
 
     def choose_folder(self) -> None:
         folder = QFileDialog.getExistingDirectory(self, "Kundenordner waehlen")

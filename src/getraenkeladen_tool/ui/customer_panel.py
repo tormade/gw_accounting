@@ -1,11 +1,11 @@
 from PySide6.QtWidgets import (
     QFileDialog,
     QFormLayout,
-    QGroupBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
     QMenu,
+    QMessageBox,
     QPushButton,
     QTableWidget,
     QTableWidgetItem,
@@ -27,6 +27,7 @@ from .date_input import DateInput, to_display_date
 
 
 CUSTOMER_PANEL_ACTIONS = {
+    "customerHelpButton": "?",
     "newCustomerButton": "Neu",
     "saveCustomerButton": "Kunde speichern",
     "discardCustomerChangesButton": "Aenderungen verwerfen",
@@ -36,6 +37,11 @@ CUSTOMER_PANEL_ACTIONS = {
     "restoreCustomerButton": "Kunde wiederherstellen",
     "chooseCustomerFolderButton": "Ordner waehlen",
 }
+CUSTOMER_HELP_TEXT = (
+    "Kunden: Hier pflegen Sie Stammdaten, Lieferhinweise und Kontakttermine.\n\n"
+    "Links erfassen oder bearbeiten Sie einen Kunden. Rechts finden Sie bestehende Kunden.\n\n"
+    "Archivieren blendet Kunden aus dem Alltag aus, loescht sie aber nicht endgueltig."
+)
 
 CUSTOMER_COLUMNS = ("Name", "Adresse", "Zahlungsart", "Naechster Kontakt", "Status")
 CUSTOMER_PANEL_SECTIONS = ("1. Kunden erfassen", "2. Bestehende Kunden pruefen")
@@ -78,15 +84,20 @@ class CustomerPanel(QWidget):
         layout.setContentsMargins(32, 28, 32, 28)
         layout.setSpacing(14)
 
+        header_row = QHBoxLayout()
+        title_column = QVBoxLayout()
         headline = QLabel("Kunden")
         headline.setObjectName("headline")
-        layout.addWidget(headline)
-
+        title_column.addWidget(headline)
         muted = QLabel("Stammdaten, Lieferhinweise und Kontakttermine")
         muted.setObjectName("muted")
-        layout.addWidget(muted)
-
-        layout.addWidget(self._guidance_box())
+        title_column.addWidget(muted)
+        header_row.addLayout(title_column)
+        header_row.addStretch()
+        self.help_button = QPushButton(CUSTOMER_PANEL_ACTIONS["customerHelpButton"])
+        self.help_button.setObjectName("helpButton")
+        header_row.addWidget(self.help_button)
+        layout.addLayout(header_row)
 
         workspace = QHBoxLayout()
         workspace.setSpacing(18)
@@ -143,6 +154,7 @@ class CustomerPanel(QWidget):
 
         layout.addWidget(self.status_label)
 
+        self.help_button.clicked.connect(self.show_help)
         self.new_button.clicked.connect(self.new_customer)
         self.save_button.clicked.connect(self.save_customer)
         self.discard_button.clicked.connect(self.discard_changes)
@@ -170,6 +182,9 @@ class CustomerPanel(QWidget):
         button.setObjectName(object_name)
         return button
 
+    def show_help(self) -> None:
+        QMessageBox.information(self, "Hilfe: Kunden", CUSTOMER_HELP_TEXT)
+
     def _guidance_box(self) -> QWidget:
         box = QWidget()
         box.setObjectName("guidanceBox")
@@ -184,11 +199,16 @@ class CustomerPanel(QWidget):
             layout.addWidget(label)
         return box
 
-    def _section(self, title: str, subtitle: str) -> tuple[QGroupBox, QVBoxLayout]:
-        box = QGroupBox(title)
+    def _section(self, title: str, subtitle: str) -> tuple[QWidget, QVBoxLayout]:
+        box = QWidget()
         box.setObjectName("sectionBox")
         layout = QVBoxLayout(box)
         layout.setSpacing(10)
+
+        title_label = QLabel(title)
+        title_label.setObjectName("sectionTitle")
+        layout.addWidget(title_label)
+
         subtitle_label = QLabel(subtitle)
         subtitle_label.setObjectName("sectionSubtitle")
         subtitle_label.setWordWrap(True)

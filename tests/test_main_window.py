@@ -27,6 +27,9 @@ def test_theme_uses_winklmeier_work_tool_direction():
     assert "#b91c1c" in APP_STYLESHEET
     assert "guidanceBox" in APP_STYLESHEET
     assert "sectionBox" in APP_STYLESHEET
+    assert "helpButton" in APP_STYLESHEET
+    assert "sectionTitle" in APP_STYLESHEET
+    assert "documentHeaderCard" in APP_STYLESHEET
 
 
 def test_date_fields_use_calendar_input():
@@ -50,6 +53,7 @@ def test_document_tab_exposes_first_document_form_actions():
     from getraenkeladen_tool.ui.document_panel import DOCUMENT_FORM_ACTIONS
 
     assert DOCUMENT_FORM_ACTIONS == {
+        "documentHelpButton": "?",
         "sampleDocumentButton": "Beispiel laden",
         "chooseCustomerFolderButton": "Ordner waehlen",
         "refreshMasterDataButton": "Stammdaten laden",
@@ -61,15 +65,25 @@ def test_document_tab_exposes_first_document_form_actions():
     }
 
 
+def test_document_tab_uses_beleg_sections_and_context_help():
+    from getraenkeladen_tool.ui.document_panel import DOCUMENT_HELP_TEXT, DOCUMENT_PANEL_SECTIONS
+
+    assert DOCUMENT_PANEL_SECTIONS == ("Kopfdaten", "Positionen", "Belegabschluss")
+    assert "Kopfdaten" in DOCUMENT_HELP_TEXT
+    assert "Sonderweg" in DOCUMENT_HELP_TEXT
+
+
 def test_order_tab_exposes_guided_order_actions():
     from getraenkeladen_tool.ui.order_panel import (
         ORDER_CONTEXT_ACTIONS,
         ORDER_GUIDANCE_STEPS,
+        ORDER_HELP_TEXT,
         ORDER_PANEL_ACTIONS,
         ORDER_PANEL_SECTIONS,
     )
 
     assert ORDER_PANEL_ACTIONS == {
+        "orderHelpButton": "?",
         "refreshOrderDataButton": "Stammdaten laden",
         "suggestOrderNumberButton": "Auftragsnummer vorschlagen",
         "suggestDeliveryNoteNumberButton": "Lieferscheinnummer vorschlagen",
@@ -81,11 +95,13 @@ def test_order_tab_exposes_guided_order_actions():
         "refreshOrdersButton": "Auftragsliste laden",
     }
     assert ORDER_PANEL_SECTIONS == (
-        "1. Kunde und Lieferung",
-        "2. Produkte im Auftrag",
-        "3. Speichern und Belege",
-        "Offene Auftraege",
+        "Kopfdaten",
+        "Positionen",
+        "Belegabschluss",
+        "Bestehende Auftraege",
     )
+    assert "Kopfdaten" in ORDER_HELP_TEXT
+    assert "Positionen" in ORDER_HELP_TEXT
     assert ORDER_GUIDANCE_STEPS == (
         "Kunden suchen und Lieferdatum pruefen.",
         "Produkte hinzufuegen und Positionen kontrollieren.",
@@ -107,6 +123,7 @@ def test_customer_tab_exposes_master_data_actions():
     )
 
     assert CUSTOMER_PANEL_ACTIONS == {
+        "customerHelpButton": "?",
         "newCustomerButton": "Neu",
         "saveCustomerButton": "Kunde speichern",
         "discardCustomerChangesButton": "Aenderungen verwerfen",
@@ -138,6 +155,7 @@ def test_product_tab_exposes_price_list_actions():
     )
 
     assert PRODUCT_PANEL_ACTIONS == {
+        "productHelpButton": "?",
         "newProductButton": "Neu",
         "saveProductButton": "Produkt speichern",
         "discardProductChangesButton": "Aenderungen verwerfen",
@@ -163,6 +181,7 @@ def test_settings_tab_exposes_dropdown_list_actions():
     from getraenkeladen_tool.ui.settings_panel import SETTINGS_PANEL_ACTIONS, SETTINGS_PANEL_SECTIONS
 
     assert SETTINGS_PANEL_ACTIONS == {
+        "settingsHelpButton": "?",
         "refreshUnitsButton": "Einheiten laden",
         "addUnitButton": "Einheit hinzufuegen",
     }
@@ -173,6 +192,7 @@ def test_dashboard_tab_exposes_daily_guidance():
     from getraenkeladen_tool.ui.dashboard_panel import DASHBOARD_ACTIONS, DASHBOARD_CARDS, DASHBOARD_GUIDANCE_STEPS
 
     assert DASHBOARD_ACTIONS == {
+        "dashboardHelpButton": "?",
         "newDeliveryButton": "Neue Lieferung erfassen",
         "refreshDashboardButton": "Heute aktualisieren",
     }

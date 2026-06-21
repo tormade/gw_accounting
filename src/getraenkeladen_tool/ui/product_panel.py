@@ -2,11 +2,11 @@ from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
     QFormLayout,
-    QGroupBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
     QMenu,
+    QMessageBox,
     QPushButton,
     QTableWidget,
     QTableWidgetItem,
@@ -28,6 +28,7 @@ from ..services.settings_service import DEFAULT_PRODUCT_UNITS, list_product_unit
 
 
 PRODUCT_PANEL_ACTIONS = {
+    "productHelpButton": "?",
     "newProductButton": "Neu",
     "saveProductButton": "Produkt speichern",
     "discardProductChangesButton": "Aenderungen verwerfen",
@@ -36,6 +37,11 @@ PRODUCT_PANEL_ACTIONS = {
     "deactivateProductButton": "Produkt deaktivieren",
     "restoreProductButton": "Produkt wiederherstellen",
 }
+PRODUCT_HELP_TEXT = (
+    "Produkte: Hier pflegen Sie die zentrale Preisliste.\n\n"
+    "Links erfassen oder bearbeiten Sie einen Artikel. Rechts sehen Sie die vorhandene Preisliste.\n\n"
+    "Deaktivieren verhindert neue Nutzung, laesst alte Belege aber nachvollziehbar bestehen."
+)
 
 PRODUCT_COLUMNS = ("Produkt", "Einheit", "Artikelnummer", "Preis", "Status")
 PRODUCT_PANEL_SECTIONS = ("1. Produkt erfassen", "2. Preisliste pruefen")
@@ -78,15 +84,20 @@ class ProductPanel(QWidget):
         layout.setContentsMargins(32, 28, 32, 28)
         layout.setSpacing(14)
 
+        header_row = QHBoxLayout()
+        title_column = QVBoxLayout()
         headline = QLabel("Produkte")
         headline.setObjectName("headline")
-        layout.addWidget(headline)
-
+        title_column.addWidget(headline)
         muted = QLabel("Zentrale Artikelliste und Standardpreise")
         muted.setObjectName("muted")
-        layout.addWidget(muted)
-
-        layout.addWidget(self._guidance_box())
+        title_column.addWidget(muted)
+        header_row.addLayout(title_column)
+        header_row.addStretch()
+        self.help_button = QPushButton(PRODUCT_PANEL_ACTIONS["productHelpButton"])
+        self.help_button.setObjectName("helpButton")
+        header_row.addWidget(self.help_button)
+        layout.addLayout(header_row)
 
         workspace = QHBoxLayout()
         workspace.setSpacing(18)
@@ -142,6 +153,7 @@ class ProductPanel(QWidget):
 
         layout.addWidget(self.status_label)
 
+        self.help_button.clicked.connect(self.show_help)
         self.new_button.clicked.connect(self.new_product)
         self.save_button.clicked.connect(self.save_product)
         self.discard_button.clicked.connect(self.discard_changes)
@@ -160,6 +172,9 @@ class ProductPanel(QWidget):
         button.setObjectName(object_name)
         return button
 
+    def show_help(self) -> None:
+        QMessageBox.information(self, "Hilfe: Produkte", PRODUCT_HELP_TEXT)
+
     def _guidance_box(self) -> QWidget:
         box = QWidget()
         box.setObjectName("guidanceBox")
@@ -174,11 +189,16 @@ class ProductPanel(QWidget):
             layout.addWidget(label)
         return box
 
-    def _section(self, title: str, subtitle: str) -> tuple[QGroupBox, QVBoxLayout]:
-        box = QGroupBox(title)
+    def _section(self, title: str, subtitle: str) -> tuple[QWidget, QVBoxLayout]:
+        box = QWidget()
         box.setObjectName("sectionBox")
         layout = QVBoxLayout(box)
         layout.setSpacing(10)
+
+        title_label = QLabel(title)
+        title_label.setObjectName("sectionTitle")
+        layout.addWidget(title_label)
+
         subtitle_label = QLabel(subtitle)
         subtitle_label.setObjectName("sectionSubtitle")
         subtitle_label.setWordWrap(True)

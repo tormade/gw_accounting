@@ -48,8 +48,8 @@ QLabel#muted {
 }
 
 QWidget#guidanceBox {
-    background: #fff7ed;
-    border: 1px solid #f59e0b;
+    background: #ffffff;
+    border: 1px solid #e7e2d6;
     border-radius: 10px;
     padding: 14px;
 }
@@ -65,20 +65,22 @@ QLabel#stepText {
     font-size: 14px;
 }
 
-QGroupBox#sectionBox {
+QWidget#sectionBox,
+QWidget#documentHeaderCard {
     background: #ffffff;
-    border: 1px solid #d8d6cf;
-    border-radius: 10px;
-    margin-top: 14px;
-    padding: 14px;
-    font-size: 15px;
-    font-weight: 800;
+    border: 1px solid #dedbd2;
+    border-radius: 14px;
+    padding: 16px;
 }
 
-QGroupBox#sectionBox::title {
-    subcontrol-origin: margin;
-    left: 12px;
-    padding: 0 6px;
+QWidget#documentHeaderCard {
+    background: #fbfaf7;
+}
+
+QLabel#sectionTitle {
+    color: #111111;
+    font-size: 15px;
+    font-weight: 800;
 }
 
 QLabel#sectionSubtitle {
@@ -168,14 +170,33 @@ QPushButton#newDeliveryButton {
     background: #b91c1c;
     border: 0;
     color: #ffffff;
-    font-size: 17px;
+    font-size: 15px;
     font-weight: 900;
-    min-height: 46px;
-    padding: 14px 18px;
+    min-height: 34px;
+    padding: 10px 16px;
 }
 
 QPushButton#newDeliveryButton:hover {
     background: #941616;
+}
+
+QPushButton#helpButton {
+    background: #ffffff;
+    border: 1px solid #d8d6cf;
+    border-radius: 17px;
+    color: #111111;
+    font-size: 16px;
+    font-weight: 900;
+    min-width: 34px;
+    max-width: 34px;
+    min-height: 34px;
+    max-height: 34px;
+    padding: 0;
+}
+
+QPushButton#helpButton:hover {
+    background: #f3efe6;
+    border-color: #b91c1c;
 }
 
 QPushButton#addOrderLineButton,

@@ -1,13 +1,18 @@
-from PySide6.QtWidgets import QFormLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit, QPushButton, QListWidget, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QFormLayout, QHBoxLayout, QLabel, QLineEdit, QMessageBox, QPushButton, QListWidget, QVBoxLayout, QWidget
 
 from ..services.settings_service import add_product_unit, list_product_units
 
 
 SETTINGS_PANEL_ACTIONS = {
+    "settingsHelpButton": "?",
     "refreshUnitsButton": "Einheiten laden",
     "addUnitButton": "Einheit hinzufuegen",
 }
 SETTINGS_PANEL_SECTIONS = ("Produkteinheiten bearbeiten",)
+SETTINGS_HELP_TEXT = (
+    "Einstellungen: Hier pflegen Sie Listenwerte, die an anderer Stelle als Auswahlfeld erscheinen.\n\n"
+    "Aktuell bearbeiten Sie die Produkteinheiten, zum Beispiel Kiste, Flasche, Fass oder Tray."
+)
 
 
 class SettingsPanel(QWidget):
@@ -27,17 +32,27 @@ class SettingsPanel(QWidget):
         layout.setContentsMargins(32, 28, 32, 28)
         layout.setSpacing(14)
 
+        header_row = QHBoxLayout()
+        title_column = QVBoxLayout()
         headline = QLabel("Einstellungen")
         headline.setObjectName("headline")
-        layout.addWidget(headline)
-
+        title_column.addWidget(headline)
         muted = QLabel("Listenwerte, die an anderer Stelle als Auswahlfeld verwendet werden")
         muted.setObjectName("muted")
-        layout.addWidget(muted)
+        title_column.addWidget(muted)
+        header_row.addLayout(title_column)
+        header_row.addStretch()
+        self.help_button = QPushButton(SETTINGS_PANEL_ACTIONS["settingsHelpButton"])
+        self.help_button.setObjectName("helpButton")
+        header_row.addWidget(self.help_button)
+        layout.addLayout(header_row)
 
-        box = QGroupBox(SETTINGS_PANEL_SECTIONS[0])
+        box = QWidget()
         box.setObjectName("sectionBox")
         box_layout = QVBoxLayout(box)
+        title = QLabel(SETTINGS_PANEL_SECTIONS[0])
+        title.setObjectName("sectionTitle")
+        box_layout.addWidget(title)
         hint = QLabel("Hier bearbeiten Sie die Auswahlwerte fuer das Feld Einheit im Produkte-Reiter.")
         hint.setObjectName("sectionSubtitle")
         hint.setWordWrap(True)
@@ -58,6 +73,7 @@ class SettingsPanel(QWidget):
         layout.addWidget(self.status_label)
         layout.addStretch()
 
+        self.help_button.clicked.connect(self.show_help)
         self.refresh_units_button.clicked.connect(self.refresh_units)
         self.add_unit_button.clicked.connect(self.add_unit)
         self.refresh_units()
@@ -66,6 +82,9 @@ class SettingsPanel(QWidget):
         button = QPushButton(SETTINGS_PANEL_ACTIONS[object_name])
         button.setObjectName(object_name)
         return button
+
+    def show_help(self) -> None:
+        QMessageBox.information(self, "Hilfe: Einstellungen", SETTINGS_HELP_TEXT)
 
     def refresh_units(self) -> None:
         if self.session_factory is None:
