@@ -1,20 +1,26 @@
 from datetime import date
 
+from PySide6.QtCore import Signal
 from PySide6.QtWidgets import QGridLayout, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
 
 from ..services.report_service import DashboardSummary, get_dashboard_summary
 
 
-DASHBOARD_ACTIONS = {"refreshDashboardButton": "Heute aktualisieren"}
+DASHBOARD_ACTIONS = {
+    "newDeliveryButton": "Neue Lieferung erfassen",
+    "refreshDashboardButton": "Heute aktualisieren",
+}
 DASHBOARD_CARDS = ("Lieferungen heute", "Offene Posten", "Kontaktanfragen heute")
 DASHBOARD_GUIDANCE_STEPS = (
-    "Erst Start pruefen: Was ist heute offen?",
-    "Dann Auftraege erfassen oder Listen bearbeiten.",
-    "Bei Unsicherheit den passenden Reiter ueber die Karten oeffnen.",
+    "Neue Lieferung erfassen starten.",
+    "Kunde auswaehlen und bei Bedarf letzte Bestellung uebernehmen.",
+    "PDF-Belege erzeugen oder offene Aufgaben ueber die Karten pruefen.",
 )
 
 
 class DashboardPanel(QWidget):
+    new_delivery_requested = Signal()
+
     def __init__(self, session_factory=None) -> None:
         super().__init__()
         self.session_factory = session_factory
@@ -34,6 +40,11 @@ class DashboardPanel(QWidget):
         layout.addWidget(muted)
 
         layout.addWidget(self._guidance_box())
+
+        self.new_delivery_button = QPushButton(DASHBOARD_ACTIONS["newDeliveryButton"])
+        self.new_delivery_button.setObjectName("newDeliveryButton")
+        layout.addWidget(self.new_delivery_button)
+
         layout.addLayout(self._cards_grid())
 
         action_row = QHBoxLayout()
@@ -49,6 +60,7 @@ class DashboardPanel(QWidget):
         layout.addWidget(self.next_steps_label)
         layout.addStretch()
 
+        self.new_delivery_button.clicked.connect(self.new_delivery_requested.emit)
         self.refresh_button.clicked.connect(self.refresh_dashboard)
         self.refresh_dashboard()
 

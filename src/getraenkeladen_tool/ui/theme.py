@@ -164,6 +164,20 @@ QPushButton#primaryAction:hover {
     background: #941616;
 }
 
+QPushButton#newDeliveryButton {
+    background: #b91c1c;
+    border: 0;
+    color: #ffffff;
+    font-size: 17px;
+    font-weight: 900;
+    min-height: 46px;
+    padding: 14px 18px;
+}
+
+QPushButton#newDeliveryButton:hover {
+    background: #941616;
+}
+
 QPushButton#addOrderLineButton,
 QPushButton#saveOrderButton {
     background: #111111;

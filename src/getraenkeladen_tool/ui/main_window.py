@@ -2,7 +2,7 @@ from pathlib import Path
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
-from PySide6.QtWidgets import QLabel, QMainWindow, QPushButton, QTabWidget, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QLabel, QMainWindow, QPushButton, QScrollArea, QTabWidget, QVBoxLayout, QWidget
 
 from .customer_panel import CustomerPanel
 from .dashboard_panel import DashboardPanel
@@ -14,6 +14,8 @@ from .settings_panel import SettingsPanel
 
 
 MAIN_TABS = ("Start", "Kunden", "Produkte", "Auftraege", "Belege", "Listen", "Einstellungen")
+MAIN_WINDOW_INITIAL_SIZE = (1180, 760)
+MAIN_WINDOW_MINIMUM_SIZE = (900, 560)
 BRAND_DIR = Path(__file__).resolve().parents[3] / "assets" / "brand"
 LOGO_PATH = BRAND_DIR / "logo_winklmeier.png"
 CLAIM_PATH = BRAND_DIR / "wir-bringens-einfach-schwarz.png"
@@ -24,7 +26,8 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.session_factory = session_factory
         self.setWindowTitle("Getraenke Winklmeier")
-        self.resize(1040, 680)
+        self.resize(*MAIN_WINDOW_INITIAL_SIZE)
+        self.setMinimumSize(*MAIN_WINDOW_MINIMUM_SIZE)
 
         root = QWidget()
         root_layout = QVBoxLayout(root)
@@ -33,15 +36,27 @@ class MainWindow(QMainWindow):
         root_layout.addWidget(self._header())
 
         self.tabs = QTabWidget()
-        self.tabs.addTab(DashboardPanel(session_factory=session_factory), "Start")
-        self.tabs.addTab(CustomerPanel(session_factory=session_factory), "Kunden")
-        self.tabs.addTab(ProductPanel(session_factory=session_factory), "Produkte")
-        self.tabs.addTab(OrderPanel(session_factory=session_factory), "Auftraege")
-        self.tabs.addTab(DocumentPanel(session_factory=session_factory), "Belege")
-        self.tabs.addTab(ReportPanel(session_factory=session_factory), "Listen")
-        self.tabs.addTab(SettingsPanel(session_factory=session_factory), "Einstellungen")
+        dashboard_panel = DashboardPanel(session_factory=session_factory)
+        dashboard_panel.new_delivery_requested.connect(self.open_orders_tab)
+        self.tabs.addTab(self._scrollable_tab(dashboard_panel), "Start")
+        self.tabs.addTab(self._scrollable_tab(CustomerPanel(session_factory=session_factory)), "Kunden")
+        self.tabs.addTab(self._scrollable_tab(ProductPanel(session_factory=session_factory)), "Produkte")
+        self.tabs.addTab(self._scrollable_tab(OrderPanel(session_factory=session_factory)), "Auftraege")
+        self.tabs.addTab(self._scrollable_tab(DocumentPanel(session_factory=session_factory)), "Belege")
+        self.tabs.addTab(self._scrollable_tab(ReportPanel(session_factory=session_factory)), "Listen")
+        self.tabs.addTab(self._scrollable_tab(SettingsPanel(session_factory=session_factory)), "Einstellungen")
         root_layout.addWidget(self.tabs)
         self.setCentralWidget(root)
+
+    def open_orders_tab(self) -> None:
+        self.tabs.setCurrentIndex(MAIN_TABS.index("Auftraege"))
+
+    def _scrollable_tab(self, panel: QWidget) -> QScrollArea:
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setFrameShape(QScrollArea.Shape.NoFrame)
+        scroll_area.setWidget(panel)
+        return scroll_area
 
     def _header(self) -> QWidget:
         header = QWidget()

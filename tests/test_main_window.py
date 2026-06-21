@@ -1,9 +1,24 @@
-from getraenkeladen_tool.ui.main_window import CLAIM_PATH, LOGO_PATH, MAIN_TABS
+from getraenkeladen_tool.ui.main_window import CLAIM_PATH, LOGO_PATH, MAIN_TABS, MAIN_WINDOW_INITIAL_SIZE, MAIN_WINDOW_MINIMUM_SIZE
 from getraenkeladen_tool.ui.theme import APP_STYLESHEET
 
 
 def test_main_window_exposes_first_version_tabs():
     assert MAIN_TABS == ("Start", "Kunden", "Produkte", "Auftraege", "Belege", "Listen", "Einstellungen")
+
+
+def test_main_window_uses_resizable_screen_friendly_size():
+    assert MAIN_WINDOW_INITIAL_SIZE == (1180, 760)
+    assert MAIN_WINDOW_MINIMUM_SIZE == (900, 560)
+
+
+def test_main_window_wraps_large_tabs_in_scroll_areas():
+    from pathlib import Path
+
+    source = Path("src/getraenkeladen_tool/ui/main_window.py").read_text(encoding="utf-8")
+
+    assert "QScrollArea" in source
+    assert "setWidgetResizable(True)" in source
+    assert "self.tabs.addTab(self._scrollable_tab(" in source
 
 
 def test_theme_uses_winklmeier_work_tool_direction():
@@ -157,13 +172,25 @@ def test_settings_tab_exposes_dropdown_list_actions():
 def test_dashboard_tab_exposes_daily_guidance():
     from getraenkeladen_tool.ui.dashboard_panel import DASHBOARD_ACTIONS, DASHBOARD_CARDS, DASHBOARD_GUIDANCE_STEPS
 
-    assert DASHBOARD_ACTIONS == {"refreshDashboardButton": "Heute aktualisieren"}
+    assert DASHBOARD_ACTIONS == {
+        "newDeliveryButton": "Neue Lieferung erfassen",
+        "refreshDashboardButton": "Heute aktualisieren",
+    }
     assert DASHBOARD_CARDS == ("Lieferungen heute", "Offene Posten", "Kontaktanfragen heute")
     assert DASHBOARD_GUIDANCE_STEPS == (
-        "Erst Start pruefen: Was ist heute offen?",
-        "Dann Auftraege erfassen oder Listen bearbeiten.",
-        "Bei Unsicherheit den passenden Reiter ueber die Karten oeffnen.",
+        "Neue Lieferung erfassen starten.",
+        "Kunde auswaehlen und bei Bedarf letzte Bestellung uebernehmen.",
+        "PDF-Belege erzeugen oder offene Aufgaben ueber die Karten pruefen.",
     )
+
+
+def test_dashboard_primary_action_opens_order_tab():
+    from pathlib import Path
+
+    source = Path("src/getraenkeladen_tool/ui/main_window.py").read_text(encoding="utf-8")
+
+    assert "new_delivery_requested.connect(self.open_orders_tab)" in source
+    assert 'MAIN_TABS.index("Auftraege")' in source
 
 
 def test_report_tab_exposes_reporting_actions():

@@ -59,3 +59,16 @@ def test_user_guide_explains_guided_daily_workflow():
     assert "Auftrag erfassen" in guide
     assert "Archivieren statt loeschen" in guide
     assert "Windows" in guide
+
+
+def test_project_docs_include_approved_ux_guidelines_and_roadmap():
+    ux = Path("docs/ux-leitlinien.md").read_text(encoding="utf-8")
+    roadmap = Path("docs/roadmap.md").read_text(encoding="utf-8")
+
+    assert "Neue Lieferung erfassen" in ux
+    assert "Letzte Bestellung uebernehmen" in ux
+    assert "PDF + E-Mail" in ux
+    assert "vorerst ausgeklammert" in ux
+    assert "Meilenstein 2" in roadmap
+    assert "ZUGFeRD" in roadmap
+    assert "Status" in roadmap
