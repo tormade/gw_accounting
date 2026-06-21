@@ -1,4 +1,4 @@
-from getraenkeladen_tool.ui.main_window import BADGE_PATH, CLAIM_PATH, LOGO_PATH, MAIN_TABS
+from getraenkeladen_tool.ui.main_window import CLAIM_PATH, LOGO_PATH, MAIN_TABS
 from getraenkeladen_tool.ui.theme import APP_STYLESHEET
 
 
@@ -15,4 +15,3 @@ def test_theme_uses_winklmeier_work_tool_direction():
 def test_brand_assets_are_available():
     assert LOGO_PATH.exists()
     assert CLAIM_PATH.exists()
-    assert BADGE_PATH.exists()

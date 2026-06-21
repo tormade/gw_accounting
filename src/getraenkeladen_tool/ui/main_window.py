@@ -7,9 +7,8 @@ from PySide6.QtWidgets import QLabel, QMainWindow, QPushButton, QTabWidget, QVBo
 
 MAIN_TABS = ("Kunden", "Produkte", "Belege", "Listen")
 BRAND_DIR = Path(__file__).resolve().parents[3] / "assets" / "brand"
-LOGO_PATH = BRAND_DIR / "logo_winklmeier_30px.bmp"
+LOGO_PATH = BRAND_DIR / "logo_winklmeier.png"
 CLAIM_PATH = BRAND_DIR / "wir-bringens-einfach-schwarz.png"
-BADGE_PATH = BRAND_DIR / "fair-familiaer-regional-button.png"
 
 
 class MainWindow(QMainWindow):
@@ -72,12 +71,6 @@ class MainWindow(QMainWindow):
         action.setObjectName("primaryAction")
         action.setFixedWidth(160)
         layout.addWidget(action)
-
-        badge = QLabel()
-        badge.setObjectName("brandBadge")
-        if BADGE_PATH.exists():
-            badge.setPixmap(QPixmap(str(BADGE_PATH)).scaledToWidth(96, Qt.TransformationMode.SmoothTransformation))
-        layout.addWidget(badge)
 
         layout.addStretch()
 

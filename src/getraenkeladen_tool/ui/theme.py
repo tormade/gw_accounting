@@ -57,8 +57,4 @@ QPushButton#primaryAction {
 QPushButton#primaryAction:hover {
     background: #941616;
 }
-
-QLabel#brandBadge {
-    margin-top: 16px;
-}
 """
