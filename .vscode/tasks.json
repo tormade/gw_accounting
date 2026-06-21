@@ -1,0 +1,18 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Getraenkeladen Tool starten",
+            "type": "shell",
+            "command": "PYTHONPATH=src .venv/bin/python -m getraenkeladen_tool",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "panel": "dedicated",
+                "reveal": "always"
+            }
+        }
+    ]
+}

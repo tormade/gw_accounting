@@ -17,8 +17,8 @@ python -m getraenkeladen_tool
 ```
 
 If you want VS Code to run the current source files directly while developing,
-use the included "Getraenkeladen Tool" launch configuration. From the terminal,
-the equivalent command is:
+use the included task "Getraenkeladen Tool starten" or run this command in the
+integrated terminal:
 
 ```bash
 PYTHONPATH=src python -m getraenkeladen_tool

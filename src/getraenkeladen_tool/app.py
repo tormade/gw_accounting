@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from pathlib import Path
 
+from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QApplication
 
 from .config import AppConfig
@@ -39,4 +40,6 @@ def main() -> int:
     runtime = create_runtime()
     window = MainWindow(session_factory=runtime.session_factory)
     window.show()
+    QTimer.singleShot(0, window.raise_)
+    QTimer.singleShot(0, window.activateWindow)
     return app.exec()

@@ -3,9 +3,10 @@
     "configurations": [
         {
             "name": "Getraenkeladen Tool",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "module": "getraenkeladen_tool",
+            "python": "${workspaceFolder}/.venv/bin/python",
             "cwd": "${workspaceFolder}",
             "env": {
                 "PYTHONPATH": "${workspaceFolder}/src"

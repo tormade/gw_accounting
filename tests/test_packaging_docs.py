@@ -1,4 +1,5 @@
 from pathlib import Path
+import json
 import tomllib
 
 
@@ -31,3 +32,21 @@ def test_package_discovery_uses_src_layout():
 
     assert project["build-system"]["build-backend"] == "setuptools.build_meta"
     assert project["tool"]["setuptools"]["packages"]["find"]["where"] == ["src"]
+
+
+def test_vscode_launch_uses_project_venv_with_debugpy():
+    launch = json.loads(Path(".vscode/launch.json").read_text(encoding="utf-8"))
+    config = launch["configurations"][0]
+
+    assert config["type"] == "debugpy"
+    assert config["python"] == "${workspaceFolder}/.venv/bin/python"
+    assert config["module"] == "getraenkeladen_tool"
+
+
+def test_vscode_task_runs_app_without_debug_adapter():
+    tasks = json.loads(Path(".vscode/tasks.json").read_text(encoding="utf-8"))
+    task = tasks["tasks"][0]
+
+    assert task["label"] == "Getraenkeladen Tool starten"
+    assert task["command"] == "PYTHONPATH=src .venv/bin/python -m getraenkeladen_tool"
+    assert task["type"] == "shell"
