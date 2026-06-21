@@ -5,13 +5,14 @@ from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import QLabel, QMainWindow, QPushButton, QTabWidget, QVBoxLayout, QWidget
 
 from .customer_panel import CustomerPanel
+from .dashboard_panel import DashboardPanel
 from .document_panel import DocumentPanel
 from .order_panel import OrderPanel
 from .product_panel import ProductPanel
 from .report_panel import ReportPanel
 
 
-MAIN_TABS = ("Kunden", "Produkte", "Auftraege", "Belege", "Listen")
+MAIN_TABS = ("Start", "Kunden", "Produkte", "Auftraege", "Belege", "Listen")
 BRAND_DIR = Path(__file__).resolve().parents[3] / "assets" / "brand"
 LOGO_PATH = BRAND_DIR / "logo_winklmeier.png"
 CLAIM_PATH = BRAND_DIR / "wir-bringens-einfach-schwarz.png"
@@ -31,6 +32,7 @@ class MainWindow(QMainWindow):
         root_layout.addWidget(self._header())
 
         self.tabs = QTabWidget()
+        self.tabs.addTab(DashboardPanel(session_factory=session_factory), "Start")
         self.tabs.addTab(CustomerPanel(session_factory=session_factory), "Kunden")
         self.tabs.addTab(ProductPanel(session_factory=session_factory), "Produkte")
         self.tabs.addTab(OrderPanel(session_factory=session_factory), "Auftraege")

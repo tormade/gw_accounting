@@ -1,6 +1,7 @@
 from PySide6.QtWidgets import (
     QFileDialog,
     QFormLayout,
+    QGroupBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -32,6 +33,12 @@ CUSTOMER_PANEL_ACTIONS = {
 }
 
 CUSTOMER_COLUMNS = ("Name", "Adresse", "Zahlungsart", "Naechster Kontakt", "Status")
+CUSTOMER_PANEL_SECTIONS = ("1. Kunden erfassen", "2. Bestehende Kunden pruefen")
+CUSTOMER_GUIDANCE_STEPS = (
+    "Neuen Kunden links eintragen oder unten einen Kunden auswaehlen.",
+    "Mit Auswahl bearbeiten Stammdaten in das Formular laden.",
+    "Archivieren statt loeschen, damit versehentliche Aenderungen rueckgaengig bleiben.",
+)
 
 
 class CustomerPanel(QWidget):
@@ -68,6 +75,20 @@ class CustomerPanel(QWidget):
         muted.setObjectName("muted")
         layout.addWidget(muted)
 
+        layout.addWidget(self._guidance_box())
+
+        workspace = QHBoxLayout()
+        workspace.setSpacing(18)
+        left_column = QVBoxLayout()
+        right_column = QVBoxLayout()
+        workspace.addLayout(left_column, 1)
+        workspace.addLayout(right_column, 1)
+        layout.addLayout(workspace)
+
+        edit_box, edit_layout = self._section(
+            CUSTOMER_PANEL_SECTIONS[0],
+            "Pflicht ist der Kundenname. Ordner, Zahlungsart und Kontakttermin helfen spaeter beim Tagesablauf.",
+        )
         form = QFormLayout()
         form.addRow("Kunde", self.customer_name)
         form.addRow("Kundenordner", self._folder_row())
@@ -75,28 +96,37 @@ class CustomerPanel(QWidget):
         form.addRow("Zahlungsart", self.payment_method)
         form.addRow("Naechster Kontakt", self.next_contact_date)
         form.addRow("Lieferhinweise", self.delivery_notes)
-        layout.addLayout(form)
+        edit_layout.addLayout(form)
 
         action_row = QHBoxLayout()
         self.save_button = self._button("saveCustomerButton")
-        self.refresh_button = self._button("refreshCustomersButton")
         self.load_button = self._button("loadCustomerButton")
+        action_row.addWidget(self.save_button)
+        action_row.addWidget(self.load_button)
+        action_row.addStretch()
+        edit_layout.addLayout(action_row)
+        left_column.addWidget(edit_box)
+
+        list_box, list_layout = self._section(
+            CUSTOMER_PANEL_SECTIONS[1],
+            "Kunden unten anklicken. Archivieren blendet sie aus dem Alltag aus, Wiederherstellen holt sie zurueck.",
+        )
+        list_actions = QHBoxLayout()
+        self.refresh_button = self._button("refreshCustomersButton")
         self.archive_button = self._button("archiveCustomerButton")
         self.restore_button = self._button("restoreCustomerButton")
         for button in (
-            self.save_button,
             self.refresh_button,
-            self.load_button,
             self.archive_button,
             self.restore_button,
         ):
-            action_row.addWidget(button)
-        action_row.addStretch()
-        layout.addLayout(action_row)
-        layout.addWidget(self.status_label)
+            list_actions.addWidget(button)
+        list_actions.addStretch()
+        list_layout.addLayout(list_actions)
+        list_layout.addWidget(self.customers_table)
+        right_column.addWidget(list_box)
 
-        layout.addWidget(QLabel("Gepflegte Kunden"))
-        layout.addWidget(self.customers_table)
+        layout.addWidget(self.status_label)
 
         self.save_button.clicked.connect(self.save_customer)
         self.refresh_button.clicked.connect(self.refresh_customers)
@@ -119,6 +149,31 @@ class CustomerPanel(QWidget):
         button = QPushButton(CUSTOMER_PANEL_ACTIONS[object_name])
         button.setObjectName(object_name)
         return button
+
+    def _guidance_box(self) -> QWidget:
+        box = QWidget()
+        box.setObjectName("guidanceBox")
+        layout = QVBoxLayout(box)
+        layout.setSpacing(8)
+        title = QLabel("So pflegen Sie Kunden")
+        title.setObjectName("stepTitle")
+        layout.addWidget(title)
+        for index, step in enumerate(CUSTOMER_GUIDANCE_STEPS, start=1):
+            label = QLabel(f"{index}. {step}")
+            label.setObjectName("stepText")
+            layout.addWidget(label)
+        return box
+
+    def _section(self, title: str, subtitle: str) -> tuple[QGroupBox, QVBoxLayout]:
+        box = QGroupBox(title)
+        box.setObjectName("sectionBox")
+        layout = QVBoxLayout(box)
+        layout.setSpacing(10)
+        subtitle_label = QLabel(subtitle)
+        subtitle_label.setObjectName("sectionSubtitle")
+        subtitle_label.setWordWrap(True)
+        layout.addWidget(subtitle_label)
+        return box, layout
 
     def choose_folder(self) -> None:
         folder = QFileDialog.getExistingDirectory(self, "Kundenordner waehlen")

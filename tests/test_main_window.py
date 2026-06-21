@@ -3,7 +3,7 @@ from getraenkeladen_tool.ui.theme import APP_STYLESHEET
 
 
 def test_main_window_exposes_first_version_tabs():
-    assert MAIN_TABS == ("Kunden", "Produkte", "Auftraege", "Belege", "Listen")
+    assert MAIN_TABS == ("Start", "Kunden", "Produkte", "Auftraege", "Belege", "Listen")
 
 
 def test_theme_uses_winklmeier_work_tool_direction():
@@ -59,7 +59,7 @@ def test_order_tab_exposes_guided_order_actions():
 
 
 def test_customer_tab_exposes_master_data_actions():
-    from getraenkeladen_tool.ui.customer_panel import CUSTOMER_PANEL_ACTIONS
+    from getraenkeladen_tool.ui.customer_panel import CUSTOMER_GUIDANCE_STEPS, CUSTOMER_PANEL_ACTIONS, CUSTOMER_PANEL_SECTIONS
 
     assert CUSTOMER_PANEL_ACTIONS == {
         "saveCustomerButton": "Kunde speichern",
@@ -69,10 +69,16 @@ def test_customer_tab_exposes_master_data_actions():
         "restoreCustomerButton": "Kunde wiederherstellen",
         "chooseCustomerFolderButton": "Ordner waehlen",
     }
+    assert CUSTOMER_PANEL_SECTIONS == ("1. Kunden erfassen", "2. Bestehende Kunden pruefen")
+    assert CUSTOMER_GUIDANCE_STEPS == (
+        "Neuen Kunden links eintragen oder unten einen Kunden auswaehlen.",
+        "Mit Auswahl bearbeiten Stammdaten in das Formular laden.",
+        "Archivieren statt loeschen, damit versehentliche Aenderungen rueckgaengig bleiben.",
+    )
 
 
 def test_product_tab_exposes_price_list_actions():
-    from getraenkeladen_tool.ui.product_panel import PRODUCT_PANEL_ACTIONS
+    from getraenkeladen_tool.ui.product_panel import PRODUCT_GUIDANCE_STEPS, PRODUCT_PANEL_ACTIONS, PRODUCT_PANEL_SECTIONS
 
     assert PRODUCT_PANEL_ACTIONS == {
         "saveProductButton": "Produkt speichern",
@@ -81,6 +87,24 @@ def test_product_tab_exposes_price_list_actions():
         "deactivateProductButton": "Produkt deaktivieren",
         "restoreProductButton": "Produkt wiederherstellen",
     }
+    assert PRODUCT_PANEL_SECTIONS == ("1. Produkt erfassen", "2. Preisliste pruefen")
+    assert PRODUCT_GUIDANCE_STEPS == (
+        "Artikel mit Einheit und Standardpreis pflegen.",
+        "Vorhandene Artikel unten auswaehlen und zur Bearbeitung laden.",
+        "Nicht mehr benoetigte Artikel deaktivieren statt endgueltig loeschen.",
+    )
+
+
+def test_dashboard_tab_exposes_daily_guidance():
+    from getraenkeladen_tool.ui.dashboard_panel import DASHBOARD_ACTIONS, DASHBOARD_CARDS, DASHBOARD_GUIDANCE_STEPS
+
+    assert DASHBOARD_ACTIONS == {"refreshDashboardButton": "Heute aktualisieren"}
+    assert DASHBOARD_CARDS == ("Lieferungen heute", "Offene Posten", "Kontaktanfragen heute")
+    assert DASHBOARD_GUIDANCE_STEPS == (
+        "Erst Start pruefen: Was ist heute offen?",
+        "Dann Auftraege erfassen oder Listen bearbeiten.",
+        "Bei Unsicherheit den passenden Reiter ueber die Karten oeffnen.",
+    )
 
 
 def test_report_tab_exposes_reporting_actions():

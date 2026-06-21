@@ -87,6 +87,35 @@ QLabel#sectionSubtitle {
     font-weight: 400;
 }
 
+QWidget#metricCard {
+    background: #ffffff;
+    border: 1px solid #d8d6cf;
+    border-radius: 12px;
+    padding: 18px;
+}
+
+QLabel#metricValue {
+    color: #b91c1c;
+    font-size: 34px;
+    font-weight: 900;
+}
+
+QLabel#metricLabel {
+    color: #111111;
+    font-size: 15px;
+    font-weight: 800;
+}
+
+QLabel#statusBox {
+    background: #eef2e6;
+    border: 1px solid #c8d3b5;
+    border-radius: 10px;
+    color: #283618;
+    padding: 12px;
+    font-size: 14px;
+    font-weight: 700;
+}
+
 QLineEdit,
 QComboBox,
 QSpinBox {

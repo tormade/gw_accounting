@@ -1,6 +1,7 @@
 from PySide6.QtWidgets import (
     QCheckBox,
     QFormLayout,
+    QGroupBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -31,6 +32,12 @@ PRODUCT_PANEL_ACTIONS = {
 }
 
 PRODUCT_COLUMNS = ("Produkt", "Einheit", "Artikelnummer", "Preis", "Status")
+PRODUCT_PANEL_SECTIONS = ("1. Produkt erfassen", "2. Preisliste pruefen")
+PRODUCT_GUIDANCE_STEPS = (
+    "Artikel mit Einheit und Standardpreis pflegen.",
+    "Vorhandene Artikel unten auswaehlen und zur Bearbeitung laden.",
+    "Nicht mehr benoetigte Artikel deaktivieren statt endgueltig loeschen.",
+)
 
 
 class ProductPanel(QWidget):
@@ -66,34 +73,57 @@ class ProductPanel(QWidget):
         muted.setObjectName("muted")
         layout.addWidget(muted)
 
+        layout.addWidget(self._guidance_box())
+
+        workspace = QHBoxLayout()
+        workspace.setSpacing(18)
+        left_column = QVBoxLayout()
+        right_column = QVBoxLayout()
+        workspace.addLayout(left_column, 1)
+        workspace.addLayout(right_column, 1)
+        layout.addLayout(workspace)
+
+        edit_box, edit_layout = self._section(
+            PRODUCT_PANEL_SECTIONS[0],
+            "Produktname, Einheit und Preis sind die Basis fuer spaetere Auftraege.",
+        )
         form = QFormLayout()
         form.addRow("Produkt", self.product_name)
         form.addRow("Einheit", self.unit)
         form.addRow("Artikelnummer", self.article_number)
         form.addRow("Preis EUR", self.price_eur)
         form.addRow("Status", self.is_active)
-        layout.addLayout(form)
+        edit_layout.addLayout(form)
 
         action_row = QHBoxLayout()
         self.save_button = self._button("saveProductButton")
-        self.refresh_button = self._button("refreshProductsButton")
         self.load_button = self._button("loadProductButton")
+        action_row.addWidget(self.save_button)
+        action_row.addWidget(self.load_button)
+        action_row.addStretch()
+        edit_layout.addLayout(action_row)
+        left_column.addWidget(edit_box)
+
+        list_box, list_layout = self._section(
+            PRODUCT_PANEL_SECTIONS[1],
+            "Artikel unten anklicken. Deaktivieren verhindert neue Nutzung, Wiederherstellen macht ihn wieder aktiv.",
+        )
+        list_actions = QHBoxLayout()
+        self.refresh_button = self._button("refreshProductsButton")
         self.deactivate_button = self._button("deactivateProductButton")
         self.restore_button = self._button("restoreProductButton")
         for button in (
-            self.save_button,
             self.refresh_button,
-            self.load_button,
             self.deactivate_button,
             self.restore_button,
         ):
-            action_row.addWidget(button)
-        action_row.addStretch()
-        layout.addLayout(action_row)
-        layout.addWidget(self.status_label)
+            list_actions.addWidget(button)
+        list_actions.addStretch()
+        list_layout.addLayout(list_actions)
+        list_layout.addWidget(self.products_table)
+        right_column.addWidget(list_box)
 
-        layout.addWidget(QLabel("Gepflegte Produkte"))
-        layout.addWidget(self.products_table)
+        layout.addWidget(self.status_label)
 
         self.save_button.clicked.connect(self.save_product)
         self.refresh_button.clicked.connect(self.refresh_products)
@@ -106,6 +136,31 @@ class ProductPanel(QWidget):
         button = QPushButton(PRODUCT_PANEL_ACTIONS[object_name])
         button.setObjectName(object_name)
         return button
+
+    def _guidance_box(self) -> QWidget:
+        box = QWidget()
+        box.setObjectName("guidanceBox")
+        layout = QVBoxLayout(box)
+        layout.setSpacing(8)
+        title = QLabel("So pflegen Sie Produkte")
+        title.setObjectName("stepTitle")
+        layout.addWidget(title)
+        for index, step in enumerate(PRODUCT_GUIDANCE_STEPS, start=1):
+            label = QLabel(f"{index}. {step}")
+            label.setObjectName("stepText")
+            layout.addWidget(label)
+        return box
+
+    def _section(self, title: str, subtitle: str) -> tuple[QGroupBox, QVBoxLayout]:
+        box = QGroupBox(title)
+        box.setObjectName("sectionBox")
+        layout = QVBoxLayout(box)
+        layout.setSpacing(10)
+        subtitle_label = QLabel(subtitle)
+        subtitle_label.setObjectName("sectionSubtitle")
+        subtitle_label.setWordWrap(True)
+        layout.addWidget(subtitle_label)
+        return box, layout
 
     def save_product(self) -> None:
         if self.session_factory is None:

@@ -50,3 +50,12 @@ def test_vscode_task_runs_app_without_debug_adapter():
     assert task["label"] == "Getraenkeladen Tool starten"
     assert task["command"] == "PYTHONPATH=src .venv/bin/python -m getraenkeladen_tool"
     assert task["type"] == "shell"
+
+
+def test_user_guide_explains_guided_daily_workflow():
+    guide = Path("docs/bedienhilfe.md").read_text(encoding="utf-8")
+
+    assert "Startseite" in guide
+    assert "Auftrag erfassen" in guide
+    assert "Archivieren statt loeschen" in guide
+    assert "Windows" in guide

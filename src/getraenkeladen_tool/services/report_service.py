@@ -1,9 +1,33 @@
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 from pathlib import Path
+from dataclasses import dataclass
 
 from ..models import Customer, Document, OpenItem
 from .file_service import ensure_parent_folder
+
+
+@dataclass(frozen=True)
+class DashboardSummary:
+    target_date: str
+    delivery_count: int
+    open_item_count: int
+    due_contact_count: int
+    next_steps: tuple[str, str, str]
+
+
+def get_dashboard_summary(session: Session, target_date: str) -> DashboardSummary:
+    return DashboardSummary(
+        target_date=target_date,
+        delivery_count=len(list_daily_deliveries(session, target_date)),
+        open_item_count=len(list_open_items(session)),
+        due_contact_count=len(list_due_contacts(session, target_date)),
+        next_steps=(
+            f"Lieferliste fuer {target_date} pruefen.",
+            "Offene Posten kontrollieren und Zahlungseingaenge markieren.",
+            "Faellige Kundenkontakte abarbeiten.",
+        ),
+    )
 
 
 def list_open_items(session: Session) -> list[OpenItem]:

@@ -7,6 +7,7 @@ from getraenkeladen_tool.services.report_service import (
     export_daily_deliveries_csv,
     export_due_contacts_csv,
     export_open_items_csv,
+    get_dashboard_summary,
     list_daily_deliveries,
     list_due_contacts,
     list_open_items,
@@ -234,3 +235,53 @@ def test_export_due_contacts_csv_writes_contact_request_list(session, tmp_path: 
         "Kontakttermin;Kunde;E-Mail;Hinweise",
         "2026-06-21;Hotel Blau;bestellung@hotel-blau.test;Bestellung per Mail anfragen",
     ]
+
+
+def test_dashboard_summary_counts_daily_work(session, tmp_path: Path):
+    delivery_customer = create_customer(
+        session,
+        CustomerCreate(
+            name="Gasthof Sued",
+            folder_path=str(tmp_path / "Kunden" / "Gasthof Sued"),
+            next_contact_date="2026-06-21",
+        ),
+    )
+    invoice_customer = create_customer(
+        session,
+        CustomerCreate(
+            name="Cafe Nord",
+            folder_path=str(tmp_path / "Kunden" / "Cafe Nord"),
+            payment_method="SEPA",
+        ),
+    )
+    create_document(
+        session,
+        DocumentCreate(
+            customer_id=delivery_customer.id,
+            document_type="Lieferschein",
+            document_number="LS-3001",
+            delivery_date="2026-06-21",
+            delivery_slot="vormittag",
+            line_items=[DocumentLineItem(name="Wasser", quantity=1, unit_price_cents=1000)],
+        ),
+    )
+    create_document(
+        session,
+        DocumentCreate(
+            customer_id=invoice_customer.id,
+            document_type="Rechnung",
+            document_number="RG-3001",
+            line_items=[DocumentLineItem(name="Limo", quantity=2, unit_price_cents=1200)],
+        ),
+    )
+
+    summary = get_dashboard_summary(session, "2026-06-21")
+
+    assert summary.delivery_count == 1
+    assert summary.open_item_count == 1
+    assert summary.due_contact_count == 1
+    assert summary.next_steps == (
+        "Lieferliste fuer 2026-06-21 pruefen.",
+        "Offene Posten kontrollieren und Zahlungseingaenge markieren.",
+        "Faellige Kundenkontakte abarbeiten.",
+    )
