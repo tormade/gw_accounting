@@ -6,7 +6,7 @@ from getraenkeladen_tool.services.customer_service import create_customer
 from getraenkeladen_tool.services.document_service import create_document
 
 
-def test_create_invoice_writes_excel_file_and_open_item(session, tmp_path: Path):
+def test_create_invoice_writes_excel_pdf_file_and_open_item(session, tmp_path: Path):
     customer_folder = tmp_path / "Kunden" / "Cafe Nord"
     customer = create_customer(
         session,
@@ -37,6 +37,11 @@ def test_create_invoice_writes_excel_file_and_open_item(session, tmp_path: Path)
     excel_path = Path(document.excel_path)
     assert excel_path == customer_folder / "RG-1001_Rechnung.xlsx"
     assert excel_path.exists()
+
+    pdf_path = Path(document.pdf_path)
+    assert pdf_path == customer_folder / "RG-1001_Rechnung.pdf"
+    assert pdf_path.exists()
+    assert pdf_path.read_bytes().startswith(b"%PDF-")
 
     open_item = session.query(OpenItem).one()
     assert open_item.customer_name == "Cafe Nord"

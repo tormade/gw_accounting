@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from ..models import Customer, Document, OpenItem
 from ..schemas import DocumentCreate
 from .excel_service import build_delivery_note_workbook, build_invoice_workbook
+from .pdf_service import build_document_pdf
 
 
 def _safe_filename_part(value: str) -> str:
@@ -18,25 +19,27 @@ def create_document(session: Session, payload: DocumentCreate) -> Document:
 
     document_type = payload.document_type.strip()
     document_number = payload.document_number.strip()
-    output_path = (
+    excel_path = (
         Path(customer.folder_path)
         / f"{_safe_filename_part(document_number)}_{_safe_filename_part(document_type)}.xlsx"
     )
+    pdf_path = excel_path.with_suffix(".pdf")
     line_items = [item.model_dump() for item in payload.line_items]
 
     if document_type == "Rechnung":
-        build_invoice_workbook(output_path, customer.name, document_number, line_items)
+        build_invoice_workbook(excel_path, customer.name, document_number, line_items)
     elif document_type == "Lieferschein":
-        build_delivery_note_workbook(output_path, customer.name, document_number, line_items)
+        build_delivery_note_workbook(excel_path, customer.name, document_number, line_items)
     else:
         raise ValueError("Belegtyp muss Rechnung oder Lieferschein sein.")
+    build_document_pdf(pdf_path, document_type, customer.name, document_number, line_items)
 
     document = Document(
         customer_id=customer.id,
         document_type=document_type,
         document_number=document_number,
-        excel_path=str(output_path),
-        pdf_path="",
+        excel_path=str(excel_path),
+        pdf_path=str(pdf_path),
     )
     session.add(document)
     session.flush()
