@@ -28,3 +28,5 @@ def _add_missing_columns(engine) -> None:
     with engine.begin() as connection:
         if "datev_export_path" not in document_columns:
             connection.execute(text("ALTER TABLE documents ADD COLUMN datev_export_path VARCHAR(500)"))
+        if "order_id" not in document_columns:
+            connection.execute(text("ALTER TABLE documents ADD COLUMN order_id INTEGER"))

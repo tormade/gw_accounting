@@ -36,3 +36,4 @@ def test_bootstrap_database_adds_missing_document_columns(tmp_path: Path):
     columns = {row[1] for row in connection.execute("PRAGMA table_info(documents)").fetchall()}
     connection.close()
     assert "datev_export_path" in columns
+    assert "order_id" in columns

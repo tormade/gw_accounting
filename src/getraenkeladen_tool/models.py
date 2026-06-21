@@ -38,6 +38,7 @@ class Document(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     customer_id: Mapped[int] = mapped_column(ForeignKey("customers.id"))
+    order_id: Mapped[int | None] = mapped_column(ForeignKey("orders.id"), nullable=True)
     document_type: Mapped[str] = mapped_column(String(30))
     document_number: Mapped[str] = mapped_column(String(50))
     excel_path: Mapped[str] = mapped_column(String(500))
@@ -47,6 +48,7 @@ class Document(Base):
     delivery_slot: Mapped[str | None] = mapped_column(String(30), nullable=True)
 
     customer: Mapped[Customer] = relationship()
+    order: Mapped["Order | None"] = relationship()
 
 
 class OpenItem(Base):
@@ -59,3 +61,33 @@ class OpenItem(Base):
     amount_cents: Mapped[int] = mapped_column(Integer())
     payment_method: Mapped[str] = mapped_column(String(50))
     status: Mapped[str] = mapped_column(String(30), default="offen")
+
+
+class Order(Base):
+    __tablename__ = "orders"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    order_number: Mapped[str] = mapped_column(String(50))
+    customer_id: Mapped[int] = mapped_column(ForeignKey("customers.id"))
+    order_date: Mapped[str] = mapped_column(String(20))
+    delivery_date: Mapped[str] = mapped_column(String(20))
+    delivery_slot: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    tour_area: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    status: Mapped[str] = mapped_column(String(30), default="geplant")
+
+    customer: Mapped[Customer] = relationship()
+    lines: Mapped[list["OrderLine"]] = relationship(cascade="all, delete-orphan", order_by="OrderLine.id")
+
+
+class OrderLine(Base):
+    __tablename__ = "order_lines"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    order_id: Mapped[int] = mapped_column(ForeignKey("orders.id"))
+    product_id: Mapped[int | None] = mapped_column(ForeignKey("products.id"), nullable=True)
+    product_name: Mapped[str] = mapped_column(String(200))
+    quantity: Mapped[int] = mapped_column(Integer())
+    unit_price_cents: Mapped[int] = mapped_column(Integer())
+    deposit_cents: Mapped[int] = mapped_column(Integer(), default=0)
+
+    product: Mapped[Product | None] = relationship()

@@ -15,11 +15,12 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from ..schemas import DocumentCreate, DocumentLineItem
+from ..schemas import DocumentCreate, DocumentLineItem, OrderCreate, OrderLineCreate
 from ..services.customer_service import list_customers
 from ..services.document_service import create_document
 from ..services.excel_service import build_delivery_note_workbook, build_invoice_workbook
 from ..services.file_naming_service import build_document_paths
+from ..services.order_service import create_order, create_order_documents
 from ..services.pdf_service import build_document_pdf
 from ..services.product_service import list_active_products
 
@@ -30,6 +31,8 @@ DOCUMENT_FORM_ACTIONS = {
     "refreshMasterDataButton": "Stammdaten laden",
     "addLineItemButton": "Position hinzufuegen",
     "removeLineItemButton": "Position entfernen",
+    "saveOrderButton": "Auftrag speichern",
+    "createOrderDocumentsButton": "Lieferschein und Rechnung aus Auftrag",
     "createDocumentButton": "Excel und PDF erstellen",
 }
 
@@ -55,6 +58,12 @@ class DocumentPanel(QWidget):
         self.customer_folder.setPlaceholderText("Kundenordner auswaehlen oder eintragen")
         self.document_number = QLineEdit()
         self.document_number.setPlaceholderText("z. B. RG-1001")
+        self.order_number = QLineEdit()
+        self.order_number.setPlaceholderText("z. B. AUF-1001")
+        self.delivery_note_number = QLineEdit()
+        self.delivery_note_number.setPlaceholderText("z. B. LS-1001")
+        self.invoice_number = QLineEdit()
+        self.invoice_number.setPlaceholderText("z. B. RG-1001")
         self.delivery_date = QLineEdit()
         self.delivery_date.setPlaceholderText("YYYY-MM-DD")
         self.delivery_slot = QComboBox()
@@ -71,6 +80,7 @@ class DocumentPanel(QWidget):
         self.line_items_table.setHorizontalHeaderLabels(LINE_ITEM_COLUMNS)
         self.status_label = QLabel("Noch kein Beleg erzeugt.")
         self.status_label.setObjectName("muted")
+        self.current_order_id = None
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(32, 28, 32, 28)
@@ -90,6 +100,9 @@ class DocumentPanel(QWidget):
         form.addRow("Kunde", self.customer_name)
         form.addRow("Kundenordner", self._folder_row())
         form.addRow("Belegnummer", self.document_number)
+        form.addRow("Auftragsnummer", self.order_number)
+        form.addRow("Lieferscheinnummer", self.delivery_note_number)
+        form.addRow("Rechnungsnummer", self.invoice_number)
         form.addRow("Lieferdatum", self.delivery_date)
         form.addRow("Zeitfenster", self.delivery_slot)
         form.addRow("Produkt aus Preisliste", self.product_select)
@@ -105,11 +118,15 @@ class DocumentPanel(QWidget):
         self.refresh_master_data_button = self._button("refreshMasterDataButton")
         self.add_line_item_button = self._button("addLineItemButton")
         self.remove_line_item_button = self._button("removeLineItemButton")
+        self.save_order_button = self._button("saveOrderButton")
+        self.create_order_documents_button = self._button("createOrderDocumentsButton")
         self.create_button = self._button("createDocumentButton")
         action_row.addWidget(self.sample_button)
         action_row.addWidget(self.refresh_master_data_button)
         action_row.addWidget(self.add_line_item_button)
         action_row.addWidget(self.remove_line_item_button)
+        action_row.addWidget(self.save_order_button)
+        action_row.addWidget(self.create_order_documents_button)
         action_row.addWidget(self.create_button)
         action_row.addStretch()
         layout.addLayout(action_row)
@@ -120,6 +137,8 @@ class DocumentPanel(QWidget):
         self.refresh_master_data_button.clicked.connect(self.refresh_master_data)
         self.add_line_item_button.clicked.connect(self.add_line_item)
         self.remove_line_item_button.clicked.connect(self.remove_selected_line_item)
+        self.save_order_button.clicked.connect(self.save_order)
+        self.create_order_documents_button.clicked.connect(self.create_documents_from_order)
         self.create_button.clicked.connect(self.create_excel)
         self.customer_select.currentIndexChanged.connect(self.apply_selected_customer)
         self.product_select.currentIndexChanged.connect(self.apply_selected_product)
@@ -150,6 +169,9 @@ class DocumentPanel(QWidget):
         self.customer_name.setText("Cafe Nord")
         self.customer_folder.setText(str(sample_folder))
         self.document_number.setText("RG-1001")
+        self.order_number.setText("AUF-1001")
+        self.delivery_note_number.setText("LS-1001")
+        self.invoice_number.setText("RG-1001")
         self.delivery_date.setText("2026-06-21")
         self.delivery_slot.setCurrentText("vormittag")
         self.product_name.setText("Wasser 0,7")
@@ -275,6 +297,66 @@ class DocumentPanel(QWidget):
 
         self.status_label.setText(f"Excel und PDF erstellt: {output_path}")
 
+    def save_order(self) -> None:
+        if self.session_factory is None:
+            self.status_label.setText("Keine Datenbankverbindung vorhanden.")
+            return
+        customer_id = self.customer_select.currentData()
+        if customer_id is None:
+            self.status_label.setText("Bitte einen Kunden aus den Stammdaten auswaehlen.")
+            return
+
+        line_items = self._line_items_from_table()
+        if not line_items:
+            self.add_line_item()
+            line_items = self._line_items_from_table()
+        order_lines = self._order_lines_from_items(line_items)
+        if not order_lines:
+            self.status_label.setText("Bitte Produkte aus der Preisliste verwenden, um einen Auftrag zu speichern.")
+            return
+
+        session = self.session_factory()
+        try:
+            order = create_order(
+                session,
+                OrderCreate(
+                    order_number=self.order_number.text().strip(),
+                    customer_id=customer_id,
+                    order_date=self.delivery_date.text().strip() or "ohne-datum",
+                    delivery_date=self.delivery_date.text().strip() or "ohne-datum",
+                    delivery_slot=self.delivery_slot.currentText() or None,
+                    lines=order_lines,
+                ),
+            )
+            self.current_order_id = order.id
+            self.status_label.setText(f"Auftrag gespeichert: {order.order_number}")
+        finally:
+            session.close()
+
+    def create_documents_from_order(self) -> None:
+        if self.session_factory is None:
+            self.status_label.setText("Keine Datenbankverbindung vorhanden.")
+            return
+        if self.current_order_id is None:
+            self.save_order()
+        if self.current_order_id is None:
+            return
+
+        session = self.session_factory()
+        try:
+            documents = create_order_documents(
+                session,
+                order_id=self.current_order_id,
+                delivery_note_number=self.delivery_note_number.text().strip(),
+                invoice_number=self.invoice_number.text().strip(),
+                datev_upload_dir=Path.cwd() / "outputs" / "datev_upload",
+            )
+            self.status_label.setText(
+                f"Lieferschein und Rechnung erstellt: {documents[0].excel_path} / {documents[1].excel_path}"
+            )
+        finally:
+            session.close()
+
     def _line_items_from_table(self) -> list[dict]:
         line_items = []
         for row in range(self.line_items_table.rowCount()):
@@ -290,9 +372,32 @@ class DocumentPanel(QWidget):
                     "quantity": int(quantity_item.text()) if quantity_item is not None else 1,
                     "unit_price_cents": self._parse_euro_cents(price_item.text() if price_item is not None else "0"),
                     "deposit_cents": self._parse_euro_cents(deposit_item.text() if deposit_item is not None else "0"),
+                    "product_id": self._product_id_for_name(name_item.text().strip()),
                 }
             )
         return line_items
+
+    def _order_lines_from_items(self, line_items: list[dict]) -> list[OrderLineCreate]:
+        order_lines = []
+        for item in line_items:
+            product_id = item.get("product_id")
+            if product_id is None:
+                continue
+            order_lines.append(
+                OrderLineCreate(
+                    product_id=product_id,
+                    quantity=item["quantity"],
+                    unit_price_cents=item["unit_price_cents"],
+                    deposit_cents=item["deposit_cents"],
+                )
+            )
+        return order_lines
+
+    def _product_id_for_name(self, product_name: str) -> int | None:
+        for product_id, product in self.products_by_id.items():
+            if product.name == product_name:
+                return product_id
+        return None
 
     def _output_path(self) -> Path:
         paths = build_document_paths(

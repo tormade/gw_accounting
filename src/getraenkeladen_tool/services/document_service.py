@@ -46,6 +46,7 @@ def create_document(session: Session, payload: DocumentCreate, datev_upload_dir:
 
     document = Document(
         customer_id=customer.id,
+        order_id=payload.order_id,
         document_type=document_type,
         document_number=document_number,
         excel_path=str(paths.excel_path),

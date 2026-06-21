@@ -36,3 +36,22 @@ class DocumentCreate(BaseModel):
     delivery_date: str | None = None
     delivery_slot: str | None = None
     line_items: list[DocumentLineItem] = Field(min_length=1)
+    order_id: int | None = Field(default=None, gt=0)
+
+
+class OrderLineCreate(BaseModel):
+    product_id: int = Field(gt=0)
+    quantity: int = Field(gt=0)
+    unit_price_cents: int | None = Field(default=None, ge=0)
+    deposit_cents: int = Field(default=0, ge=0)
+
+
+class OrderCreate(BaseModel):
+    order_number: str = Field(min_length=1)
+    customer_id: int = Field(gt=0)
+    order_date: str = Field(min_length=1)
+    delivery_date: str = Field(min_length=1)
+    delivery_slot: str | None = None
+    tour_area: str | None = None
+    status: str = "geplant"
+    lines: list[OrderLineCreate] = Field(min_length=1)

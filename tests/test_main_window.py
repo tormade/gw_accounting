@@ -26,6 +26,8 @@ def test_document_tab_exposes_first_document_form_actions():
         "refreshMasterDataButton": "Stammdaten laden",
         "addLineItemButton": "Position hinzufuegen",
         "removeLineItemButton": "Position entfernen",
+        "saveOrderButton": "Auftrag speichern",
+        "createOrderDocumentsButton": "Lieferschein und Rechnung aus Auftrag",
         "createDocumentButton": "Excel und PDF erstellen",
     }
 
