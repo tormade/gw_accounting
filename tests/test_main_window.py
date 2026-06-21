@@ -10,6 +10,8 @@ def test_theme_uses_winklmeier_work_tool_direction():
     assert "#111111" in APP_STYLESHEET
     assert "#f5f5f2" in APP_STYLESHEET
     assert "#b91c1c" in APP_STYLESHEET
+    assert "guidanceBox" in APP_STYLESHEET
+    assert "sectionBox" in APP_STYLESHEET
 
 
 def test_brand_assets_are_available():
@@ -33,7 +35,7 @@ def test_document_tab_exposes_first_document_form_actions():
 
 
 def test_order_tab_exposes_guided_order_actions():
-    from getraenkeladen_tool.ui.order_panel import ORDER_PANEL_ACTIONS
+    from getraenkeladen_tool.ui.order_panel import ORDER_GUIDANCE_STEPS, ORDER_PANEL_ACTIONS, ORDER_PANEL_SECTIONS
 
     assert ORDER_PANEL_ACTIONS == {
         "refreshOrderDataButton": "Stammdaten laden",
@@ -43,6 +45,17 @@ def test_order_tab_exposes_guided_order_actions():
         "createOrderDocumentsButton": "Lieferschein und Rechnung erzeugen",
         "refreshOrdersButton": "Auftragsliste laden",
     }
+    assert ORDER_PANEL_SECTIONS == (
+        "1. Kunde und Lieferung",
+        "2. Positionen",
+        "3. Belege erzeugen",
+        "Vorhandene Auftraege",
+    )
+    assert ORDER_GUIDANCE_STEPS == (
+        "Stammdaten laden und Kunden waehlen.",
+        "Produkte mit Menge als Positionen hinzufuegen.",
+        "Auftrag speichern und daraus Lieferschein plus Rechnung erzeugen.",
+    )
 
 
 def test_customer_tab_exposes_master_data_actions():

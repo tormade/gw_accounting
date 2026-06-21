@@ -3,6 +3,7 @@ from pathlib import Path
 from PySide6.QtWidgets import (
     QComboBox,
     QFormLayout,
+    QGroupBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -31,6 +32,17 @@ ORDER_PANEL_ACTIONS = {
 
 ORDER_LINE_COLUMNS = ("Produkt", "Menge", "Preis EUR", "Pfand EUR")
 ORDER_COLUMNS = ("Auftrag", "Kunde", "Lieferdatum", "Zeitfenster", "Status")
+ORDER_PANEL_SECTIONS = (
+    "1. Kunde und Lieferung",
+    "2. Positionen",
+    "3. Belege erzeugen",
+    "Vorhandene Auftraege",
+)
+ORDER_GUIDANCE_STEPS = (
+    "Stammdaten laden und Kunden waehlen.",
+    "Produkte mit Menge als Positionen hinzufuegen.",
+    "Auftrag speichern und daraus Lieferschein plus Rechnung erzeugen.",
+)
 
 
 class OrderPanel(QWidget):
@@ -80,44 +92,85 @@ class OrderPanel(QWidget):
         muted.setObjectName("muted")
         layout.addWidget(muted)
 
-        form = QFormLayout()
-        form.addRow("1. Kunde", self.customer_select)
-        form.addRow("Auftragsnummer", self.order_number)
-        form.addRow("Lieferdatum", self.delivery_date)
-        form.addRow("Zeitfenster", self.delivery_slot)
-        form.addRow("Lieferscheinnummer", self.delivery_note_number)
-        form.addRow("Rechnungsnummer", self.invoice_number)
-        form.addRow("2. Produkt", self.product_select)
-        form.addRow("Menge", self.quantity)
-        form.addRow("Preis EUR", self.unit_price_eur)
-        form.addRow("Pfand EUR", self.deposit_eur)
-        layout.addLayout(form)
+        layout.addWidget(self._guidance_box())
 
-        layout.addWidget(QLabel("Positionen im Auftrag"))
-        layout.addWidget(self.order_lines_table)
-
-        action_row = QHBoxLayout()
         self.refresh_data_button = self._button("refreshOrderDataButton")
         self.add_line_button = self._button("addOrderLineButton")
         self.remove_line_button = self._button("removeOrderLineButton")
         self.save_order_button = self._button("saveOrderButton")
         self.create_documents_button = self._button("createOrderDocumentsButton")
         self.refresh_orders_button = self._button("refreshOrdersButton")
-        for button in (
-            self.refresh_data_button,
-            self.add_line_button,
-            self.remove_line_button,
-            self.save_order_button,
-            self.create_documents_button,
-            self.refresh_orders_button,
-        ):
-            action_row.addWidget(button)
-        action_row.addStretch()
-        layout.addLayout(action_row)
-        layout.addWidget(self.status_label)
 
-        layout.addWidget(QLabel("Vorhandene Auftraege"))
-        layout.addWidget(self.orders_table)
+        workspace = QHBoxLayout()
+        workspace.setSpacing(18)
+        left_column = QVBoxLayout()
+        left_column.setSpacing(14)
+        right_column = QVBoxLayout()
+        right_column.setSpacing(14)
+        workspace.addLayout(left_column, 1)
+        workspace.addLayout(right_column, 1)
+        layout.addLayout(workspace)
+
+        customer_box, customer_layout = self._section(
+            ORDER_PANEL_SECTIONS[0],
+            "Zuerst Stammdaten laden, dann Kunde, Lieferdatum und Nummern erfassen.",
+        )
+        customer_form = QFormLayout()
+        customer_form.addRow("Kunde", self.customer_select)
+        customer_form.addRow("Auftragsnummer", self.order_number)
+        customer_form.addRow("Lieferdatum", self.delivery_date)
+        customer_form.addRow("Zeitfenster", self.delivery_slot)
+        customer_form.addRow("Lieferscheinnummer", self.delivery_note_number)
+        customer_form.addRow("Rechnungsnummer", self.invoice_number)
+        customer_layout.addLayout(customer_form)
+        customer_actions = QHBoxLayout()
+        customer_actions.addWidget(self.refresh_data_button)
+        customer_actions.addStretch()
+        customer_layout.addLayout(customer_actions)
+        left_column.addWidget(customer_box)
+
+        position_box, position_layout = self._section(
+            ORDER_PANEL_SECTIONS[1],
+            "Produkt waehlen, Menge pruefen und als Position in den Auftrag uebernehmen.",
+        )
+        position_form = QFormLayout()
+        position_form.addRow("Produkt", self.product_select)
+        position_form.addRow("Menge", self.quantity)
+        position_form.addRow("Preis EUR", self.unit_price_eur)
+        position_form.addRow("Pfand EUR", self.deposit_eur)
+        position_layout.addLayout(position_form)
+        position_actions = QHBoxLayout()
+        position_actions.addWidget(self.add_line_button)
+        position_actions.addWidget(self.remove_line_button)
+        position_actions.addStretch()
+        position_layout.addLayout(position_actions)
+        position_layout.addWidget(QLabel("Positionen im Auftrag"))
+        position_layout.addWidget(self.order_lines_table)
+        left_column.addWidget(position_box)
+
+        document_box, document_layout = self._section(
+            ORDER_PANEL_SECTIONS[2],
+            "Wenn alle Positionen stimmen: Auftrag speichern und daraus die Belege erzeugen.",
+        )
+        document_actions = QHBoxLayout()
+        document_actions.addWidget(self.save_order_button)
+        document_actions.addWidget(self.create_documents_button)
+        document_actions.addStretch()
+        document_layout.addLayout(document_actions)
+        right_column.addWidget(document_box)
+
+        orders_box, orders_layout = self._section(
+            ORDER_PANEL_SECTIONS[3],
+            "Vorhandenen Auftrag doppelt anklicken, um danach die Belege zu erzeugen.",
+        )
+        orders_actions = QHBoxLayout()
+        orders_actions.addWidget(self.refresh_orders_button)
+        orders_actions.addStretch()
+        orders_layout.addLayout(orders_actions)
+        orders_layout.addWidget(self.orders_table)
+        right_column.addWidget(orders_box)
+
+        layout.addWidget(self.status_label)
 
         self.refresh_data_button.clicked.connect(self.refresh_master_data)
         self.add_line_button.clicked.connect(self.add_order_line)
@@ -132,6 +185,35 @@ class OrderPanel(QWidget):
         button = QPushButton(ORDER_PANEL_ACTIONS[object_name])
         button.setObjectName(object_name)
         return button
+
+    def _guidance_box(self) -> QWidget:
+        box = QWidget()
+        box.setObjectName("guidanceBox")
+        layout = QVBoxLayout(box)
+        layout.setSpacing(8)
+
+        title = QLabel("So erstellen Sie einen Auftrag")
+        title.setObjectName("stepTitle")
+        layout.addWidget(title)
+
+        for index, step in enumerate(ORDER_GUIDANCE_STEPS, start=1):
+            label = QLabel(f"{index}. {step}")
+            label.setObjectName("stepText")
+            layout.addWidget(label)
+
+        return box
+
+    def _section(self, title: str, subtitle: str) -> tuple[QGroupBox, QVBoxLayout]:
+        box = QGroupBox(title)
+        box.setObjectName("sectionBox")
+        layout = QVBoxLayout(box)
+        layout.setSpacing(10)
+
+        subtitle_label = QLabel(subtitle)
+        subtitle_label.setObjectName("sectionSubtitle")
+        subtitle_label.setWordWrap(True)
+        layout.addWidget(subtitle_label)
+        return box, layout
 
     def refresh_master_data(self) -> None:
         if self.session_factory is None:
