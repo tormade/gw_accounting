@@ -49,3 +49,40 @@ def test_create_invoice_writes_excel_pdf_file_and_open_item(session, tmp_path: P
     assert open_item.amount_cents == 16290
     assert open_item.payment_method == "SEPA"
     assert open_item.status == "offen"
+
+
+def test_create_invoice_supports_multiple_line_items(session, tmp_path: Path):
+    customer = create_customer(
+        session,
+        CustomerCreate(
+            name="Mehrpositionen Kunde",
+            folder_path=str(tmp_path / "Kunden" / "Mehrpositionen Kunde"),
+            payment_method="Ueberweisung",
+        ),
+    )
+
+    create_document(
+        session,
+        DocumentCreate(
+            customer_id=customer.id,
+            document_type="Rechnung",
+            document_number="RG-1002",
+            line_items=[
+                DocumentLineItem(
+                    name="Wasser 0,7",
+                    quantity=2,
+                    unit_price_cents=1299,
+                    deposit_cents=330,
+                ),
+                DocumentLineItem(
+                    name="Apfelschorle",
+                    quantity=3,
+                    unit_price_cents=1499,
+                    deposit_cents=330,
+                ),
+            ],
+        ),
+    )
+
+    open_item = session.query(OpenItem).one()
+    assert open_item.amount_cents == 8745
