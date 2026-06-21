@@ -86,11 +86,11 @@ class DocumentPanel(QWidget):
         layout.setContentsMargins(32, 28, 32, 28)
         layout.setSpacing(14)
 
-        headline = QLabel("Belege")
+        headline = QLabel("Direktbelege")
         headline.setObjectName("headline")
         layout.addWidget(headline)
 
-        muted = QLabel("Erste Arbeitsmaske fuer Rechnung oder Lieferschein aus der Winklmeier-Excel-Vorlage")
+        muted = QLabel("Sonderweg fuer einzelne Rechnung oder einzelnen Lieferschein ohne gespeicherten Auftrag")
         muted.setObjectName("muted")
         layout.addWidget(muted)
 

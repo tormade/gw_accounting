@@ -3,7 +3,7 @@ from getraenkeladen_tool.ui.theme import APP_STYLESHEET
 
 
 def test_main_window_exposes_first_version_tabs():
-    assert MAIN_TABS == ("Kunden", "Produkte", "Belege", "Listen")
+    assert MAIN_TABS == ("Kunden", "Produkte", "Auftraege", "Belege", "Listen")
 
 
 def test_theme_uses_winklmeier_work_tool_direction():
@@ -29,6 +29,19 @@ def test_document_tab_exposes_first_document_form_actions():
         "saveOrderButton": "Auftrag speichern",
         "createOrderDocumentsButton": "Lieferschein und Rechnung aus Auftrag",
         "createDocumentButton": "Excel und PDF erstellen",
+    }
+
+
+def test_order_tab_exposes_guided_order_actions():
+    from getraenkeladen_tool.ui.order_panel import ORDER_PANEL_ACTIONS
+
+    assert ORDER_PANEL_ACTIONS == {
+        "refreshOrderDataButton": "Stammdaten laden",
+        "addOrderLineButton": "Position hinzufuegen",
+        "removeOrderLineButton": "Position entfernen",
+        "saveOrderButton": "Auftrag speichern",
+        "createOrderDocumentsButton": "Lieferschein und Rechnung erzeugen",
+        "refreshOrdersButton": "Auftragsliste laden",
     }
 
 
