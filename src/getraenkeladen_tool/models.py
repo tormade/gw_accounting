@@ -20,6 +20,7 @@ class Customer(Base):
     delivery_notes: Mapped[str | None] = mapped_column(Text(), nullable=True)
     opening_hours: Mapped[str | None] = mapped_column(Text(), nullable=True)
     internal_notes: Mapped[str | None] = mapped_column(Text(), nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean(), default=True)
 
 
 class Product(Base):

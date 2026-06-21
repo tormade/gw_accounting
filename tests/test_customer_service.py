@@ -1,5 +1,12 @@
 from getraenkeladen_tool.schemas import CustomerCreate
-from getraenkeladen_tool.services.customer_service import create_customer, list_customers
+from getraenkeladen_tool.services.customer_service import (
+    archive_customer,
+    create_customer,
+    list_active_customers,
+    list_customers,
+    restore_customer,
+    update_customer,
+)
 
 
 def test_create_customer_requires_name_and_folder(session):
@@ -18,3 +25,42 @@ def test_list_customers_returns_customers_sorted_by_name(session):
     customers = list_customers(session)
 
     assert [customer.name for customer in customers] == ["Cafe Nord", "Zoo Bar"]
+
+
+def test_update_customer_changes_existing_master_data(session):
+    customer = create_customer(
+        session,
+        CustomerCreate(name="Cafe Nord", folder_path="Kunden/Cafe Nord"),
+    )
+
+    updated = update_customer(
+        session,
+        customer.id,
+        CustomerCreate(
+            name="Cafe Nord GmbH",
+            folder_path="Kunden/Cafe Nord GmbH",
+            payment_method="SEPA",
+        ),
+    )
+
+    assert updated.id == customer.id
+    assert updated.name == "Cafe Nord GmbH"
+    assert updated.folder_path == "Kunden/Cafe Nord GmbH"
+    assert updated.payment_method == "SEPA"
+
+
+def test_archive_customer_hides_from_active_list_and_restore_reactivates(session):
+    customer = create_customer(
+        session,
+        CustomerCreate(name="Cafe Nord", folder_path="Kunden/Cafe Nord"),
+    )
+
+    archived = archive_customer(session, customer.id)
+
+    assert archived.is_active is False
+    assert list_active_customers(session) == []
+
+    restored = restore_customer(session, customer.id)
+
+    assert restored.is_active is True
+    assert list_active_customers(session) == [restored]

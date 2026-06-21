@@ -21,12 +21,16 @@ def create_session_factory(config: AppConfig) -> sessionmaker:
 
 def _add_missing_columns(engine) -> None:
     inspector = inspect(engine)
-    if "documents" not in inspector.get_table_names():
-        return
+    table_names = inspector.get_table_names()
 
-    document_columns = {column["name"] for column in inspector.get_columns("documents")}
     with engine.begin() as connection:
-        if "datev_export_path" not in document_columns:
-            connection.execute(text("ALTER TABLE documents ADD COLUMN datev_export_path VARCHAR(500)"))
-        if "order_id" not in document_columns:
-            connection.execute(text("ALTER TABLE documents ADD COLUMN order_id INTEGER"))
+        if "documents" in table_names:
+            document_columns = {column["name"] for column in inspector.get_columns("documents")}
+            if "datev_export_path" not in document_columns:
+                connection.execute(text("ALTER TABLE documents ADD COLUMN datev_export_path VARCHAR(500)"))
+            if "order_id" not in document_columns:
+                connection.execute(text("ALTER TABLE documents ADD COLUMN order_id INTEGER"))
+        if "customers" in table_names:
+            customer_columns = {column["name"] for column in inspector.get_columns("customers")}
+            if "is_active" not in customer_columns:
+                connection.execute(text("ALTER TABLE customers ADD COLUMN is_active BOOLEAN DEFAULT 1 NOT NULL"))

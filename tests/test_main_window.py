@@ -37,6 +37,10 @@ def test_customer_tab_exposes_master_data_actions():
 
     assert CUSTOMER_PANEL_ACTIONS == {
         "saveCustomerButton": "Kunde speichern",
+        "refreshCustomersButton": "Kundenliste laden",
+        "loadCustomerButton": "Auswahl bearbeiten",
+        "archiveCustomerButton": "Kunde archivieren",
+        "restoreCustomerButton": "Kunde wiederherstellen",
         "chooseCustomerFolderButton": "Ordner waehlen",
     }
 
@@ -46,7 +50,10 @@ def test_product_tab_exposes_price_list_actions():
 
     assert PRODUCT_PANEL_ACTIONS == {
         "saveProductButton": "Produkt speichern",
+        "refreshProductsButton": "Produktliste laden",
+        "loadProductButton": "Auswahl bearbeiten",
         "deactivateProductButton": "Produkt deaktivieren",
+        "restoreProductButton": "Produkt wiederherstellen",
     }
 
 

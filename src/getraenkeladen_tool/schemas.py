@@ -12,6 +12,7 @@ class CustomerCreate(BaseModel):
     delivery_notes: str | None = None
     opening_hours: str | None = None
     internal_notes: str | None = None
+    is_active: bool = True
 
 
 class ProductCreate(BaseModel):

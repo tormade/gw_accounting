@@ -61,6 +61,14 @@ def _seed_customers(session: Session, base_output_dir: Path, target_date: str) -
             delivery_notes="Bestellung per Mail anfragen",
             opening_hours="Rezeption durchgehend besetzt",
         ),
+        CustomerCreate(
+            name="Archivkunde Beispiel",
+            folder_path=str(base_output_dir / "Kunden" / "Archivkunde Beispiel"),
+            address="Alte Str. 99",
+            payment_method="Ueberweisung",
+            delivery_notes="Beispiel fuer versehentlich archivierten Kunden",
+            is_active=False,
+        ),
     ]
     created = 0
     for customer in customers:
@@ -76,6 +84,13 @@ def _seed_products(session: Session) -> int:
         ProductCreate(name="Apfelschorle 12x1,0", unit="Kiste", standard_price_cents=1499, article_number="A-100"),
         ProductCreate(name="Helles 20x0,5", unit="Kiste", standard_price_cents=1899, article_number="B-200"),
         ProductCreate(name="Wasser 12x0,7", unit="Kiste", standard_price_cents=1299, article_number="W-070"),
+        ProductCreate(
+            name="Archivprodukt Beispiel",
+            unit="Kiste",
+            standard_price_cents=999,
+            article_number="ALT-1",
+            is_active=False,
+        ),
     ]
     created = 0
     for product in products:
