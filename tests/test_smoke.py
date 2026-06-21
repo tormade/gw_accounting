@@ -15,6 +15,9 @@ class FakeApplication:
     def setApplicationName(self, name):
         self._application_name = name
 
+    def setStyleSheet(self, _stylesheet):
+        pass
+
     def applicationName(self):
         return self._application_name
 
