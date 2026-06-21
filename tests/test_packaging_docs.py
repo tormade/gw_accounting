@@ -1,4 +1,5 @@
 from pathlib import Path
+import tomllib
 
 
 def test_readme_mentions_windows_packaging():
@@ -17,3 +18,9 @@ def test_windows_packaging_script_includes_required_assets():
     assert "templates" in script
     assert "assets/brand" in script
     assert Path("assets/app-icon.ico").exists()
+
+
+def test_pyside_dependency_is_pinned_below_known_bad_cocoa_plugin_version():
+    project = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))
+
+    assert "PySide6>=6.10,<6.11" in project["project"]["dependencies"]
