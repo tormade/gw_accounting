@@ -17,8 +17,9 @@ CLAIM_PATH = BRAND_DIR / "wir-bringens-einfach-schwarz.png"
 
 
 class MainWindow(QMainWindow):
-    def __init__(self) -> None:
+    def __init__(self, session_factory=None) -> None:
         super().__init__()
+        self.session_factory = session_factory
         self.setWindowTitle("Getraenke Winklmeier")
         self.resize(1040, 680)
 
@@ -29,10 +30,10 @@ class MainWindow(QMainWindow):
         root_layout.addWidget(self._header())
 
         self.tabs = QTabWidget()
-        self.tabs.addTab(CustomerPanel(), "Kunden")
-        self.tabs.addTab(ProductPanel(), "Produkte")
-        self.tabs.addTab(DocumentPanel(), "Belege")
-        self.tabs.addTab(ReportPanel(), "Listen")
+        self.tabs.addTab(CustomerPanel(session_factory=session_factory), "Kunden")
+        self.tabs.addTab(ProductPanel(session_factory=session_factory), "Produkte")
+        self.tabs.addTab(DocumentPanel(session_factory=session_factory), "Belege")
+        self.tabs.addTab(ReportPanel(session_factory=session_factory), "Listen")
         root_layout.addWidget(self.tabs)
         self.setCentralWidget(root)
 

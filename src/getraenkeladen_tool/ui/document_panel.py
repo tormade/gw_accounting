@@ -24,8 +24,9 @@ DOCUMENT_FORM_ACTIONS = {
 
 
 class DocumentPanel(QWidget):
-    def __init__(self) -> None:
+    def __init__(self, session_factory=None) -> None:
         super().__init__()
+        self.session_factory = session_factory
 
         self.document_type = QComboBox()
         self.document_type.addItems(["Rechnung", "Lieferschein"])

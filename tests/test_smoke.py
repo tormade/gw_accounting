@@ -1,4 +1,4 @@
-from getraenkeladen_tool.app import create_app
+from getraenkeladen_tool.app import create_app, create_runtime
 
 
 class FakeApplication:
@@ -28,3 +28,10 @@ def test_create_app_returns_qapplication(monkeypatch):
     app = create_app()
 
     assert app.applicationName() == "Getraenkeladen Tool"
+
+
+def test_create_runtime_bootstraps_local_database(tmp_path):
+    runtime = create_runtime(base_dir=tmp_path)
+
+    assert runtime.config.database_path.exists()
+    assert runtime.session_factory is not None

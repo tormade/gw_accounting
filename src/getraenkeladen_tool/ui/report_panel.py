@@ -18,8 +18,9 @@ OPEN_ITEMS_COLUMNS = ("Kunde", "Rechnungsnr.", "Betrag", "Zahlungsart", "Status"
 
 
 class ReportPanel(QWidget):
-    def __init__(self) -> None:
+    def __init__(self, session_factory=None) -> None:
         super().__init__()
+        self.session_factory = session_factory
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(32, 28, 32, 28)

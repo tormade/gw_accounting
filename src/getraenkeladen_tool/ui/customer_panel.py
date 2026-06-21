@@ -8,8 +8,9 @@ CUSTOMER_PANEL_ACTIONS = {
 
 
 class CustomerPanel(QWidget):
-    def __init__(self) -> None:
+    def __init__(self, session_factory=None) -> None:
         super().__init__()
+        self.session_factory = session_factory
 
         self.customer_name = QLineEdit()
         self.customer_name.setPlaceholderText("z. B. Cafe Nord")

@@ -8,8 +8,9 @@ PRODUCT_PANEL_ACTIONS = {
 
 
 class ProductPanel(QWidget):
-    def __init__(self) -> None:
+    def __init__(self, session_factory=None) -> None:
         super().__init__()
+        self.session_factory = session_factory
 
         self.product_name = QLineEdit()
         self.product_name.setPlaceholderText("z. B. Wasser 0,7")
