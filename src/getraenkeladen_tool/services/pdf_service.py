@@ -1,6 +1,10 @@
+import json
 from pathlib import Path
 
 from .file_service import ensure_parent_folder
+
+
+LETTERHEAD_PATH = Path(__file__).resolve().parents[3] / "templates" / "briefkopf.json"
 
 
 def build_document_pdf(
@@ -11,8 +15,12 @@ def build_document_pdf(
     line_items: list[dict],
 ) -> None:
     ensure_parent_folder(output_path)
+    letterhead = _load_letterhead()
     lines = [
-        "Getraenke Winklmeier",
+        letterhead["sender"],
+        letterhead["claim"],
+        letterhead["phone"],
+        "",
         document_title,
         f"Belegnummer: {document_number}",
         f"Kunde: {customer_name}",
@@ -27,6 +35,10 @@ def build_document_pdf(
         )
 
     _write_simple_pdf(output_path, lines)
+
+
+def _load_letterhead() -> dict[str, str]:
+    return json.loads(LETTERHEAD_PATH.read_text(encoding="utf-8"))
 
 
 def _write_simple_pdf(output_path: Path, lines: list[str]) -> None:
