@@ -131,6 +131,7 @@ class ProductPanel(QWidget):
         self.deactivate_button.clicked.connect(self.deactivate_current_product)
         self.restore_button.clicked.connect(self.restore_selected_product)
         self.products_table.itemDoubleClicked.connect(lambda _item: self.load_selected_product())
+        self.refresh_products()
 
     def _button(self, object_name: str) -> QPushButton:
         button = QPushButton(PRODUCT_PANEL_ACTIONS[object_name])

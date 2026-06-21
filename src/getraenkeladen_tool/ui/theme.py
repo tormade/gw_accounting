@@ -118,7 +118,8 @@ QLabel#statusBox {
 
 QLineEdit,
 QComboBox,
-QSpinBox {
+QSpinBox,
+QDateEdit {
     min-height: 30px;
     font-size: 14px;
 }

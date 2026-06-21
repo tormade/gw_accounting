@@ -21,6 +21,7 @@ from ..services.customer_service import (
     restore_customer,
     update_customer,
 )
+from .date_input import DateInput, to_display_date
 
 
 CUSTOMER_PANEL_ACTIONS = {
@@ -39,6 +40,7 @@ CUSTOMER_GUIDANCE_STEPS = (
     "Mit Auswahl bearbeiten Stammdaten in das Formular laden.",
     "Archivieren statt loeschen, damit versehentliche Aenderungen rueckgaengig bleiben.",
 )
+DATE_FIELD_WIDGETS = ("next_contact_date",)
 
 
 class CustomerPanel(QWidget):
@@ -55,8 +57,7 @@ class CustomerPanel(QWidget):
         self.address = QLineEdit()
         self.payment_method = QLineEdit()
         self.payment_method.setPlaceholderText("SEPA oder Ueberweisung")
-        self.next_contact_date = QLineEdit()
-        self.next_contact_date.setPlaceholderText("YYYY-MM-DD")
+        self.next_contact_date = DateInput()
         self.delivery_notes = QLineEdit()
         self.status_label = QLabel("Noch kein Kunde gespeichert.")
         self.status_label.setObjectName("muted")
@@ -134,6 +135,7 @@ class CustomerPanel(QWidget):
         self.archive_button.clicked.connect(self.archive_selected_customer)
         self.restore_button.clicked.connect(self.restore_selected_customer)
         self.customers_table.itemDoubleClicked.connect(lambda _item: self.load_selected_customer())
+        self.refresh_customers()
 
     def _folder_row(self) -> QWidget:
         row = QWidget()
@@ -218,7 +220,7 @@ class CustomerPanel(QWidget):
                 customer.name,
                 customer.address or "",
                 customer.payment_method or "",
-                customer.next_contact_date or "",
+                to_display_date(customer.next_contact_date),
                 "aktiv" if customer.is_active else "archiviert",
             )
             for column, value in enumerate(values):
@@ -242,7 +244,7 @@ class CustomerPanel(QWidget):
             self.folder_path.setText(customer.folder_path)
             self.address.setText(customer.address or "")
             self.payment_method.setText(customer.payment_method or "")
-            self.next_contact_date.setText(customer.next_contact_date or "")
+            self.next_contact_date.set_iso_date(customer.next_contact_date)
             self.delivery_notes.setText(customer.delivery_notes or "")
             self.status_label.setText(f"Kunde geladen: {customer.name}")
         finally:
@@ -279,6 +281,6 @@ class CustomerPanel(QWidget):
             folder_path=self.folder_path.text().strip(),
             address=self.address.text().strip() or None,
             payment_method=self.payment_method.text().strip() or None,
-            next_contact_date=self.next_contact_date.text().strip() or None,
+            next_contact_date=self.next_contact_date.iso_date() or None,
             delivery_notes=self.delivery_notes.text().strip() or None,
         )

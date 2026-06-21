@@ -1,4 +1,5 @@
 from pathlib import Path
+from datetime import date
 
 from PySide6.QtWidgets import (
     QFormLayout,
@@ -12,6 +13,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from .date_input import DateInput, to_display_date
 from ..services.report_service import (
     export_daily_deliveries_csv,
     export_due_contacts_csv,
@@ -38,6 +40,7 @@ REPORT_PANEL_ACTIONS = {
 OPEN_ITEMS_COLUMNS = ("Kunde", "Rechnungsnr.", "Betrag", "Zahlungsart", "Status")
 DELIVERY_COLUMNS = ("Datum", "Zeitfenster", "Belegnr.", "Kunde", "Adresse", "Hinweise")
 CONTACT_COLUMNS = ("Kontakttermin", "Kunde", "E-Mail", "Hinweise")
+DATE_FIELD_WIDGETS = ("target_date",)
 
 
 class ReportPanel(QWidget):
@@ -58,8 +61,7 @@ class ReportPanel(QWidget):
         muted.setObjectName("muted")
         layout.addWidget(muted)
 
-        self.target_date = QLineEdit("2026-06-21")
-        self.target_date.setPlaceholderText("YYYY-MM-DD")
+        self.target_date = DateInput(date.today().isoformat())
         form = QFormLayout()
         form.addRow("Stichtag", self.target_date)
         layout.addLayout(form)
@@ -118,6 +120,7 @@ class ReportPanel(QWidget):
         self.export_open_items_button.clicked.connect(self.export_open_items)
         self.export_deliveries_button.clicked.connect(self.export_deliveries)
         self.export_contacts_button.clicked.connect(self.export_contacts)
+        self.refresh_all_lists()
 
     def _button(self, object_name: str) -> QPushButton:
         button = QPushButton(REPORT_PANEL_ACTIONS[object_name])
@@ -131,13 +134,14 @@ class ReportPanel(QWidget):
 
         session = self.session_factory()
         try:
-            result = seed_demo_workflow(session, self._outputs_dir(), self.target_date.text().strip())
+            result = seed_demo_workflow(session, self._outputs_dir(), self._target_date())
             self.show_open_items(list_open_items(session))
-            self.show_deliveries(list_daily_deliveries(session, self.target_date.text().strip()))
-            self.show_contacts(list_due_contacts(session, self.target_date.text().strip()))
+            self.show_deliveries(list_daily_deliveries(session, self._target_date()))
+            self.show_contacts(list_due_contacts(session, self._target_date()))
             self.status_label.setText(
                 "Beispieldaten angelegt: "
                 f"{result.created_customers} Kunden, {result.created_products} Produkte, "
+                f"{result.created_orders} Auftraege, "
                 f"{result.created_documents} Belege."
             )
         finally:
@@ -163,7 +167,7 @@ class ReportPanel(QWidget):
         self.deliveries_table.setRowCount(len(deliveries))
         for row, document in enumerate(deliveries):
             values = (
-                document.delivery_date or "",
+                to_display_date(document.delivery_date),
                 document.delivery_slot or "",
                 document.document_number,
                 document.customer.name,
@@ -177,7 +181,7 @@ class ReportPanel(QWidget):
         self.contacts_table.setRowCount(len(contacts))
         for row, customer in enumerate(contacts):
             values = (
-                customer.next_contact_date or "",
+                to_display_date(customer.next_contact_date),
                 customer.name,
                 customer.contact_email or "",
                 customer.delivery_notes or "",
@@ -203,7 +207,7 @@ class ReportPanel(QWidget):
 
         session = self.session_factory()
         try:
-            self.show_deliveries(list_daily_deliveries(session, self.target_date.text().strip()))
+            self.show_deliveries(list_daily_deliveries(session, self._target_date()))
         finally:
             session.close()
 
@@ -214,7 +218,7 @@ class ReportPanel(QWidget):
 
         session = self.session_factory()
         try:
-            self.show_contacts(list_due_contacts(session, self.target_date.text().strip()))
+            self.show_contacts(list_due_contacts(session, self._target_date()))
         finally:
             session.close()
 
@@ -252,10 +256,10 @@ class ReportPanel(QWidget):
         if self.session_factory is None:
             self.status_label.setText("Keine Datenbankverbindung vorhanden.")
             return
-        output_path = self._list_path(f"lieferliste_{self.target_date.text().strip()}.csv")
+        output_path = self._list_path(f"lieferliste_{self._target_date()}.csv")
         session = self.session_factory()
         try:
-            export_daily_deliveries_csv(session, self.target_date.text().strip(), output_path)
+            export_daily_deliveries_csv(session, self._target_date(), output_path)
             self.status_label.setText(f"Lieferliste exportiert: {output_path}")
         finally:
             session.close()
@@ -264,10 +268,10 @@ class ReportPanel(QWidget):
         if self.session_factory is None:
             self.status_label.setText("Keine Datenbankverbindung vorhanden.")
             return
-        output_path = self._list_path(f"kontaktliste_{self.target_date.text().strip()}.csv")
+        output_path = self._list_path(f"kontaktliste_{self._target_date()}.csv")
         session = self.session_factory()
         try:
-            export_due_contacts_csv(session, self.target_date.text().strip(), output_path)
+            export_due_contacts_csv(session, self._target_date(), output_path)
             self.status_label.setText(f"Kontaktliste exportiert: {output_path}")
         finally:
             session.close()
@@ -281,3 +285,11 @@ class ReportPanel(QWidget):
 
     def _list_path(self, filename: str) -> Path:
         return self._outputs_dir() / "listen" / filename
+
+    def refresh_all_lists(self) -> None:
+        self.refresh_open_items()
+        self.refresh_deliveries()
+        self.refresh_contacts()
+
+    def _target_date(self) -> str:
+        return self.target_date.iso_date() or date.today().isoformat()

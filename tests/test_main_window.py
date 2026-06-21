@@ -14,6 +14,18 @@ def test_theme_uses_winklmeier_work_tool_direction():
     assert "sectionBox" in APP_STYLESHEET
 
 
+def test_date_fields_use_calendar_input():
+    from getraenkeladen_tool.ui.customer_panel import DATE_FIELD_WIDGETS as CUSTOMER_DATE_FIELDS
+    from getraenkeladen_tool.ui.document_panel import DATE_FIELD_WIDGETS as DOCUMENT_DATE_FIELDS
+    from getraenkeladen_tool.ui.order_panel import DATE_FIELD_WIDGETS as ORDER_DATE_FIELDS
+    from getraenkeladen_tool.ui.report_panel import DATE_FIELD_WIDGETS as REPORT_DATE_FIELDS
+
+    assert CUSTOMER_DATE_FIELDS == ("next_contact_date",)
+    assert DOCUMENT_DATE_FIELDS == ("delivery_date",)
+    assert ORDER_DATE_FIELDS == ("delivery_date",)
+    assert REPORT_DATE_FIELDS == ("target_date",)
+
+
 def test_brand_assets_are_available():
     assert LOGO_PATH.exists()
     assert CLAIM_PATH.exists()

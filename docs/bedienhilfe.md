@@ -25,6 +25,8 @@ Der normale Ablauf ist:
 
 Die vorgeschlagenen Auftrags-, Lieferschein- und Rechnungsnummern koennen immer ueberschrieben werden. Wenn eine hoehere Nummer manuell eingetragen und gespeichert wird, zaehlt die App beim naechsten Vorschlag von dieser Nummer aus weiter.
 
+Datumsfelder koennen entweder ueber den Kalender ausgewaehlt oder direkt im Format TT.MM.JJJJ eingetragen werden, zum Beispiel 21.06.2026.
+
 Der normale Ablauf fuer Positionen ist:
 
 1. Produkt waehlen.

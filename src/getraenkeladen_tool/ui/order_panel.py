@@ -1,4 +1,5 @@
 from pathlib import Path
+from datetime import date
 
 from PySide6.QtWidgets import (
     QComboBox,
@@ -20,6 +21,7 @@ from ..services.customer_service import list_active_customers
 from ..services.numbering_service import suggest_next_numbers
 from ..services.order_service import create_order, create_order_documents, list_active_orders
 from ..services.product_service import list_active_products
+from .date_input import DateInput, to_display_date
 
 
 ORDER_PANEL_ACTIONS = {
@@ -45,6 +47,7 @@ ORDER_GUIDANCE_STEPS = (
     "Produkte mit Menge als Positionen hinzufuegen.",
     "Auftrag speichern und daraus Lieferschein plus Rechnung erzeugen.",
 )
+DATE_FIELD_WIDGETS = ("delivery_date",)
 
 
 class OrderPanel(QWidget):
@@ -62,8 +65,7 @@ class OrderPanel(QWidget):
         self.product_select.addItem("Bitte Produkt waehlen", None)
         self.order_number = QLineEdit()
         self.order_number.setPlaceholderText("z. B. AUF-1001")
-        self.delivery_date = QLineEdit()
-        self.delivery_date.setPlaceholderText("YYYY-MM-DD")
+        self.delivery_date = DateInput(date.today().isoformat())
         self.delivery_slot = QComboBox()
         self.delivery_slot.addItems(["", "vormittag", "nachmittag", "ganztags"])
         self.delivery_note_number = QLineEdit()
@@ -185,6 +187,9 @@ class OrderPanel(QWidget):
         self.refresh_orders_button.clicked.connect(self.refresh_orders)
         self.product_select.currentIndexChanged.connect(self.apply_selected_product)
         self.orders_table.itemDoubleClicked.connect(lambda _item: self.load_selected_order_id())
+        self.refresh_master_data()
+        self.refresh_orders()
+        self.suggest_numbers()
 
     def _button(self, object_name: str) -> QPushButton:
         button = QPushButton(ORDER_PANEL_ACTIONS[object_name])
@@ -317,8 +322,8 @@ class OrderPanel(QWidget):
                 OrderCreate(
                     order_number=self.order_number.text().strip(),
                     customer_id=customer_id,
-                    order_date=self.delivery_date.text().strip() or "ohne-datum",
-                    delivery_date=self.delivery_date.text().strip() or "ohne-datum",
+                    order_date=self.delivery_date.iso_date() or "ohne-datum",
+                    delivery_date=self.delivery_date.iso_date() or "ohne-datum",
                     delivery_slot=self.delivery_slot.currentText() or None,
                     lines=order_lines,
                 ),
@@ -372,7 +377,7 @@ class OrderPanel(QWidget):
             values = (
                 order.order_number,
                 order.customer.name,
-                order.delivery_date,
+                to_display_date(order.delivery_date),
                 order.delivery_slot or "",
                 order.status,
             )

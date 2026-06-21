@@ -1,4 +1,5 @@
 from pathlib import Path
+from datetime import date
 
 from PySide6.QtWidgets import (
     QComboBox,
@@ -23,6 +24,7 @@ from ..services.file_naming_service import build_document_paths
 from ..services.order_service import create_order, create_order_documents
 from ..services.pdf_service import build_document_pdf
 from ..services.product_service import list_active_products
+from .date_input import DateInput
 
 
 DOCUMENT_FORM_ACTIONS = {
@@ -37,6 +39,7 @@ DOCUMENT_FORM_ACTIONS = {
 }
 
 LINE_ITEM_COLUMNS = ("Produkt", "Menge", "Preis EUR", "Pfand EUR")
+DATE_FIELD_WIDGETS = ("delivery_date",)
 
 
 class DocumentPanel(QWidget):
@@ -64,8 +67,7 @@ class DocumentPanel(QWidget):
         self.delivery_note_number.setPlaceholderText("z. B. LS-1001")
         self.invoice_number = QLineEdit()
         self.invoice_number.setPlaceholderText("z. B. RG-1001")
-        self.delivery_date = QLineEdit()
-        self.delivery_date.setPlaceholderText("YYYY-MM-DD")
+        self.delivery_date = DateInput(date.today().isoformat())
         self.delivery_slot = QComboBox()
         self.delivery_slot.addItems(["", "vormittag", "nachmittag", "ganztags"])
         self.product_name = QLineEdit()
@@ -142,6 +144,7 @@ class DocumentPanel(QWidget):
         self.create_button.clicked.connect(self.create_excel)
         self.customer_select.currentIndexChanged.connect(self.apply_selected_customer)
         self.product_select.currentIndexChanged.connect(self.apply_selected_product)
+        self.refresh_master_data()
 
     def _folder_row(self) -> QWidget:
         row = QWidget()
@@ -172,7 +175,7 @@ class DocumentPanel(QWidget):
         self.order_number.setText("AUF-1001")
         self.delivery_note_number.setText("LS-1001")
         self.invoice_number.setText("RG-1001")
-        self.delivery_date.setText("2026-06-21")
+        self.delivery_date.set_iso_date("2026-06-21")
         self.delivery_slot.setCurrentText("vormittag")
         self.product_name.setText("Wasser 0,7")
         self.quantity.setValue(10)
@@ -262,7 +265,7 @@ class DocumentPanel(QWidget):
                         customer_id=customer_id,
                         document_type=self.document_type.currentText(),
                         document_number=self.document_number.text().strip(),
-                        delivery_date=self.delivery_date.text().strip() or None,
+                        delivery_date=self.delivery_date.iso_date() or None,
                         delivery_slot=self.delivery_slot.currentText() or None,
                         line_items=[
                             DocumentLineItem(
@@ -322,8 +325,8 @@ class DocumentPanel(QWidget):
                 OrderCreate(
                     order_number=self.order_number.text().strip(),
                     customer_id=customer_id,
-                    order_date=self.delivery_date.text().strip() or "ohne-datum",
-                    delivery_date=self.delivery_date.text().strip() or "ohne-datum",
+                    order_date=self.delivery_date.iso_date() or "ohne-datum",
+                    delivery_date=self.delivery_date.iso_date() or "ohne-datum",
                     delivery_slot=self.delivery_slot.currentText() or None,
                     lines=order_lines,
                 ),
@@ -405,7 +408,7 @@ class DocumentPanel(QWidget):
             document_type=self.document_type.currentText(),
             document_number=self.document_number.text().strip(),
             customer_name=self.customer_name.text().strip(),
-            document_date=self.delivery_date.text().strip() or "ohne-datum",
+            document_date=self.delivery_date.iso_date() or "ohne-datum",
         )
         return paths.excel_path
 
