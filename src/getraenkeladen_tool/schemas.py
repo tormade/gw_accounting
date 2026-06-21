@@ -5,7 +5,13 @@ class CustomerCreate(BaseModel):
     name: str = Field(min_length=1)
     folder_path: str = Field(min_length=1)
     address: str | None = None
+    contact_name: str | None = None
+    contact_email: str | None = None
     payment_method: str | None = None
+    next_contact_date: str | None = None
+    delivery_notes: str | None = None
+    opening_hours: str | None = None
+    internal_notes: str | None = None
 
 
 class ProductCreate(BaseModel):
@@ -25,4 +31,6 @@ class DocumentCreate(BaseModel):
     customer_id: int = Field(gt=0)
     document_type: str = Field(min_length=1)
     document_number: str = Field(min_length=1)
+    delivery_date: str | None = None
+    delivery_slot: str | None = None
     line_items: list[DocumentLineItem] = Field(min_length=1)

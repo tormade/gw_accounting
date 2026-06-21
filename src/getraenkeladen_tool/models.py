@@ -42,6 +42,7 @@ class Document(Base):
     document_number: Mapped[str] = mapped_column(String(50))
     excel_path: Mapped[str] = mapped_column(String(500))
     pdf_path: Mapped[str] = mapped_column(String(500))
+    delivery_date: Mapped[str | None] = mapped_column(String(20), nullable=True)
     delivery_slot: Mapped[str | None] = mapped_column(String(30), nullable=True)
 
     customer: Mapped[Customer] = relationship()

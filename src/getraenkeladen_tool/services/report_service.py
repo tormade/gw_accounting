@@ -1,7 +1,7 @@
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from ..models import OpenItem
+from ..models import Customer, Document, OpenItem
 
 
 def list_open_items(session: Session) -> list[OpenItem]:
@@ -23,3 +23,23 @@ def mark_open_item_paid(session: Session, open_item_id: int) -> OpenItem:
     session.commit()
     session.refresh(open_item)
     return open_item
+
+
+def list_due_contacts(session: Session, target_date: str) -> list[Customer]:
+    return list(
+        session.scalars(
+            select(Customer)
+            .where(Customer.next_contact_date == target_date)
+            .order_by(Customer.name)
+        )
+    )
+
+
+def list_daily_deliveries(session: Session, target_date: str) -> list[Document]:
+    return list(
+        session.scalars(
+            select(Document)
+            .where(Document.delivery_date == target_date)
+            .order_by(Document.delivery_slot, Document.document_number)
+        )
+    )

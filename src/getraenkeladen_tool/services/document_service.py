@@ -40,6 +40,8 @@ def create_document(session: Session, payload: DocumentCreate) -> Document:
         document_number=document_number,
         excel_path=str(excel_path),
         pdf_path=str(pdf_path),
+        delivery_date=payload.delivery_date,
+        delivery_slot=payload.delivery_slot,
     )
     session.add(document)
     session.flush()
