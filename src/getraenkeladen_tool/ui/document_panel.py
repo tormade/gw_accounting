@@ -19,6 +19,7 @@ from ..schemas import DocumentCreate, DocumentLineItem
 from ..services.customer_service import list_customers
 from ..services.document_service import create_document
 from ..services.excel_service import build_delivery_note_workbook, build_invoice_workbook
+from ..services.pdf_service import build_document_pdf
 from ..services.product_service import list_active_products
 
 
@@ -28,7 +29,7 @@ DOCUMENT_FORM_ACTIONS = {
     "refreshMasterDataButton": "Stammdaten laden",
     "addLineItemButton": "Position hinzufuegen",
     "removeLineItemButton": "Position entfernen",
-    "createDocumentButton": "Excel erstellen",
+    "createDocumentButton": "Excel und PDF erstellen",
 }
 
 LINE_ITEM_COLUMNS = ("Produkt", "Menge", "Preis EUR", "Pfand EUR")
@@ -53,6 +54,10 @@ class DocumentPanel(QWidget):
         self.customer_folder.setPlaceholderText("Kundenordner auswaehlen oder eintragen")
         self.document_number = QLineEdit()
         self.document_number.setPlaceholderText("z. B. RG-1001")
+        self.delivery_date = QLineEdit()
+        self.delivery_date.setPlaceholderText("YYYY-MM-DD")
+        self.delivery_slot = QComboBox()
+        self.delivery_slot.addItems(["", "vormittag", "nachmittag", "ganztags"])
         self.product_name = QLineEdit()
         self.product_name.setPlaceholderText("z. B. Wasser 0,7")
         self.quantity = QSpinBox()
@@ -84,6 +89,8 @@ class DocumentPanel(QWidget):
         form.addRow("Kunde", self.customer_name)
         form.addRow("Kundenordner", self._folder_row())
         form.addRow("Belegnummer", self.document_number)
+        form.addRow("Lieferdatum", self.delivery_date)
+        form.addRow("Zeitfenster", self.delivery_slot)
         form.addRow("Produkt aus Preisliste", self.product_select)
         form.addRow("Produkt", self.product_name)
         form.addRow("Menge", self.quantity)
@@ -142,6 +149,8 @@ class DocumentPanel(QWidget):
         self.customer_name.setText("Cafe Nord")
         self.customer_folder.setText(str(sample_folder))
         self.document_number.setText("RG-1001")
+        self.delivery_date.setText("2026-06-21")
+        self.delivery_slot.setCurrentText("vormittag")
         self.product_name.setText("Wasser 0,7")
         self.quantity.setValue(10)
         self.unit_price_eur.setText("12,99")
@@ -230,6 +239,8 @@ class DocumentPanel(QWidget):
                         customer_id=customer_id,
                         document_type=self.document_type.currentText(),
                         document_number=self.document_number.text().strip(),
+                        delivery_date=self.delivery_date.text().strip() or None,
+                        delivery_slot=self.delivery_slot.currentText() or None,
                         line_items=[
                             DocumentLineItem(
                                 name=item["name"],
@@ -251,8 +262,16 @@ class DocumentPanel(QWidget):
             build_invoice_workbook(output_path, self.customer_name.text().strip(), self.document_number.text().strip(), line_items)
         else:
             build_delivery_note_workbook(output_path, self.customer_name.text().strip(), self.document_number.text().strip(), line_items)
+        pdf_path = output_path.with_suffix(".pdf")
+        build_document_pdf(
+            pdf_path,
+            self.document_type.currentText(),
+            self.customer_name.text().strip(),
+            self.document_number.text().strip(),
+            line_items,
+        )
 
-        self.status_label.setText(f"Excel-Datei erstellt: {output_path}")
+        self.status_label.setText(f"Excel und PDF erstellt: {output_path}")
 
     def _line_items_from_table(self) -> list[dict]:
         line_items = []

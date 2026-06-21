@@ -26,7 +26,7 @@ def test_document_tab_exposes_first_document_form_actions():
         "refreshMasterDataButton": "Stammdaten laden",
         "addLineItemButton": "Position hinzufuegen",
         "removeLineItemButton": "Position entfernen",
-        "createDocumentButton": "Excel erstellen",
+        "createDocumentButton": "Excel und PDF erstellen",
     }
 
 
@@ -48,10 +48,16 @@ def test_product_tab_exposes_price_list_actions():
     }
 
 
-def test_report_tab_exposes_open_items_actions():
+def test_report_tab_exposes_reporting_actions():
     from getraenkeladen_tool.ui.report_panel import REPORT_PANEL_ACTIONS
 
     assert REPORT_PANEL_ACTIONS == {
+        "seedDemoDataButton": "Beispieldaten anlegen",
         "refreshOpenItemsButton": "Offene Posten aktualisieren",
         "markPaidButton": "Zahlung markieren",
+        "refreshDeliveriesButton": "Lieferliste laden",
+        "refreshContactsButton": "Kontaktliste laden",
+        "exportOpenItemsButton": "Offene Posten exportieren",
+        "exportDeliveriesButton": "Lieferliste exportieren",
+        "exportContactsButton": "Kontaktliste exportieren",
     }

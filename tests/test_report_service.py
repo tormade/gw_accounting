@@ -4,6 +4,9 @@ from getraenkeladen_tool.schemas import CustomerCreate, DocumentCreate, Document
 from getraenkeladen_tool.services.customer_service import create_customer
 from getraenkeladen_tool.services.document_service import create_document
 from getraenkeladen_tool.services.report_service import (
+    export_daily_deliveries_csv,
+    export_due_contacts_csv,
+    export_open_items_csv,
     list_daily_deliveries,
     list_due_contacts,
     list_open_items,
@@ -106,3 +109,98 @@ def test_list_daily_deliveries_filters_by_delivery_date_and_slot(session, tmp_pa
     assert deliveries[0].customer.name == "Gasthof Sued"
     assert deliveries[0].document_number == "LS-2001"
     assert deliveries[0].delivery_slot == "vormittag"
+
+
+def test_export_open_items_csv_writes_payment_overview(session, tmp_path: Path):
+    customer = create_customer(
+        session,
+        CustomerCreate(
+            name="Cafe Nord",
+            folder_path=str(tmp_path / "Kunden" / "Cafe Nord"),
+            payment_method="SEPA",
+        ),
+    )
+    create_document(
+        session,
+        DocumentCreate(
+            customer_id=customer.id,
+            document_type="Rechnung",
+            document_number="RG-1005",
+            line_items=[
+                DocumentLineItem(
+                    name="Wasser 0,7",
+                    quantity=2,
+                    unit_price_cents=1299,
+                    deposit_cents=330,
+                )
+            ],
+        ),
+    )
+
+    output_path = export_open_items_csv(session, tmp_path / "offene_posten.csv")
+
+    assert output_path.exists()
+    assert output_path.read_text(encoding="utf-8").splitlines() == [
+        "Kunde;Rechnungsnr.;Betrag EUR;Zahlungsart;Status",
+        "Cafe Nord;RG-1005;32,58;SEPA;offen",
+    ]
+
+
+def test_export_daily_deliveries_csv_includes_customer_notes(session, tmp_path: Path):
+    customer = create_customer(
+        session,
+        CustomerCreate(
+            name="Gasthof Sued",
+            folder_path=str(tmp_path / "Kunden" / "Gasthof Sued"),
+            address="Dorfstr. 1",
+            delivery_notes="Hofeinfahrt nutzen",
+            opening_hours="ab 9 Uhr",
+        ),
+    )
+    create_document(
+        session,
+        DocumentCreate(
+            customer_id=customer.id,
+            document_type="Lieferschein",
+            document_number="LS-2002",
+            delivery_date="2026-06-21",
+            delivery_slot="vormittag",
+            line_items=[
+                DocumentLineItem(
+                    name="Apfelschorle",
+                    quantity=4,
+                    unit_price_cents=1499,
+                    deposit_cents=330,
+                )
+            ],
+        ),
+    )
+
+    output_path = export_daily_deliveries_csv(session, "2026-06-21", tmp_path / "lieferliste.csv")
+
+    assert output_path.exists()
+    assert output_path.read_text(encoding="utf-8").splitlines() == [
+        "Datum;Zeitfenster;Belegnr.;Kunde;Adresse;Hinweise;Oeffnungszeiten",
+        "2026-06-21;vormittag;LS-2002;Gasthof Sued;Dorfstr. 1;Hofeinfahrt nutzen;ab 9 Uhr",
+    ]
+
+
+def test_export_due_contacts_csv_writes_contact_request_list(session, tmp_path: Path):
+    create_customer(
+        session,
+        CustomerCreate(
+            name="Hotel Blau",
+            folder_path=str(tmp_path / "Kunden" / "Hotel Blau"),
+            contact_email="bestellung@hotel-blau.test",
+            next_contact_date="2026-06-21",
+            delivery_notes="Bestellung per Mail anfragen",
+        ),
+    )
+
+    output_path = export_due_contacts_csv(session, "2026-06-21", tmp_path / "kontakte.csv")
+
+    assert output_path.exists()
+    assert output_path.read_text(encoding="utf-8").splitlines() == [
+        "Kontakttermin;Kunde;E-Mail;Hinweise",
+        "2026-06-21;Hotel Blau;bestellung@hotel-blau.test;Bestellung per Mail anfragen",
+    ]

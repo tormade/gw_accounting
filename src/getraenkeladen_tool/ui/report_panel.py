@@ -1,6 +1,10 @@
+from pathlib import Path
+
 from PySide6.QtWidgets import (
+    QFormLayout,
     QHBoxLayout,
     QLabel,
+    QLineEdit,
     QPushButton,
     QTableWidget,
     QTableWidgetItem,
@@ -8,15 +12,32 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from ..services.report_service import list_open_items, mark_open_item_paid
+from ..services.report_service import (
+    export_daily_deliveries_csv,
+    export_due_contacts_csv,
+    export_open_items_csv,
+    list_daily_deliveries,
+    list_due_contacts,
+    list_open_items,
+    mark_open_item_paid,
+)
+from ..services.sample_data_service import seed_demo_workflow
 
 
 REPORT_PANEL_ACTIONS = {
+    "seedDemoDataButton": "Beispieldaten anlegen",
     "refreshOpenItemsButton": "Offene Posten aktualisieren",
     "markPaidButton": "Zahlung markieren",
+    "refreshDeliveriesButton": "Lieferliste laden",
+    "refreshContactsButton": "Kontaktliste laden",
+    "exportOpenItemsButton": "Offene Posten exportieren",
+    "exportDeliveriesButton": "Lieferliste exportieren",
+    "exportContactsButton": "Kontaktliste exportieren",
 }
 
 OPEN_ITEMS_COLUMNS = ("Kunde", "Rechnungsnr.", "Betrag", "Zahlungsart", "Status")
+DELIVERY_COLUMNS = ("Datum", "Zeitfenster", "Belegnr.", "Kunde", "Adresse", "Hinweise")
+CONTACT_COLUMNS = ("Kontakttermin", "Kunde", "E-Mail", "Hinweise")
 
 
 class ReportPanel(QWidget):
@@ -37,35 +58,97 @@ class ReportPanel(QWidget):
         muted.setObjectName("muted")
         layout.addWidget(muted)
 
+        self.target_date = QLineEdit("2026-06-21")
+        self.target_date.setPlaceholderText("YYYY-MM-DD")
+        form = QFormLayout()
+        form.addRow("Stichtag", self.target_date)
+        layout.addLayout(form)
+
         self.open_items_table = QTableWidget(0, len(OPEN_ITEMS_COLUMNS))
         self.open_items_table.setHorizontalHeaderLabels(OPEN_ITEMS_COLUMNS)
+        layout.addWidget(QLabel("Offene Posten"))
         layout.addWidget(self.open_items_table)
 
+        self.deliveries_table = QTableWidget(0, len(DELIVERY_COLUMNS))
+        self.deliveries_table.setHorizontalHeaderLabels(DELIVERY_COLUMNS)
+        layout.addWidget(QLabel("Tageslieferungen"))
+        layout.addWidget(self.deliveries_table)
+
+        self.contacts_table = QTableWidget(0, len(CONTACT_COLUMNS))
+        self.contacts_table.setHorizontalHeaderLabels(CONTACT_COLUMNS)
+        layout.addWidget(QLabel("Kontaktliste"))
+        layout.addWidget(self.contacts_table)
+
         action_row = QHBoxLayout()
+        self.seed_button = self._button("seedDemoDataButton")
         self.refresh_button = self._button("refreshOpenItemsButton")
         self.mark_paid_button = self._button("markPaidButton")
-        action_row.addWidget(self.refresh_button)
-        action_row.addWidget(self.mark_paid_button)
+        self.refresh_deliveries_button = self._button("refreshDeliveriesButton")
+        self.refresh_contacts_button = self._button("refreshContactsButton")
+        for button in (
+            self.seed_button,
+            self.refresh_button,
+            self.mark_paid_button,
+            self.refresh_deliveries_button,
+            self.refresh_contacts_button,
+        ):
+            action_row.addWidget(button)
         action_row.addStretch()
         layout.addLayout(action_row)
 
-        self.status_label = QLabel("Noch keine offenen Posten geladen.")
+        export_row = QHBoxLayout()
+        self.export_open_items_button = self._button("exportOpenItemsButton")
+        self.export_deliveries_button = self._button("exportDeliveriesButton")
+        self.export_contacts_button = self._button("exportContactsButton")
+        export_row.addWidget(self.export_open_items_button)
+        export_row.addWidget(self.export_deliveries_button)
+        export_row.addWidget(self.export_contacts_button)
+        export_row.addStretch()
+        layout.addLayout(export_row)
+
+        self.status_label = QLabel("Noch keine Listen geladen.")
         self.status_label.setObjectName("muted")
         layout.addWidget(self.status_label)
+
+        self.seed_button.clicked.connect(self.seed_demo_data)
         self.refresh_button.clicked.connect(self.refresh_open_items)
         self.mark_paid_button.clicked.connect(self.mark_selected_paid)
+        self.refresh_deliveries_button.clicked.connect(self.refresh_deliveries)
+        self.refresh_contacts_button.clicked.connect(self.refresh_contacts)
+        self.export_open_items_button.clicked.connect(self.export_open_items)
+        self.export_deliveries_button.clicked.connect(self.export_deliveries)
+        self.export_contacts_button.clicked.connect(self.export_contacts)
 
     def _button(self, object_name: str) -> QPushButton:
         button = QPushButton(REPORT_PANEL_ACTIONS[object_name])
         button.setObjectName(object_name)
         return button
 
+    def seed_demo_data(self) -> None:
+        if self.session_factory is None:
+            self.status_label.setText("Keine Datenbankverbindung vorhanden.")
+            return
+
+        session = self.session_factory()
+        try:
+            result = seed_demo_workflow(session, self._outputs_dir(), self.target_date.text().strip())
+            self.show_open_items(list_open_items(session))
+            self.show_deliveries(list_daily_deliveries(session, self.target_date.text().strip()))
+            self.show_contacts(list_due_contacts(session, self.target_date.text().strip()))
+            self.status_label.setText(
+                "Beispieldaten angelegt: "
+                f"{result.created_customers} Kunden, {result.created_products} Produkte, "
+                f"{result.created_documents} Belege."
+            )
+        finally:
+            session.close()
+
     def show_open_items(self, open_items: list) -> None:
         self.open_item_ids_by_row = {}
         self.open_items_table.setRowCount(len(open_items))
         for row, item in enumerate(open_items):
             self.open_item_ids_by_row[row] = item.id
-            amount = f"{item.amount_cents / 100:.2f} EUR"
+            amount = f"{item.amount_cents / 100:.2f} EUR".replace(".", ",")
             values = (
                 item.customer_name,
                 item.document_number,
@@ -73,9 +156,34 @@ class ReportPanel(QWidget):
                 item.payment_method,
                 item.status,
             )
-            for column, value in enumerate(values):
-                self.open_items_table.setItem(row, column, QTableWidgetItem(value))
+            self._set_row(self.open_items_table, row, values)
         self.status_label.setText(f"{len(open_items)} offene Posten geladen.")
+
+    def show_deliveries(self, deliveries: list) -> None:
+        self.deliveries_table.setRowCount(len(deliveries))
+        for row, document in enumerate(deliveries):
+            values = (
+                document.delivery_date or "",
+                document.delivery_slot or "",
+                document.document_number,
+                document.customer.name,
+                document.customer.address or "",
+                document.customer.delivery_notes or "",
+            )
+            self._set_row(self.deliveries_table, row, values)
+        self.status_label.setText(f"{len(deliveries)} Tageslieferungen geladen.")
+
+    def show_contacts(self, contacts: list) -> None:
+        self.contacts_table.setRowCount(len(contacts))
+        for row, customer in enumerate(contacts):
+            values = (
+                customer.next_contact_date or "",
+                customer.name,
+                customer.contact_email or "",
+                customer.delivery_notes or "",
+            )
+            self._set_row(self.contacts_table, row, values)
+        self.status_label.setText(f"{len(contacts)} Kontakte geladen.")
 
     def refresh_open_items(self) -> None:
         if self.session_factory is None:
@@ -85,6 +193,28 @@ class ReportPanel(QWidget):
         session = self.session_factory()
         try:
             self.show_open_items(list_open_items(session))
+        finally:
+            session.close()
+
+    def refresh_deliveries(self) -> None:
+        if self.session_factory is None:
+            self.status_label.setText("Keine Datenbankverbindung vorhanden.")
+            return
+
+        session = self.session_factory()
+        try:
+            self.show_deliveries(list_daily_deliveries(session, self.target_date.text().strip()))
+        finally:
+            session.close()
+
+    def refresh_contacts(self) -> None:
+        if self.session_factory is None:
+            self.status_label.setText("Keine Datenbankverbindung vorhanden.")
+            return
+
+        session = self.session_factory()
+        try:
+            self.show_contacts(list_due_contacts(session, self.target_date.text().strip()))
         finally:
             session.close()
 
@@ -105,3 +235,49 @@ class ReportPanel(QWidget):
             self.show_open_items(list_open_items(session))
         finally:
             session.close()
+
+    def export_open_items(self) -> None:
+        if self.session_factory is None:
+            self.status_label.setText("Keine Datenbankverbindung vorhanden.")
+            return
+        output_path = self._list_path("offene_posten.csv")
+        session = self.session_factory()
+        try:
+            export_open_items_csv(session, output_path)
+            self.status_label.setText(f"Offene Posten exportiert: {output_path}")
+        finally:
+            session.close()
+
+    def export_deliveries(self) -> None:
+        if self.session_factory is None:
+            self.status_label.setText("Keine Datenbankverbindung vorhanden.")
+            return
+        output_path = self._list_path(f"lieferliste_{self.target_date.text().strip()}.csv")
+        session = self.session_factory()
+        try:
+            export_daily_deliveries_csv(session, self.target_date.text().strip(), output_path)
+            self.status_label.setText(f"Lieferliste exportiert: {output_path}")
+        finally:
+            session.close()
+
+    def export_contacts(self) -> None:
+        if self.session_factory is None:
+            self.status_label.setText("Keine Datenbankverbindung vorhanden.")
+            return
+        output_path = self._list_path(f"kontaktliste_{self.target_date.text().strip()}.csv")
+        session = self.session_factory()
+        try:
+            export_due_contacts_csv(session, self.target_date.text().strip(), output_path)
+            self.status_label.setText(f"Kontaktliste exportiert: {output_path}")
+        finally:
+            session.close()
+
+    def _set_row(self, table: QTableWidget, row: int, values: tuple[str, ...]) -> None:
+        for column, value in enumerate(values):
+            table.setItem(row, column, QTableWidgetItem(value))
+
+    def _outputs_dir(self) -> Path:
+        return Path.cwd() / "outputs"
+
+    def _list_path(self, filename: str) -> Path:
+        return self._outputs_dir() / "listen" / filename
