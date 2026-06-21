@@ -15,3 +15,13 @@ def test_theme_uses_winklmeier_work_tool_direction():
 def test_brand_assets_are_available():
     assert LOGO_PATH.exists()
     assert CLAIM_PATH.exists()
+
+
+def test_document_tab_exposes_first_document_form_actions():
+    from getraenkeladen_tool.ui.document_panel import DOCUMENT_FORM_ACTIONS
+
+    assert DOCUMENT_FORM_ACTIONS == {
+        "sampleDocumentButton": "Beispiel laden",
+        "chooseCustomerFolderButton": "Ordner waehlen",
+        "createDocumentButton": "Excel erstellen",
+    }
