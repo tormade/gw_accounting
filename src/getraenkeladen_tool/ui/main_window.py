@@ -4,7 +4,9 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import QLabel, QMainWindow, QPushButton, QTabWidget, QVBoxLayout, QWidget
 
+from .customer_panel import CustomerPanel
 from .document_panel import DocumentPanel
+from .product_panel import ProductPanel
 from .report_panel import ReportPanel
 
 
@@ -27,8 +29,8 @@ class MainWindow(QMainWindow):
         root_layout.addWidget(self._header())
 
         self.tabs = QTabWidget()
-        self.tabs.addTab(self._panel("Kunden", "Stammdaten, Lieferhinweise und Kontakttermine"), "Kunden")
-        self.tabs.addTab(self._panel("Produkte", "Zentrale Artikelliste und Standardpreise"), "Produkte")
+        self.tabs.addTab(CustomerPanel(), "Kunden")
+        self.tabs.addTab(ProductPanel(), "Produkte")
         self.tabs.addTab(DocumentPanel(), "Belege")
         self.tabs.addTab(ReportPanel(), "Listen")
         root_layout.addWidget(self.tabs)

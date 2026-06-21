@@ -27,6 +27,24 @@ def test_document_tab_exposes_first_document_form_actions():
     }
 
 
+def test_customer_tab_exposes_master_data_actions():
+    from getraenkeladen_tool.ui.customer_panel import CUSTOMER_PANEL_ACTIONS
+
+    assert CUSTOMER_PANEL_ACTIONS == {
+        "saveCustomerButton": "Kunde speichern",
+        "chooseCustomerFolderButton": "Ordner waehlen",
+    }
+
+
+def test_product_tab_exposes_price_list_actions():
+    from getraenkeladen_tool.ui.product_panel import PRODUCT_PANEL_ACTIONS
+
+    assert PRODUCT_PANEL_ACTIONS == {
+        "saveProductButton": "Produkt speichern",
+        "deactivateProductButton": "Produkt deaktivieren",
+    }
+
+
 def test_report_tab_exposes_open_items_actions():
     from getraenkeladen_tool.ui.report_panel import REPORT_PANEL_ACTIONS
 
