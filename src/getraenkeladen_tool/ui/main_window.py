@@ -5,6 +5,7 @@ from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import QLabel, QMainWindow, QPushButton, QTabWidget, QVBoxLayout, QWidget
 
 from .document_panel import DocumentPanel
+from .report_panel import ReportPanel
 
 
 MAIN_TABS = ("Kunden", "Produkte", "Belege", "Listen")
@@ -29,7 +30,7 @@ class MainWindow(QMainWindow):
         self.tabs.addTab(self._panel("Kunden", "Stammdaten, Lieferhinweise und Kontakttermine"), "Kunden")
         self.tabs.addTab(self._panel("Produkte", "Zentrale Artikelliste und Standardpreise"), "Produkte")
         self.tabs.addTab(DocumentPanel(), "Belege")
-        self.tabs.addTab(self._panel("Listen", "Offene Posten, Tageslieferungen und Kontaktliste"), "Listen")
+        self.tabs.addTab(ReportPanel(), "Listen")
         root_layout.addWidget(self.tabs)
         self.setCentralWidget(root)
 

@@ -25,3 +25,12 @@ def test_document_tab_exposes_first_document_form_actions():
         "chooseCustomerFolderButton": "Ordner waehlen",
         "createDocumentButton": "Excel erstellen",
     }
+
+
+def test_report_tab_exposes_open_items_actions():
+    from getraenkeladen_tool.ui.report_panel import REPORT_PANEL_ACTIONS
+
+    assert REPORT_PANEL_ACTIONS == {
+        "refreshOpenItemsButton": "Offene Posten aktualisieren",
+        "markPaidButton": "Zahlung markieren",
+    }
