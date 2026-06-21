@@ -24,3 +24,10 @@ def test_pyside_dependency_is_pinned_below_known_bad_cocoa_plugin_version():
     project = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))
 
     assert "PySide6>=6.10,<6.11" in project["project"]["dependencies"]
+
+
+def test_package_discovery_uses_src_layout():
+    project = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))
+
+    assert project["build-system"]["build-backend"] == "setuptools.build_meta"
+    assert project["tool"]["setuptools"]["packages"]["find"]["where"] == ["src"]

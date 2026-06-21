@@ -7,7 +7,21 @@ Local Windows desktop app for a beverage store, built with Python 3.12 and PySid
 Install the app with development dependencies:
 
 ```bash
-python -m pip install -e ".[dev]"
+python -m pip install ".[dev]"
+```
+
+Start the app from the installed package:
+
+```bash
+python -m getraenkeladen_tool
+```
+
+If you want VS Code to run the current source files directly while developing,
+use the included "Getraenkeladen Tool" launch configuration. From the terminal,
+the equivalent command is:
+
+```bash
+PYTHONPATH=src python -m getraenkeladen_tool
 ```
 
 Run tests:
