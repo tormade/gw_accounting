@@ -17,10 +17,20 @@ Wenn hier etwas angezeigt wird, ist das der naechste Arbeitsvorrat. Danach wechs
 Der normale Ablauf ist:
 
 1. Stammdaten laden und Kunden waehlen.
-2. Lieferdatum, Zeitfenster und Nummern eintragen.
-3. Produkt waehlen, Menge pruefen und Position hinzufuegen.
-4. Auftrag speichern.
-5. Lieferschein und Rechnung erzeugen.
+2. Nummern vorschlagen lassen oder manuell eintragen.
+3. Lieferdatum und Zeitfenster eintragen.
+4. Produkt waehlen, Menge pruefen und Position hinzufuegen.
+5. Auftrag speichern.
+6. Lieferschein und Rechnung erzeugen.
+
+Die vorgeschlagenen Auftrags-, Lieferschein- und Rechnungsnummern koennen immer ueberschrieben werden. Wenn eine hoehere Nummer manuell eingetragen und gespeichert wird, zaehlt die App beim naechsten Vorschlag von dieser Nummer aus weiter.
+
+Der normale Ablauf fuer Positionen ist:
+
+1. Produkt waehlen.
+2. Menge pruefen.
+3. Position hinzufuegen.
+4. Bei Bedarf weitere Positionen hinzufuegen.
 
 Wenn etwas fehlt, zeigt die Statuszeile unten an, was als Naechstes zu tun ist.
 

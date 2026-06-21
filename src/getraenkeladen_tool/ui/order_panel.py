@@ -17,12 +17,14 @@ from PySide6.QtWidgets import (
 
 from ..schemas import OrderCreate, OrderLineCreate
 from ..services.customer_service import list_active_customers
+from ..services.numbering_service import suggest_next_numbers
 from ..services.order_service import create_order, create_order_documents, list_active_orders
 from ..services.product_service import list_active_products
 
 
 ORDER_PANEL_ACTIONS = {
     "refreshOrderDataButton": "Stammdaten laden",
+    "suggestNumbersButton": "Nummern vorschlagen",
     "addOrderLineButton": "Position hinzufuegen",
     "removeOrderLineButton": "Position entfernen",
     "saveOrderButton": "Auftrag speichern",
@@ -95,6 +97,7 @@ class OrderPanel(QWidget):
         layout.addWidget(self._guidance_box())
 
         self.refresh_data_button = self._button("refreshOrderDataButton")
+        self.suggest_numbers_button = self._button("suggestNumbersButton")
         self.add_line_button = self._button("addOrderLineButton")
         self.remove_line_button = self._button("removeOrderLineButton")
         self.save_order_button = self._button("saveOrderButton")
@@ -125,6 +128,7 @@ class OrderPanel(QWidget):
         customer_layout.addLayout(customer_form)
         customer_actions = QHBoxLayout()
         customer_actions.addWidget(self.refresh_data_button)
+        customer_actions.addWidget(self.suggest_numbers_button)
         customer_actions.addStretch()
         customer_layout.addLayout(customer_actions)
         left_column.addWidget(customer_box)
@@ -173,6 +177,7 @@ class OrderPanel(QWidget):
         layout.addWidget(self.status_label)
 
         self.refresh_data_button.clicked.connect(self.refresh_master_data)
+        self.suggest_numbers_button.clicked.connect(self.suggest_numbers)
         self.add_line_button.clicked.connect(self.add_order_line)
         self.remove_line_button.clicked.connect(self.remove_selected_order_line)
         self.save_order_button.clicked.connect(self.save_order)
@@ -185,6 +190,24 @@ class OrderPanel(QWidget):
         button = QPushButton(ORDER_PANEL_ACTIONS[object_name])
         button.setObjectName(object_name)
         return button
+
+    def suggest_numbers(self) -> None:
+        if self.session_factory is None:
+            self.status_label.setText("Keine Datenbankverbindung vorhanden.")
+            return
+
+        session = self.session_factory()
+        try:
+            suggestions = suggest_next_numbers(session)
+        finally:
+            session.close()
+
+        self.order_number.setText(suggestions.order_number)
+        self.delivery_note_number.setText(suggestions.delivery_note_number)
+        self.invoice_number.setText(suggestions.invoice_number)
+        self.status_label.setText(
+            "Nummern vorgeschlagen. Sie koennen jede Nummer vor dem Speichern manuell ueberschreiben."
+        )
 
     def _guidance_box(self) -> QWidget:
         box = QWidget()

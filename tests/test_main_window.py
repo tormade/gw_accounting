@@ -39,6 +39,7 @@ def test_order_tab_exposes_guided_order_actions():
 
     assert ORDER_PANEL_ACTIONS == {
         "refreshOrderDataButton": "Stammdaten laden",
+        "suggestNumbersButton": "Nummern vorschlagen",
         "addOrderLineButton": "Position hinzufuegen",
         "removeOrderLineButton": "Position entfernen",
         "saveOrderButton": "Auftrag speichern",
