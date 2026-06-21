@@ -34,6 +34,16 @@ class Product(Base):
     is_active: Mapped[bool] = mapped_column(Boolean(), default=True)
 
 
+class DropdownOption(Base):
+    __tablename__ = "dropdown_options"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    category: Mapped[str] = mapped_column(String(80))
+    value: Mapped[str] = mapped_column(String(120))
+    sort_order: Mapped[int] = mapped_column(Integer(), default=0)
+    is_active: Mapped[bool] = mapped_column(Boolean(), default=True)
+
+
 class Document(Base):
     __tablename__ = "documents"
 

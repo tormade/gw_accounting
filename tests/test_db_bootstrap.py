@@ -61,3 +61,21 @@ def test_bootstrap_database_adds_customer_active_column(tmp_path: Path):
     connection.close()
     assert "is_active" in columns
     assert active_default == []
+
+
+def test_bootstrap_database_creates_dropdown_options_with_units(tmp_path: Path):
+    config = AppConfig(base_dir=tmp_path)
+    bootstrap_database(config)
+
+    connection = sqlite3.connect(config.database_path)
+    tables = {row[0] for row in connection.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()}
+    units = [
+        row[0]
+        for row in connection.execute(
+            "SELECT value FROM dropdown_options WHERE category = 'product_unit' ORDER BY sort_order, value"
+        ).fetchall()
+    ]
+    connection.close()
+
+    assert "dropdown_options" in tables
+    assert units[:3] == ["Kiste", "Flasche", "Fass"]

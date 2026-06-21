@@ -40,7 +40,13 @@ Wenn etwas fehlt, zeigt die Statuszeile unten an, was als Naechstes zu tun ist.
 
 Neue Kunden und Produkte werden links eingetragen. Vorhandene Stammdaten werden in der Liste ausgewaehlt und mit "Auswahl bearbeiten" wieder in das Formular geladen.
 
+Bei Produkten koennen versehentliche Eingaben mit "Aenderungen verwerfen" zurueckgenommen werden, solange noch nicht gespeichert wurde. Die Einheit wird ueber ein Dropdown gewaehlt.
+
 Wichtig: Archivieren statt loeschen. Dadurch verschwinden Kunden oder Produkte aus dem normalen Alltag, koennen aber bei einem Fehler wiederhergestellt werden.
+
+## Einstellungen
+
+Im Bereich Einstellungen werden zentrale Dropdown-Listen gepflegt. Aktuell koennen dort Produkteinheiten wie Kiste, Flasche, Fass oder Karton erweitert werden.
 
 ## Listen bearbeiten
 

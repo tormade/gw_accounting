@@ -3,7 +3,7 @@ from getraenkeladen_tool.ui.theme import APP_STYLESHEET
 
 
 def test_main_window_exposes_first_version_tabs():
-    assert MAIN_TABS == ("Start", "Kunden", "Produkte", "Auftraege", "Belege", "Listen")
+    assert MAIN_TABS == ("Start", "Kunden", "Produkte", "Auftraege", "Belege", "Listen", "Einstellungen")
 
 
 def test_theme_uses_winklmeier_work_tool_direction():
@@ -94,7 +94,9 @@ def test_product_tab_exposes_price_list_actions():
     from getraenkeladen_tool.ui.product_panel import PRODUCT_GUIDANCE_STEPS, PRODUCT_PANEL_ACTIONS, PRODUCT_PANEL_SECTIONS
 
     assert PRODUCT_PANEL_ACTIONS == {
+        "newProductButton": "Neu",
         "saveProductButton": "Produkt speichern",
+        "discardProductChangesButton": "Aenderungen verwerfen",
         "refreshProductsButton": "Produktliste laden",
         "loadProductButton": "Auswahl bearbeiten",
         "deactivateProductButton": "Produkt deaktivieren",
@@ -104,8 +106,18 @@ def test_product_tab_exposes_price_list_actions():
     assert PRODUCT_GUIDANCE_STEPS == (
         "Artikel mit Einheit und Standardpreis pflegen.",
         "Vorhandene Artikel unten auswaehlen und zur Bearbeitung laden.",
-        "Nicht mehr benoetigte Artikel deaktivieren statt endgueltig loeschen.",
+        "Aenderungen koennen vor dem Speichern verworfen werden.",
     )
+
+
+def test_settings_tab_exposes_dropdown_list_actions():
+    from getraenkeladen_tool.ui.settings_panel import SETTINGS_PANEL_ACTIONS, SETTINGS_PANEL_SECTIONS
+
+    assert SETTINGS_PANEL_ACTIONS == {
+        "refreshUnitsButton": "Einheiten laden",
+        "addUnitButton": "Einheit hinzufuegen",
+    }
+    assert SETTINGS_PANEL_SECTIONS == ("Dropdown-Listen",)
 
 
 def test_dashboard_tab_exposes_daily_guidance():

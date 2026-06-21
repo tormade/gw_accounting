@@ -10,9 +10,10 @@ from .document_panel import DocumentPanel
 from .order_panel import OrderPanel
 from .product_panel import ProductPanel
 from .report_panel import ReportPanel
+from .settings_panel import SettingsPanel
 
 
-MAIN_TABS = ("Start", "Kunden", "Produkte", "Auftraege", "Belege", "Listen")
+MAIN_TABS = ("Start", "Kunden", "Produkte", "Auftraege", "Belege", "Listen", "Einstellungen")
 BRAND_DIR = Path(__file__).resolve().parents[3] / "assets" / "brand"
 LOGO_PATH = BRAND_DIR / "logo_winklmeier.png"
 CLAIM_PATH = BRAND_DIR / "wir-bringens-einfach-schwarz.png"
@@ -38,6 +39,7 @@ class MainWindow(QMainWindow):
         self.tabs.addTab(OrderPanel(session_factory=session_factory), "Auftraege")
         self.tabs.addTab(DocumentPanel(session_factory=session_factory), "Belege")
         self.tabs.addTab(ReportPanel(session_factory=session_factory), "Listen")
+        self.tabs.addTab(SettingsPanel(session_factory=session_factory), "Einstellungen")
         root_layout.addWidget(self.tabs)
         self.setCentralWidget(root)
 

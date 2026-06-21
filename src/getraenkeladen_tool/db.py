@@ -4,6 +4,7 @@ from sqlalchemy import inspect, text
 
 from .config import AppConfig
 from .models import Base
+from .services.settings_service import ensure_default_product_units
 
 
 def bootstrap_database(config: AppConfig) -> None:
@@ -12,6 +13,7 @@ def bootstrap_database(config: AppConfig) -> None:
     engine = create_engine(f"sqlite:///{db_path}")
     Base.metadata.create_all(engine)
     _add_missing_columns(engine)
+    _seed_defaults(engine)
 
 
 def create_session_factory(config: AppConfig) -> sessionmaker:
@@ -34,3 +36,12 @@ def _add_missing_columns(engine) -> None:
             customer_columns = {column["name"] for column in inspector.get_columns("customers")}
             if "is_active" not in customer_columns:
                 connection.execute(text("ALTER TABLE customers ADD COLUMN is_active BOOLEAN DEFAULT 1 NOT NULL"))
+
+
+def _seed_defaults(engine) -> None:
+    session_factory = sessionmaker(bind=engine)
+    session = session_factory()
+    try:
+        ensure_default_product_units(session)
+    finally:
+        session.close()
