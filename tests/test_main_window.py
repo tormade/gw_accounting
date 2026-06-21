@@ -47,7 +47,12 @@ def test_document_tab_exposes_first_document_form_actions():
 
 
 def test_order_tab_exposes_guided_order_actions():
-    from getraenkeladen_tool.ui.order_panel import ORDER_GUIDANCE_STEPS, ORDER_PANEL_ACTIONS, ORDER_PANEL_SECTIONS
+    from getraenkeladen_tool.ui.order_panel import (
+        ORDER_CONTEXT_ACTIONS,
+        ORDER_GUIDANCE_STEPS,
+        ORDER_PANEL_ACTIONS,
+        ORDER_PANEL_SECTIONS,
+    )
 
     assert ORDER_PANEL_ACTIONS == {
         "refreshOrderDataButton": "Stammdaten laden",
@@ -69,13 +74,25 @@ def test_order_tab_exposes_guided_order_actions():
         "Produkte mit Menge als Positionen hinzufuegen.",
         "Auftrag speichern und daraus Lieferschein plus Rechnung erzeugen.",
     )
+    assert ORDER_CONTEXT_ACTIONS == {
+        "open": "Auftrag oeffnen",
+        "create_documents": "Belege erzeugen",
+        "archive": "Auftrag archivieren",
+    }
 
 
 def test_customer_tab_exposes_master_data_actions():
-    from getraenkeladen_tool.ui.customer_panel import CUSTOMER_GUIDANCE_STEPS, CUSTOMER_PANEL_ACTIONS, CUSTOMER_PANEL_SECTIONS
+    from getraenkeladen_tool.ui.customer_panel import (
+        CUSTOMER_CONTEXT_ACTIONS,
+        CUSTOMER_GUIDANCE_STEPS,
+        CUSTOMER_PANEL_ACTIONS,
+        CUSTOMER_PANEL_SECTIONS,
+    )
 
     assert CUSTOMER_PANEL_ACTIONS == {
+        "newCustomerButton": "Neu",
         "saveCustomerButton": "Kunde speichern",
+        "discardCustomerChangesButton": "Aenderungen verwerfen",
         "refreshCustomersButton": "Kundenliste laden",
         "loadCustomerButton": "Auswahl bearbeiten",
         "archiveCustomerButton": "Kunde archivieren",
@@ -86,12 +103,22 @@ def test_customer_tab_exposes_master_data_actions():
     assert CUSTOMER_GUIDANCE_STEPS == (
         "Neuen Kunden links eintragen oder unten einen Kunden auswaehlen.",
         "Mit Auswahl bearbeiten Stammdaten in das Formular laden.",
-        "Archivieren statt loeschen, damit versehentliche Aenderungen rueckgaengig bleiben.",
+        "Aenderungen koennen vor dem Speichern verworfen werden.",
     )
+    assert CUSTOMER_CONTEXT_ACTIONS == {
+        "edit": "Kunde bearbeiten",
+        "archive": "Kunde archivieren",
+        "restore": "Kunde wiederherstellen",
+    }
 
 
 def test_product_tab_exposes_price_list_actions():
-    from getraenkeladen_tool.ui.product_panel import PRODUCT_GUIDANCE_STEPS, PRODUCT_PANEL_ACTIONS, PRODUCT_PANEL_SECTIONS
+    from getraenkeladen_tool.ui.product_panel import (
+        PRODUCT_CONTEXT_ACTIONS,
+        PRODUCT_GUIDANCE_STEPS,
+        PRODUCT_PANEL_ACTIONS,
+        PRODUCT_PANEL_SECTIONS,
+    )
 
     assert PRODUCT_PANEL_ACTIONS == {
         "newProductButton": "Neu",
@@ -108,6 +135,11 @@ def test_product_tab_exposes_price_list_actions():
         "Vorhandene Artikel unten auswaehlen und zur Bearbeitung laden.",
         "Aenderungen koennen vor dem Speichern verworfen werden.",
     )
+    assert PRODUCT_CONTEXT_ACTIONS == {
+        "edit": "Produkt bearbeiten",
+        "deactivate": "Produkt deaktivieren",
+        "restore": "Produkt wiederherstellen",
+    }
 
 
 def test_settings_tab_exposes_dropdown_list_actions():
@@ -117,7 +149,7 @@ def test_settings_tab_exposes_dropdown_list_actions():
         "refreshUnitsButton": "Einheiten laden",
         "addUnitButton": "Einheit hinzufuegen",
     }
-    assert SETTINGS_PANEL_SECTIONS == ("Dropdown-Listen",)
+    assert SETTINGS_PANEL_SECTIONS == ("Produkteinheiten bearbeiten",)
 
 
 def test_dashboard_tab_exposes_daily_guidance():

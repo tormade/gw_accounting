@@ -67,6 +67,13 @@ def list_active_orders(session: Session) -> list[Order]:
     )
 
 
+def archive_order(session: Session, order_id: int) -> Order:
+    order = get_order(session, order_id)
+    order.status = "archiviert"
+    session.commit()
+    return get_order(session, order_id)
+
+
 def create_order_documents(
     session: Session,
     order_id: int,

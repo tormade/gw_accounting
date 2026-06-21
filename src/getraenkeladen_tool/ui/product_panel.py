@@ -6,12 +6,14 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QMenu,
     QPushButton,
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
     QWidget,
 )
+from PySide6.QtCore import Qt
 
 from ..models import Product
 from ..schemas import ProductCreate
@@ -42,6 +44,11 @@ PRODUCT_GUIDANCE_STEPS = (
     "Vorhandene Artikel unten auswaehlen und zur Bearbeitung laden.",
     "Aenderungen koennen vor dem Speichern verworfen werden.",
 )
+PRODUCT_CONTEXT_ACTIONS = {
+    "edit": "Produkt bearbeiten",
+    "deactivate": "Produkt deaktivieren",
+    "restore": "Produkt wiederherstellen",
+}
 
 
 class ProductPanel(QWidget):
@@ -143,6 +150,8 @@ class ProductPanel(QWidget):
         self.deactivate_button.clicked.connect(self.deactivate_current_product)
         self.restore_button.clicked.connect(self.restore_selected_product)
         self.products_table.itemDoubleClicked.connect(lambda _item: self.load_selected_product())
+        self.products_table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.products_table.customContextMenuRequested.connect(self.show_product_context_menu)
         self.refresh_units()
         self.refresh_products()
 
@@ -319,6 +328,21 @@ class ProductPanel(QWidget):
             return
         self._apply_snapshot(self.loaded_form_snapshot)
         self.status_label.setText("Aenderungen verworfen. Der zuletzt geladene Stand ist wiederhergestellt.")
+
+    def show_product_context_menu(self, position) -> None:
+        if self.products_table.currentRow() < 0:
+            return
+        menu = QMenu(self)
+        edit_action = menu.addAction(PRODUCT_CONTEXT_ACTIONS["edit"])
+        deactivate_action = menu.addAction(PRODUCT_CONTEXT_ACTIONS["deactivate"])
+        restore_action = menu.addAction(PRODUCT_CONTEXT_ACTIONS["restore"])
+        selected = menu.exec(self.products_table.viewport().mapToGlobal(position))
+        if selected == edit_action:
+            self.load_selected_product()
+        elif selected == deactivate_action:
+            self.deactivate_current_product()
+        elif selected == restore_action:
+            self.restore_selected_product()
 
     def _form_snapshot(self) -> dict:
         return {

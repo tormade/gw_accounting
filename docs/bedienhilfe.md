@@ -42,11 +42,13 @@ Neue Kunden und Produkte werden links eingetragen. Vorhandene Stammdaten werden 
 
 Bei Produkten koennen versehentliche Eingaben mit "Aenderungen verwerfen" zurueckgenommen werden, solange noch nicht gespeichert wurde. Die Einheit wird ueber ein Dropdown gewaehlt.
 
+In den Listen fuer Kunden, Produkte und Auftraege koennen Eintraege per Rechtsklick bearbeitet, archiviert oder wiederhergestellt werden. Doppelklick laedt einen Eintrag ebenfalls zur Bearbeitung.
+
 Wichtig: Archivieren statt loeschen. Dadurch verschwinden Kunden oder Produkte aus dem normalen Alltag, koennen aber bei einem Fehler wiederhergestellt werden.
 
 ## Einstellungen
 
-Im Bereich Einstellungen werden zentrale Dropdown-Listen gepflegt. Aktuell koennen dort Produkteinheiten wie Kiste, Flasche, Fass oder Karton erweitert werden.
+Im Bereich Einstellungen werden zentrale Auswahlwerte gepflegt. Aktuell koennen dort Produkteinheiten wie Kiste, Flasche, Fass oder Karton erweitert werden. Diese Werte erscheinen im Feld "Einheit" bei Produkten.
 
 ## Listen bearbeiten
 

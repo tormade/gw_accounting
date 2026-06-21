@@ -7,7 +7,7 @@ SETTINGS_PANEL_ACTIONS = {
     "refreshUnitsButton": "Einheiten laden",
     "addUnitButton": "Einheit hinzufuegen",
 }
-SETTINGS_PANEL_SECTIONS = ("Dropdown-Listen",)
+SETTINGS_PANEL_SECTIONS = ("Produkteinheiten bearbeiten",)
 
 
 class SettingsPanel(QWidget):
@@ -18,7 +18,9 @@ class SettingsPanel(QWidget):
         self.unit_input = QLineEdit()
         self.unit_input.setPlaceholderText("z. B. Tray")
         self.units_list = QListWidget()
-        self.status_label = QLabel("Dropdown-Listen koennen hier gepflegt werden.")
+        self.status_label = QLabel(
+            "Diese Einheiten erscheinen im Feld Einheit bei Produkten, zum Beispiel Kiste oder Flasche."
+        )
         self.status_label.setObjectName("muted")
 
         layout = QVBoxLayout(self)
@@ -29,13 +31,17 @@ class SettingsPanel(QWidget):
         headline.setObjectName("headline")
         layout.addWidget(headline)
 
-        muted = QLabel("Zentrale Listen fuer Dropdown-Felder")
+        muted = QLabel("Listenwerte, die an anderer Stelle als Auswahlfeld verwendet werden")
         muted.setObjectName("muted")
         layout.addWidget(muted)
 
         box = QGroupBox(SETTINGS_PANEL_SECTIONS[0])
         box.setObjectName("sectionBox")
         box_layout = QVBoxLayout(box)
+        hint = QLabel("Hier bearbeiten Sie die Auswahlwerte fuer das Feld Einheit im Produkte-Reiter.")
+        hint.setObjectName("sectionSubtitle")
+        hint.setWordWrap(True)
+        box_layout.addWidget(hint)
         form = QFormLayout()
         form.addRow("Neue Einheit", self.unit_input)
         box_layout.addLayout(form)

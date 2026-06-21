@@ -4,6 +4,7 @@ from getraenkeladen_tool.models import Document
 from getraenkeladen_tool.schemas import CustomerCreate, OrderCreate, OrderLineCreate, ProductCreate
 from getraenkeladen_tool.services.customer_service import create_customer
 from getraenkeladen_tool.services.order_service import (
+    archive_order,
     create_order,
     create_order_documents,
     get_order,
@@ -138,3 +139,23 @@ def test_list_active_orders_excludes_archived_orders(session, tmp_path: Path):
 
     assert orders == [active]
     assert archived not in orders
+
+
+def test_archive_order_hides_order_from_active_list(session, tmp_path: Path):
+    customer = create_customer(session, CustomerCreate(name="Cafe Nord", folder_path=str(tmp_path / "Cafe Nord")))
+    product = create_product(session, ProductCreate(name="Wasser", unit="Kiste", standard_price_cents=1299))
+    order = create_order(
+        session,
+        OrderCreate(
+            order_number="AUF-2001",
+            customer_id=customer.id,
+            order_date="2026-06-21",
+            delivery_date="2026-06-22",
+            lines=[OrderLineCreate(product_id=product.id, quantity=1)],
+        ),
+    )
+
+    archived = archive_order(session, order.id)
+
+    assert archived.status == "archiviert"
+    assert list_active_orders(session) == []

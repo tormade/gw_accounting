@@ -8,6 +8,7 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QMenu,
     QPushButton,
     QSpinBox,
     QTableWidget,
@@ -15,11 +16,12 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+from PySide6.QtCore import Qt
 
 from ..schemas import OrderCreate, OrderLineCreate
 from ..services.customer_service import list_active_customers
 from ..services.numbering_service import suggest_next_numbers
-from ..services.order_service import create_order, create_order_documents, list_active_orders
+from ..services.order_service import archive_order, create_order, create_order_documents, list_active_orders
 from ..services.product_service import list_active_products
 from .date_input import DateInput, to_display_date
 
@@ -47,6 +49,11 @@ ORDER_GUIDANCE_STEPS = (
     "Produkte mit Menge als Positionen hinzufuegen.",
     "Auftrag speichern und daraus Lieferschein plus Rechnung erzeugen.",
 )
+ORDER_CONTEXT_ACTIONS = {
+    "open": "Auftrag oeffnen",
+    "create_documents": "Belege erzeugen",
+    "archive": "Auftrag archivieren",
+}
 DATE_FIELD_WIDGETS = ("delivery_date",)
 
 
@@ -187,6 +194,8 @@ class OrderPanel(QWidget):
         self.refresh_orders_button.clicked.connect(self.refresh_orders)
         self.product_select.currentIndexChanged.connect(self.apply_selected_product)
         self.orders_table.itemDoubleClicked.connect(lambda _item: self.load_selected_order_id())
+        self.orders_table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.orders_table.customContextMenuRequested.connect(self.show_order_context_menu)
         self.refresh_master_data()
         self.refresh_orders()
         self.suggest_numbers()
@@ -390,6 +399,42 @@ class OrderPanel(QWidget):
         self.current_order_id = self.order_ids_by_row.get(row)
         if self.current_order_id is not None:
             self.status_label.setText("Auftrag ausgewaehlt. Jetzt Belege erzeugen.")
+
+    def archive_selected_order(self) -> None:
+        if self.session_factory is None:
+            self.status_label.setText("Keine Datenbankverbindung vorhanden.")
+            return
+        if self.current_order_id is None:
+            self.load_selected_order_id()
+        if self.current_order_id is None:
+            self.status_label.setText("Bitte zuerst einen Auftrag auswaehlen.")
+            return
+
+        session = self.session_factory()
+        try:
+            order = archive_order(session, self.current_order_id)
+            self.current_order_id = None
+            self.show_orders(list_active_orders(session))
+            self.status_label.setText(f"Auftrag archiviert: {order.order_number}")
+        finally:
+            session.close()
+
+    def show_order_context_menu(self, position) -> None:
+        if self.orders_table.currentRow() < 0:
+            return
+        menu = QMenu(self)
+        open_action = menu.addAction(ORDER_CONTEXT_ACTIONS["open"])
+        documents_action = menu.addAction(ORDER_CONTEXT_ACTIONS["create_documents"])
+        archive_action = menu.addAction(ORDER_CONTEXT_ACTIONS["archive"])
+        selected = menu.exec(self.orders_table.viewport().mapToGlobal(position))
+        if selected == open_action:
+            self.load_selected_order_id()
+        elif selected == documents_action:
+            self.load_selected_order_id()
+            self.create_documents_from_order()
+        elif selected == archive_action:
+            self.load_selected_order_id()
+            self.archive_selected_order()
 
     def _order_lines_from_table(self) -> list[OrderLineCreate]:
         order_lines = []

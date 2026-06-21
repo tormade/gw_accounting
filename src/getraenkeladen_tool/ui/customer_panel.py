@@ -5,12 +5,14 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QMenu,
     QPushButton,
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
     QWidget,
 )
+from PySide6.QtCore import Qt
 
 from ..models import Customer
 from ..schemas import CustomerCreate
@@ -25,7 +27,9 @@ from .date_input import DateInput, to_display_date
 
 
 CUSTOMER_PANEL_ACTIONS = {
+    "newCustomerButton": "Neu",
     "saveCustomerButton": "Kunde speichern",
+    "discardCustomerChangesButton": "Aenderungen verwerfen",
     "refreshCustomersButton": "Kundenliste laden",
     "loadCustomerButton": "Auswahl bearbeiten",
     "archiveCustomerButton": "Kunde archivieren",
@@ -38,8 +42,13 @@ CUSTOMER_PANEL_SECTIONS = ("1. Kunden erfassen", "2. Bestehende Kunden pruefen")
 CUSTOMER_GUIDANCE_STEPS = (
     "Neuen Kunden links eintragen oder unten einen Kunden auswaehlen.",
     "Mit Auswahl bearbeiten Stammdaten in das Formular laden.",
-    "Archivieren statt loeschen, damit versehentliche Aenderungen rueckgaengig bleiben.",
+    "Aenderungen koennen vor dem Speichern verworfen werden.",
 )
+CUSTOMER_CONTEXT_ACTIONS = {
+    "edit": "Kunde bearbeiten",
+    "archive": "Kunde archivieren",
+    "restore": "Kunde wiederherstellen",
+}
 DATE_FIELD_WIDGETS = ("next_contact_date",)
 
 
@@ -49,6 +58,7 @@ class CustomerPanel(QWidget):
         self.session_factory = session_factory
         self.current_customer_id = None
         self.customer_ids_by_row = {}
+        self.loaded_form_snapshot = None
 
         self.customer_name = QLineEdit()
         self.customer_name.setPlaceholderText("z. B. Cafe Nord")
@@ -100,9 +110,13 @@ class CustomerPanel(QWidget):
         edit_layout.addLayout(form)
 
         action_row = QHBoxLayout()
+        self.new_button = self._button("newCustomerButton")
         self.save_button = self._button("saveCustomerButton")
+        self.discard_button = self._button("discardCustomerChangesButton")
         self.load_button = self._button("loadCustomerButton")
+        action_row.addWidget(self.new_button)
         action_row.addWidget(self.save_button)
+        action_row.addWidget(self.discard_button)
         action_row.addWidget(self.load_button)
         action_row.addStretch()
         edit_layout.addLayout(action_row)
@@ -129,12 +143,16 @@ class CustomerPanel(QWidget):
 
         layout.addWidget(self.status_label)
 
+        self.new_button.clicked.connect(self.new_customer)
         self.save_button.clicked.connect(self.save_customer)
+        self.discard_button.clicked.connect(self.discard_changes)
         self.refresh_button.clicked.connect(self.refresh_customers)
         self.load_button.clicked.connect(self.load_selected_customer)
         self.archive_button.clicked.connect(self.archive_selected_customer)
         self.restore_button.clicked.connect(self.restore_selected_customer)
         self.customers_table.itemDoubleClicked.connect(lambda _item: self.load_selected_customer())
+        self.customers_table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.customers_table.customContextMenuRequested.connect(self.show_customer_context_menu)
         self.refresh_customers()
 
     def _folder_row(self) -> QWidget:
@@ -195,6 +213,7 @@ class CustomerPanel(QWidget):
             else:
                 customer = update_customer(session, self.current_customer_id, payload)
             self.current_customer_id = customer.id
+            self.loaded_form_snapshot = self._snapshot_from_customer(customer)
             self.status_label.setText(f"Kunde gespeichert: {customer.name}")
             self.show_customers(list_customers(session))
         finally:
@@ -246,6 +265,7 @@ class CustomerPanel(QWidget):
             self.payment_method.setText(customer.payment_method or "")
             self.next_contact_date.set_iso_date(customer.next_contact_date)
             self.delivery_notes.setText(customer.delivery_notes or "")
+            self.loaded_form_snapshot = self._snapshot_from_customer(customer)
             self.status_label.setText(f"Kunde geladen: {customer.name}")
         finally:
             session.close()
@@ -266,6 +286,7 @@ class CustomerPanel(QWidget):
         try:
             customer = restore_customer(session, customer_id) if active else archive_customer(session, customer_id)
             self.show_customers(list_customers(session))
+            self.loaded_form_snapshot = self._snapshot_from_customer(customer)
             action = "wiederhergestellt" if active else "archiviert"
             self.status_label.setText(f"Kunde {action}: {customer.name}")
         finally:
@@ -284,3 +305,67 @@ class CustomerPanel(QWidget):
             next_contact_date=self.next_contact_date.iso_date() or None,
             delivery_notes=self.delivery_notes.text().strip() or None,
         )
+
+    def new_customer(self) -> None:
+        self.current_customer_id = None
+        self.customer_name.clear()
+        self.folder_path.clear()
+        self.address.clear()
+        self.payment_method.clear()
+        self.next_contact_date.set_iso_date(None)
+        self.delivery_notes.clear()
+        self.loaded_form_snapshot = self._form_snapshot()
+        self.status_label.setText("Neuer Kunde. Erst Speichern uebernimmt die Angaben.")
+
+    def discard_changes(self) -> None:
+        if self.loaded_form_snapshot is None:
+            self.new_customer()
+            return
+        self._apply_snapshot(self.loaded_form_snapshot)
+        self.status_label.setText("Aenderungen verworfen. Der zuletzt geladene Stand ist wiederhergestellt.")
+
+    def show_customer_context_menu(self, position) -> None:
+        if self.customers_table.currentRow() < 0:
+            return
+        menu = QMenu(self)
+        edit_action = menu.addAction(CUSTOMER_CONTEXT_ACTIONS["edit"])
+        archive_action = menu.addAction(CUSTOMER_CONTEXT_ACTIONS["archive"])
+        restore_action = menu.addAction(CUSTOMER_CONTEXT_ACTIONS["restore"])
+        selected = menu.exec(self.customers_table.viewport().mapToGlobal(position))
+        if selected == edit_action:
+            self.load_selected_customer()
+        elif selected == archive_action:
+            self.archive_selected_customer()
+        elif selected == restore_action:
+            self.restore_selected_customer()
+
+    def _form_snapshot(self) -> dict:
+        return {
+            "id": self.current_customer_id,
+            "name": self.customer_name.text(),
+            "folder_path": self.folder_path.text(),
+            "address": self.address.text(),
+            "payment_method": self.payment_method.text(),
+            "next_contact_date": self.next_contact_date.iso_date(),
+            "delivery_notes": self.delivery_notes.text(),
+        }
+
+    def _snapshot_from_customer(self, customer: Customer) -> dict:
+        return {
+            "id": customer.id,
+            "name": customer.name,
+            "folder_path": customer.folder_path,
+            "address": customer.address or "",
+            "payment_method": customer.payment_method or "",
+            "next_contact_date": customer.next_contact_date or "",
+            "delivery_notes": customer.delivery_notes or "",
+        }
+
+    def _apply_snapshot(self, snapshot: dict) -> None:
+        self.current_customer_id = snapshot["id"]
+        self.customer_name.setText(snapshot["name"])
+        self.folder_path.setText(snapshot["folder_path"])
+        self.address.setText(snapshot["address"])
+        self.payment_method.setText(snapshot["payment_method"])
+        self.next_contact_date.set_iso_date(snapshot["next_contact_date"])
+        self.delivery_notes.setText(snapshot["delivery_notes"])
