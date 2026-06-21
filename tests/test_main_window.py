@@ -56,7 +56,9 @@ def test_order_tab_exposes_guided_order_actions():
 
     assert ORDER_PANEL_ACTIONS == {
         "refreshOrderDataButton": "Stammdaten laden",
-        "suggestNumbersButton": "Nummern vorschlagen",
+        "suggestOrderNumberButton": "Auftragsnummer vorschlagen",
+        "suggestDeliveryNoteNumberButton": "Lieferscheinnummer vorschlagen",
+        "suggestInvoiceNumberButton": "Rechnungsnummer vorschlagen",
         "addOrderLineButton": "Position hinzufuegen",
         "removeOrderLineButton": "Position entfernen",
         "saveOrderButton": "Auftrag speichern",
@@ -65,14 +67,14 @@ def test_order_tab_exposes_guided_order_actions():
     }
     assert ORDER_PANEL_SECTIONS == (
         "1. Kunde und Lieferung",
-        "2. Positionen",
-        "3. Belege erzeugen",
-        "Vorhandene Auftraege",
+        "2. Produkte im Auftrag",
+        "3. Speichern und Belege",
+        "Offene Auftraege",
     )
     assert ORDER_GUIDANCE_STEPS == (
-        "Stammdaten laden und Kunden waehlen.",
-        "Produkte mit Menge als Positionen hinzufuegen.",
-        "Auftrag speichern und daraus Lieferschein plus Rechnung erzeugen.",
+        "Kunden suchen und Lieferdatum pruefen.",
+        "Produkte hinzufuegen und Positionen kontrollieren.",
+        "Auftrag speichern, danach Lieferschein oder Rechnung vorbereiten.",
     )
     assert ORDER_CONTEXT_ACTIONS == {
         "open": "Auftrag oeffnen",

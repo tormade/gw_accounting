@@ -17,13 +17,14 @@ Wenn hier etwas angezeigt wird, ist das der naechste Arbeitsvorrat. Danach wechs
 Der normale Ablauf ist:
 
 1. Stammdaten laden und Kunden waehlen.
-2. Nummern vorschlagen lassen oder manuell eintragen.
+2. Auftragsnummer vorschlagen lassen oder manuell eintragen.
 3. Lieferdatum und Zeitfenster eintragen.
 4. Produkt waehlen, Menge pruefen und Position hinzufuegen.
 5. Auftrag speichern.
-6. Lieferschein und Rechnung erzeugen.
+6. Bei Bedarf Lieferscheinnummer oder Rechnungsnummer vorschlagen lassen.
+7. Lieferschein und Rechnung erzeugen.
 
-Die vorgeschlagenen Auftrags-, Lieferschein- und Rechnungsnummern koennen immer ueberschrieben werden. Wenn eine hoehere Nummer manuell eingetragen und gespeichert wird, zaehlt die App beim naechsten Vorschlag von dieser Nummer aus weiter.
+Auftrags-, Lieferschein- und Rechnungsnummern werden einzeln vorgeschlagen. Jede Nummer kann immer ueberschrieben werden. Wenn eine hoehere Nummer manuell eingetragen und gespeichert wird, zaehlt die App beim naechsten Vorschlag von dieser Nummer aus weiter.
 
 Datumsfelder koennen entweder ueber den Kalender ausgewaehlt oder direkt im Format TT.MM.JJJJ eingetragen werden, zum Beispiel 21.06.2026.
 

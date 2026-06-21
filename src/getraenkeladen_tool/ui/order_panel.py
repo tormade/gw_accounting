@@ -28,7 +28,9 @@ from .date_input import DateInput, to_display_date
 
 ORDER_PANEL_ACTIONS = {
     "refreshOrderDataButton": "Stammdaten laden",
-    "suggestNumbersButton": "Nummern vorschlagen",
+    "suggestOrderNumberButton": "Auftragsnummer vorschlagen",
+    "suggestDeliveryNoteNumberButton": "Lieferscheinnummer vorschlagen",
+    "suggestInvoiceNumberButton": "Rechnungsnummer vorschlagen",
     "addOrderLineButton": "Position hinzufuegen",
     "removeOrderLineButton": "Position entfernen",
     "saveOrderButton": "Auftrag speichern",
@@ -40,14 +42,14 @@ ORDER_LINE_COLUMNS = ("Produkt", "Menge", "Preis EUR", "Pfand EUR")
 ORDER_COLUMNS = ("Auftrag", "Kunde", "Lieferdatum", "Zeitfenster", "Status")
 ORDER_PANEL_SECTIONS = (
     "1. Kunde und Lieferung",
-    "2. Positionen",
-    "3. Belege erzeugen",
-    "Vorhandene Auftraege",
+    "2. Produkte im Auftrag",
+    "3. Speichern und Belege",
+    "Offene Auftraege",
 )
 ORDER_GUIDANCE_STEPS = (
-    "Stammdaten laden und Kunden waehlen.",
-    "Produkte mit Menge als Positionen hinzufuegen.",
-    "Auftrag speichern und daraus Lieferschein plus Rechnung erzeugen.",
+    "Kunden suchen und Lieferdatum pruefen.",
+    "Produkte hinzufuegen und Positionen kontrollieren.",
+    "Auftrag speichern, danach Lieferschein oder Rechnung vorbereiten.",
 )
 ORDER_CONTEXT_ACTIONS = {
     "open": "Auftrag oeffnen",
@@ -63,11 +65,17 @@ class OrderPanel(QWidget):
         self.session_factory = session_factory
         self.customers_by_id = {}
         self.products_by_id = {}
+        self.customer_rows = []
         self.order_ids_by_row = {}
         self.current_order_id = None
 
+        self.customer_search = QLineEdit()
+        self.customer_search.setPlaceholderText("Kunde suchen, z. B. Cafe oder Hotel")
         self.customer_select = QComboBox()
         self.customer_select.addItem("Bitte Kunden waehlen", None)
+        self.customer_summary = QLabel("Noch kein Kunde ausgewaehlt.")
+        self.customer_summary.setObjectName("sectionSubtitle")
+        self.customer_summary.setWordWrap(True)
         self.product_select = QComboBox()
         self.product_select.addItem("Bitte Produkt waehlen", None)
         self.order_number = QLineEdit()
@@ -86,8 +94,10 @@ class OrderPanel(QWidget):
         self.deposit_eur.setPlaceholderText("z. B. 3,30")
         self.order_lines_table = QTableWidget(0, len(ORDER_LINE_COLUMNS))
         self.order_lines_table.setHorizontalHeaderLabels(ORDER_LINE_COLUMNS)
+        self.order_lines_table.setMinimumHeight(220)
         self.orders_table = QTableWidget(0, len(ORDER_COLUMNS))
         self.orders_table.setHorizontalHeaderLabels(ORDER_COLUMNS)
+        self.orders_table.setMaximumHeight(220)
         self.status_label = QLabel("Schritt 1: Stammdaten laden, dann Kunde und Produkte auswaehlen.")
         self.status_label.setObjectName("muted")
 
@@ -106,7 +116,9 @@ class OrderPanel(QWidget):
         layout.addWidget(self._guidance_box())
 
         self.refresh_data_button = self._button("refreshOrderDataButton")
-        self.suggest_numbers_button = self._button("suggestNumbersButton")
+        self.suggest_order_number_button = self._button("suggestOrderNumberButton")
+        self.suggest_delivery_note_number_button = self._button("suggestDeliveryNoteNumberButton")
+        self.suggest_invoice_number_button = self._button("suggestInvoiceNumberButton")
         self.add_line_button = self._button("addOrderLineButton")
         self.remove_line_button = self._button("removeOrderLineButton")
         self.save_order_button = self._button("saveOrderButton")
@@ -119,32 +131,31 @@ class OrderPanel(QWidget):
         left_column.setSpacing(14)
         right_column = QVBoxLayout()
         right_column.setSpacing(14)
-        workspace.addLayout(left_column, 1)
+        workspace.addLayout(left_column, 2)
         workspace.addLayout(right_column, 1)
         layout.addLayout(workspace)
 
         customer_box, customer_layout = self._section(
             ORDER_PANEL_SECTIONS[0],
-            "Zuerst Stammdaten laden, dann Kunde, Lieferdatum und Nummern erfassen.",
+            "Kunde suchen, auswaehlen und Lieferdaten pruefen. Erst die Auftragsnummer wird direkt gebraucht.",
         )
         customer_form = QFormLayout()
+        customer_form.addRow("Kunde suchen", self.customer_search)
         customer_form.addRow("Kunde", self.customer_select)
-        customer_form.addRow("Auftragsnummer", self.order_number)
+        customer_form.addRow("Auftragsnummer", self._number_row(self.order_number, self.suggest_order_number_button))
         customer_form.addRow("Lieferdatum", self.delivery_date)
         customer_form.addRow("Zeitfenster", self.delivery_slot)
-        customer_form.addRow("Lieferscheinnummer", self.delivery_note_number)
-        customer_form.addRow("Rechnungsnummer", self.invoice_number)
         customer_layout.addLayout(customer_form)
+        customer_layout.addWidget(self.customer_summary)
         customer_actions = QHBoxLayout()
         customer_actions.addWidget(self.refresh_data_button)
-        customer_actions.addWidget(self.suggest_numbers_button)
         customer_actions.addStretch()
         customer_layout.addLayout(customer_actions)
         left_column.addWidget(customer_box)
 
         position_box, position_layout = self._section(
             ORDER_PANEL_SECTIONS[1],
-            "Produkt waehlen, Menge pruefen und als Position in den Auftrag uebernehmen.",
+            "Produkt waehlen, Menge pruefen und unten die Positionen kontrollieren.",
         )
         position_form = QFormLayout()
         position_form.addRow("Produkt", self.product_select)
@@ -163,8 +174,18 @@ class OrderPanel(QWidget):
 
         document_box, document_layout = self._section(
             ORDER_PANEL_SECTIONS[2],
-            "Wenn alle Positionen stimmen: Auftrag speichern und daraus die Belege erzeugen.",
+            "Wenn alle Positionen stimmen: Auftrag speichern. Belegnummern erst hier vorbereiten.",
         )
+        document_form = QFormLayout()
+        document_form.addRow(
+            "Lieferscheinnummer",
+            self._number_row(self.delivery_note_number, self.suggest_delivery_note_number_button),
+        )
+        document_form.addRow(
+            "Rechnungsnummer",
+            self._number_row(self.invoice_number, self.suggest_invoice_number_button),
+        )
+        document_layout.addLayout(document_form)
         document_actions = QHBoxLayout()
         document_actions.addWidget(self.save_order_button)
         document_actions.addWidget(self.create_documents_button)
@@ -186,42 +207,68 @@ class OrderPanel(QWidget):
         layout.addWidget(self.status_label)
 
         self.refresh_data_button.clicked.connect(self.refresh_master_data)
-        self.suggest_numbers_button.clicked.connect(self.suggest_numbers)
+        self.suggest_order_number_button.clicked.connect(self.suggest_order_number)
+        self.suggest_delivery_note_number_button.clicked.connect(self.suggest_delivery_note_number)
+        self.suggest_invoice_number_button.clicked.connect(self.suggest_invoice_number)
         self.add_line_button.clicked.connect(self.add_order_line)
         self.remove_line_button.clicked.connect(self.remove_selected_order_line)
         self.save_order_button.clicked.connect(self.save_order)
         self.create_documents_button.clicked.connect(self.create_documents_from_order)
         self.refresh_orders_button.clicked.connect(self.refresh_orders)
+        self.customer_search.textChanged.connect(self.filter_customers)
+        self.customer_select.currentIndexChanged.connect(self.apply_selected_customer)
         self.product_select.currentIndexChanged.connect(self.apply_selected_product)
         self.orders_table.itemDoubleClicked.connect(lambda _item: self.load_selected_order_id())
         self.orders_table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.orders_table.customContextMenuRequested.connect(self.show_order_context_menu)
         self.refresh_master_data()
         self.refresh_orders()
-        self.suggest_numbers()
+        self.suggest_order_number()
 
     def _button(self, object_name: str) -> QPushButton:
         button = QPushButton(ORDER_PANEL_ACTIONS[object_name])
         button.setObjectName(object_name)
         return button
 
-    def suggest_numbers(self) -> None:
+    def _number_row(self, field: QLineEdit, button: QPushButton) -> QWidget:
+        row = QWidget()
+        layout = QHBoxLayout(row)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(field)
+        layout.addWidget(button)
+        return row
+
+    def _number_suggestions(self):
         if self.session_factory is None:
             self.status_label.setText("Keine Datenbankverbindung vorhanden.")
-            return
+            return None
 
         session = self.session_factory()
         try:
-            suggestions = suggest_next_numbers(session)
+            return suggest_next_numbers(session)
         finally:
             session.close()
 
+    def suggest_order_number(self) -> None:
+        suggestions = self._number_suggestions()
+        if suggestions is None:
+            return
         self.order_number.setText(suggestions.order_number)
+        self.status_label.setText("Auftragsnummer vorgeschlagen. Sie kann manuell ueberschrieben werden.")
+
+    def suggest_delivery_note_number(self) -> None:
+        suggestions = self._number_suggestions()
+        if suggestions is None:
+            return
         self.delivery_note_number.setText(suggestions.delivery_note_number)
+        self.status_label.setText("Lieferscheinnummer vorgeschlagen. Sie kann manuell ueberschrieben werden.")
+
+    def suggest_invoice_number(self) -> None:
+        suggestions = self._number_suggestions()
+        if suggestions is None:
+            return
         self.invoice_number.setText(suggestions.invoice_number)
-        self.status_label.setText(
-            "Nummern vorgeschlagen. Sie koennen jede Nummer vor dem Speichern manuell ueberschreiben."
-        )
+        self.status_label.setText("Rechnungsnummer vorgeschlagen. Sie kann manuell ueberschrieben werden.")
 
     def _guidance_box(self) -> QWidget:
         box = QWidget()
@@ -270,14 +317,51 @@ class OrderPanel(QWidget):
         self.customer_select.addItem("Bitte Kunden waehlen", None)
         self.product_select.addItem("Bitte Produkt waehlen", None)
         self.customers_by_id = {customer.id: customer for customer in customers}
+        self.customer_rows = customers
         self.products_by_id = {product.id: product for product in products}
-        for customer in customers:
-            self.customer_select.addItem(customer.name, customer.id)
+        self._populate_customer_select(customers)
         for product in products:
             self.product_select.addItem(product.name, product.id)
         self.customer_select.blockSignals(False)
         self.product_select.blockSignals(False)
+        self.apply_selected_customer()
         self.status_label.setText(f"{len(customers)} Kunden und {len(products)} Produkte geladen.")
+
+    def filter_customers(self) -> None:
+        search_text = self.customer_search.text().strip().lower()
+        if not search_text:
+            filtered_customers = self.customer_rows
+        else:
+            filtered_customers = [
+                customer
+                for customer in self.customer_rows
+                if search_text in customer.name.lower()
+                or search_text in (customer.address or "").lower()
+                or search_text in (customer.delivery_notes or "").lower()
+            ]
+        self.customer_select.blockSignals(True)
+        self._populate_customer_select(filtered_customers)
+        self.customer_select.blockSignals(False)
+        self.apply_selected_customer()
+
+    def _populate_customer_select(self, customers: list) -> None:
+        self.customer_select.clear()
+        self.customer_select.addItem("Bitte Kunden waehlen", None)
+        for customer in customers:
+            self.customer_select.addItem(customer.name, customer.id)
+
+    def apply_selected_customer(self) -> None:
+        customer_id = self.customer_select.currentData()
+        customer = self.customers_by_id.get(customer_id)
+        if customer is None:
+            self.customer_summary.setText("Noch kein Kunde ausgewaehlt.")
+            return
+        details = [
+            f"Adresse: {customer.address or 'nicht gepflegt'}",
+            f"Zahlungsart: {customer.payment_method or 'nicht gepflegt'}",
+            f"Hinweis: {customer.delivery_notes or 'kein Lieferhinweis'}",
+        ]
+        self.customer_summary.setText(" | ".join(details))
 
     def apply_selected_product(self) -> None:
         product_id = self.product_select.currentData()
