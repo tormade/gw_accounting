@@ -111,6 +111,36 @@ def test_list_daily_deliveries_filters_by_delivery_date_and_slot(session, tmp_pa
     assert deliveries[0].delivery_slot == "vormittag"
 
 
+def test_list_daily_deliveries_excludes_invoices_with_delivery_date(session, tmp_path: Path):
+    customer = create_customer(
+        session,
+        CustomerCreate(
+            name="Cafe Nord",
+            folder_path=str(tmp_path / "Kunden" / "Cafe Nord"),
+        ),
+    )
+    create_document(
+        session,
+        DocumentCreate(
+            customer_id=customer.id,
+            document_type="Rechnung",
+            document_number="RG-1007",
+            delivery_date="2026-06-21",
+            delivery_slot="vormittag",
+            line_items=[
+                DocumentLineItem(
+                    name="Wasser 0,7",
+                    quantity=1,
+                    unit_price_cents=1299,
+                    deposit_cents=330,
+                )
+            ],
+        ),
+    )
+
+    assert list_daily_deliveries(session, target_date="2026-06-21") == []
+
+
 def test_export_open_items_csv_writes_payment_overview(session, tmp_path: Path):
     customer = create_customer(
         session,

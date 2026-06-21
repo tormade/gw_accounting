@@ -42,6 +42,7 @@ def list_daily_deliveries(session: Session, target_date: str) -> list[Document]:
         session.scalars(
             select(Document)
             .where(Document.delivery_date == target_date)
+            .where(Document.document_type == "Lieferschein")
             .order_by(Document.delivery_slot, Document.document_number)
         )
     )

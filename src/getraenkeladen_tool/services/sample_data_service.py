@@ -97,6 +97,7 @@ def _seed_documents(session: Session, target_date: str) -> int:
                 customer_id=cafe_nord.id,
                 document_type="Rechnung",
                 document_number="RG-DEMO-1",
+                delivery_date=target_date,
                 line_items=[
                     DocumentLineItem(
                         name="Wasser 12x0,7",

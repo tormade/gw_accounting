@@ -19,6 +19,7 @@ from ..schemas import DocumentCreate, DocumentLineItem
 from ..services.customer_service import list_customers
 from ..services.document_service import create_document
 from ..services.excel_service import build_delivery_note_workbook, build_invoice_workbook
+from ..services.file_naming_service import build_document_paths
 from ..services.pdf_service import build_document_pdf
 from ..services.product_service import list_active_products
 
@@ -251,6 +252,7 @@ class DocumentPanel(QWidget):
                             for item in line_items
                         ],
                     ),
+                    datev_upload_dir=Path.cwd() / "outputs" / "datev_upload",
                 )
                 self.status_label.setText(f"Excel und PDF erstellt: {document.excel_path}")
             finally:
@@ -293,11 +295,14 @@ class DocumentPanel(QWidget):
         return line_items
 
     def _output_path(self) -> Path:
-        document_type = self.document_type.currentText()
-        document_number = self.document_number.text().strip()
-        safe_document_number = document_number.replace("/", "-").replace("\\", "-").replace(" ", "_")
-        safe_document_type = document_type.replace(" ", "_")
-        return Path(self.customer_folder.text().strip()) / f"{safe_document_number}_{safe_document_type}.xlsx"
+        paths = build_document_paths(
+            customer_folder=Path(self.customer_folder.text().strip()),
+            document_type=self.document_type.currentText(),
+            document_number=self.document_number.text().strip(),
+            customer_name=self.customer_name.text().strip(),
+            document_date=self.delivery_date.text().strip() or "ohne-datum",
+        )
+        return paths.excel_path
 
     def _parse_euro_cents(self, value: str) -> int:
         normalized = value.strip().replace(".", "").replace(",", ".")
