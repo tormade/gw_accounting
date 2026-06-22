@@ -29,8 +29,8 @@ def configure_qt_plugin_path() -> Path | None:
     if configured_path and Path(configured_path).exists():
         return Path(configured_path)
 
-    plugin_path = Path(QLibraryInfo.path(QLibraryInfo.LibraryPath.PluginsPath))
-    if plugin_path.exists():
+    plugin_path = Path(QLibraryInfo.path(QLibraryInfo.LibraryPath.PluginsPath)) / "platforms"
+    if (plugin_path / "libqcocoa.dylib").exists():
         os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = str(plugin_path)
         return plugin_path
     return None

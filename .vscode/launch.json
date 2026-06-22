@@ -10,7 +10,7 @@
             "cwd": "${workspaceFolder}",
             "env": {
                 "PYTHONPATH": "${workspaceFolder}/src",
-                "QT_QPA_PLATFORM_PLUGIN_PATH": "${workspaceFolder}/.venv/lib/python3.12/site-packages/PySide6/Qt/plugins"
+                "QT_QPA_PLATFORM_PLUGIN_PATH": "${workspaceFolder}/.venv/lib/python3.12/site-packages/PySide6/Qt/plugins/platforms"
             },
             "console": "integratedTerminal",
             "justMyCode": true

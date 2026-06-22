@@ -42,7 +42,7 @@ def test_vscode_launch_uses_project_venv_with_debugpy():
     assert config["python"] == "${workspaceFolder}/.venv/bin/python"
     assert config["module"] == "getraenkeladen_tool"
     assert config["env"]["QT_QPA_PLATFORM_PLUGIN_PATH"] == (
-        "${workspaceFolder}/.venv/lib/python3.12/site-packages/PySide6/Qt/plugins"
+        "${workspaceFolder}/.venv/lib/python3.12/site-packages/PySide6/Qt/plugins/platforms"
     )
 
 
@@ -53,7 +53,7 @@ def test_vscode_task_runs_app_without_debug_adapter():
     assert task["label"] == "Getraenkeladen Tool starten"
     assert task["command"] == (
         "PYTHONPATH=src "
-        "QT_QPA_PLATFORM_PLUGIN_PATH=.venv/lib/python3.12/site-packages/PySide6/Qt/plugins "
+        "QT_QPA_PLATFORM_PLUGIN_PATH=.venv/lib/python3.12/site-packages/PySide6/Qt/plugins/platforms "
         ".venv/bin/python -m getraenkeladen_tool"
     )
     assert task["type"] == "shell"

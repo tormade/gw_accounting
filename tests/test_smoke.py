@@ -37,7 +37,8 @@ def test_configure_qt_plugin_path_sets_existing_pyside_plugin_dir(monkeypatch):
 
     assert plugin_path is not None
     assert plugin_path.exists()
-    assert (plugin_path / "platforms" / "libqcocoa.dylib").exists()
+    assert plugin_path.name == "platforms"
+    assert (plugin_path / "libqcocoa.dylib").exists()
 
 
 def test_create_runtime_bootstraps_local_database(tmp_path):
