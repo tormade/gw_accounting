@@ -1,4 +1,4 @@
-from getraenkeladen_tool.app import create_app, create_runtime
+from getraenkeladen_tool.app import configure_qt_plugin_path, create_app, create_runtime
 
 
 class FakeApplication:
@@ -28,6 +28,16 @@ def test_create_app_returns_qapplication(monkeypatch):
     app = create_app()
 
     assert app.applicationName() == "Getraenkeladen Tool"
+
+
+def test_configure_qt_plugin_path_sets_existing_pyside_plugin_dir(monkeypatch):
+    monkeypatch.delenv("QT_QPA_PLATFORM_PLUGIN_PATH", raising=False)
+
+    plugin_path = configure_qt_plugin_path()
+
+    assert plugin_path is not None
+    assert plugin_path.exists()
+    assert (plugin_path / "platforms" / "libqcocoa.dylib").exists()
 
 
 def test_create_runtime_bootstraps_local_database(tmp_path):

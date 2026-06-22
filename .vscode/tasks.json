@@ -4,7 +4,7 @@
         {
             "label": "Getraenkeladen Tool starten",
             "type": "shell",
-            "command": "PYTHONPATH=src .venv/bin/python -m getraenkeladen_tool",
+            "command": "PYTHONPATH=src QT_QPA_PLATFORM_PLUGIN_PATH=.venv/lib/python3.12/site-packages/PySide6/Qt/plugins .venv/bin/python -m getraenkeladen_tool",
             "options": {
                 "cwd": "${workspaceFolder}"
             },

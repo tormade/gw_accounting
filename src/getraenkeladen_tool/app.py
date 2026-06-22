@@ -1,7 +1,9 @@
 from dataclasses import dataclass
+import os
 from pathlib import Path
 
 from PySide6.QtCore import QTimer
+from PySide6.QtCore import QLibraryInfo
 from PySide6.QtWidgets import QApplication
 
 from .config import AppConfig
@@ -22,7 +24,20 @@ def create_runtime(base_dir: Path | None = None) -> AppRuntime:
     return AppRuntime(config=config, session_factory=create_session_factory(config))
 
 
+def configure_qt_plugin_path() -> Path | None:
+    configured_path = os.environ.get("QT_QPA_PLATFORM_PLUGIN_PATH")
+    if configured_path and Path(configured_path).exists():
+        return Path(configured_path)
+
+    plugin_path = Path(QLibraryInfo.path(QLibraryInfo.LibraryPath.PluginsPath))
+    if plugin_path.exists():
+        os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = str(plugin_path)
+        return plugin_path
+    return None
+
+
 def create_app() -> QApplication:
+    configure_qt_plugin_path()
     app = QApplication.instance() or QApplication([])
     app.setApplicationName("Getraenkeladen Tool")
     app.setStyleSheet(APP_STYLESHEET)
