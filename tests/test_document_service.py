@@ -1,5 +1,7 @@
 from pathlib import Path
 
+from openpyxl import load_workbook
+
 from getraenkeladen_tool.models import OpenItem
 from getraenkeladen_tool.schemas import CustomerCreate, DocumentCreate, DocumentLineItem
 from getraenkeladen_tool.services.customer_service import create_customer
@@ -38,6 +40,8 @@ def test_create_invoice_writes_excel_pdf_file_and_open_item(session, tmp_path: P
     excel_path = Path(document.excel_path)
     assert excel_path == customer_folder / "2026-06-21_RE_RG-1001_Cafe_Nord.xlsx"
     assert excel_path.exists()
+    workbook = load_workbook(excel_path, data_only=False)
+    assert workbook.active["C5"].value.strftime("%Y-%m-%d") == "2026-06-21"
 
     pdf_path = Path(document.pdf_path)
     assert pdf_path == customer_folder / "2026-06-21_RE_RG-1001_Cafe_Nord.pdf"

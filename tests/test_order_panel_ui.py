@@ -47,3 +47,13 @@ def test_order_panel_keeps_product_ids_when_existing_orders_are_loaded():
 
     assert "Qt.ItemDataRole.UserRole" in source
     assert "line.product_id" in source
+
+
+def test_order_panel_shows_running_order_total():
+    source = Path("src/getraenkeladen_tool/ui/order_panel.py").read_text(encoding="utf-8")
+
+    assert '"Summe EUR"' in source
+    assert "self.order_total_label" in source
+    assert "itemChanged.connect(self.update_order_total)" in source
+    assert "def update_order_total" in source
+    assert "Auftragssumme" in source

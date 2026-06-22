@@ -50,7 +50,7 @@ ORDER_PANEL_ACTIONS = {
     "refreshOrdersButton": "Auftragsliste laden",
 }
 
-ORDER_LINE_COLUMNS = ("Produkt", "Menge", "Preis EUR", "Pfand EUR")
+ORDER_LINE_COLUMNS = ("Produkt", "Menge", "Preis EUR", "Pfand EUR", "Summe EUR")
 ORDER_COLUMNS = ("Auftrag", "Kunde", "Lieferdatum", "Zeitfenster", "Status")
 ORDER_PANEL_SECTIONS = (
     "Kopfdaten",
@@ -112,6 +112,8 @@ class OrderPanel(QWidget):
         self.order_lines_table.setHorizontalHeaderLabels(ORDER_LINE_COLUMNS)
         self.order_lines_table.setMinimumHeight(320)
         self.order_lines_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        self.order_total_label = QLabel("Auftragssumme: 0,00 EUR")
+        self.order_total_label.setObjectName("stepTitle")
         self.orders_table = QTableWidget(0, len(ORDER_COLUMNS))
         self.orders_table.setHorizontalHeaderLabels(ORDER_COLUMNS)
         self.orders_table.setMaximumHeight(180)
@@ -195,6 +197,7 @@ class OrderPanel(QWidget):
 
         line_box, line_layout = self._section("Belegpositionen", "Alle hinzugefuegten Artikel dieses Auftrags.")
         line_layout.addWidget(self.order_lines_table)
+        line_layout.addWidget(self.order_total_label)
         middle_row.addWidget(line_box, 3)
 
         bottom_row = QHBoxLayout()
@@ -248,6 +251,7 @@ class OrderPanel(QWidget):
         self.create_delivery_order_button.clicked.connect(self.create_delivery_order_from_order)
         self.create_invoice_button.clicked.connect(self.create_invoice_from_order)
         self.refresh_orders_button.clicked.connect(self.refresh_orders)
+        self.order_lines_table.itemChanged.connect(self.update_order_total)
         self.customer_select.selection_changed.connect(self.apply_selected_customer)
         self.product_select.selection_changed.connect(self.apply_selected_product)
         self.orders_table.itemDoubleClicked.connect(lambda _item: self.load_selected_order_id())
@@ -433,6 +437,7 @@ class OrderPanel(QWidget):
         row = self.order_lines_table.currentRow()
         if row >= 0:
             self.order_lines_table.removeRow(row)
+            self.update_order_total()
 
     def save_order(self) -> None:
         if self.session_factory is None:
@@ -645,19 +650,56 @@ class OrderPanel(QWidget):
         deposit_cents: int,
         product_id: int | None = None,
     ) -> None:
+        line_total_cents = (unit_price_cents + deposit_cents) * quantity
         row = self.order_lines_table.rowCount()
+        self.order_lines_table.blockSignals(True)
         self.order_lines_table.insertRow(row)
         values = (
             product_name,
             str(quantity),
             f"{unit_price_cents / 100:.2f}".replace(".", ","),
             f"{deposit_cents / 100:.2f}".replace(".", ","),
+            self._format_euro_cents(line_total_cents),
         )
         for column, value in enumerate(values):
             item = QTableWidgetItem(value)
             if column == 0:
                 item.setData(Qt.ItemDataRole.UserRole, product_id)
+            if column == 4:
+                item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
             self.order_lines_table.setItem(row, column, item)
+        self.order_lines_table.blockSignals(False)
+        self.update_order_total()
+
+    def update_order_total(self, _item=None) -> None:
+        total_cents = 0
+        self.order_lines_table.blockSignals(True)
+        try:
+            for row in range(self.order_lines_table.rowCount()):
+                line_total_cents = self._line_total_cents_for_row(row)
+                total_cents += line_total_cents
+                total_item = self.order_lines_table.item(row, 4)
+                if total_item is None:
+                    total_item = QTableWidgetItem()
+                    total_item.setFlags(total_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+                    self.order_lines_table.setItem(row, 4, total_item)
+                total_item.setText(self._format_euro_cents(line_total_cents))
+        finally:
+            self.order_lines_table.blockSignals(False)
+        self.order_total_label.setText(f"Auftragssumme: {self._format_euro_cents(total_cents)}")
+
+    def _line_total_cents_for_row(self, row: int) -> int:
+        quantity_item = self.order_lines_table.item(row, 1)
+        price_item = self.order_lines_table.item(row, 2)
+        deposit_item = self.order_lines_table.item(row, 3)
+        try:
+            quantity = int(quantity_item.text()) if quantity_item is not None else 0
+        except ValueError:
+            quantity = 0
+        return (
+            self._parse_euro_cents_or_zero(price_item.text() if price_item is not None else "")
+            + self._parse_euro_cents_or_zero(deposit_item.text() if deposit_item is not None else "")
+        ) * quantity
 
     def _product_id_for_name(self, product_name: str) -> int | None:
         for product_id, product in self.products_by_id.items():
@@ -668,3 +710,12 @@ class OrderPanel(QWidget):
     def _parse_euro_cents(self, value: str) -> int:
         normalized = value.strip().replace(".", "").replace(",", ".")
         return int(round(float(normalized) * 100))
+
+    def _parse_euro_cents_or_zero(self, value: str) -> int:
+        try:
+            return self._parse_euro_cents(value)
+        except ValueError:
+            return 0
+
+    def _format_euro_cents(self, cents: int) -> str:
+        return f"{cents / 100:.2f} EUR".replace(".", ",")
