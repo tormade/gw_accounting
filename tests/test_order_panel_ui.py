@@ -25,8 +25,12 @@ def test_document_workflow_panels_make_excel_pdf_generation_flow_visible():
 
     assert "class DeliveryNotePanel" in source
     assert "class InvoicePanel" in source
-    assert "Lieferschein Excel/PDF erstellen" in source
-    assert "Rechnung Excel/PDF erstellen" in source
+    assert "Lieferschein Excel erstellen" in source
+    assert "Lieferschein PDF erstellen" in source
+    assert "Rechnung Excel erstellen" in source
+    assert "Rechnung PDF erstellen" in source
+    assert "self.create_excel_button.clicked.connect(self.create_excel_document)" in source
+    assert "self.create_pdf_button.clicked.connect(self.create_pdf_document)" in source
     assert "Auftrag waehlen" in source
     assert "Excel:" in source
     assert "PDF:" in source

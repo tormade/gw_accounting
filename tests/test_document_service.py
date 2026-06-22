@@ -209,3 +209,48 @@ def test_create_invoice_copies_pdf_to_datev_upload_folder(session, tmp_path: Pat
 
     assert document.datev_export_path == str(datev_dir / "2026-06" / "2026-06-21_RE_RG-1006_Cafe_Nord.pdf")
     assert Path(document.datev_export_path).exists()
+
+
+def test_create_document_can_generate_only_excel_first(session, tmp_path: Path):
+    customer = create_customer(
+        session,
+        CustomerCreate(name="Excel Kunde", folder_path=str(tmp_path / "Kunden" / "Excel Kunde")),
+    )
+
+    document = create_document(
+        session,
+        DocumentCreate(
+            customer_id=customer.id,
+            document_type="Rechnung",
+            document_number="RG-2001",
+            delivery_date="2026-06-21",
+            line_items=[DocumentLineItem(name="Wasser", quantity=1, unit_price_cents=1299, deposit_cents=330)],
+        ),
+        assets={"excel"},
+    )
+
+    assert Path(document.excel_path).exists()
+    assert not Path(document.pdf_path).exists()
+    assert session.query(OpenItem).one().document_number == "RG-2001"
+
+
+def test_create_document_can_generate_pdf_later_without_duplicate_invoice(session, tmp_path: Path):
+    customer = create_customer(
+        session,
+        CustomerCreate(name="PDF Kunde", folder_path=str(tmp_path / "Kunden" / "PDF Kunde")),
+    )
+    payload = DocumentCreate(
+        customer_id=customer.id,
+        document_type="Rechnung",
+        document_number="RG-2002",
+        delivery_date="2026-06-21",
+        line_items=[DocumentLineItem(name="Wasser", quantity=1, unit_price_cents=1299, deposit_cents=330)],
+    )
+
+    excel_document = create_document(session, payload, assets={"excel"})
+    pdf_document = create_document(session, payload, assets={"pdf"})
+
+    assert pdf_document.id == excel_document.id
+    assert Path(pdf_document.excel_path).exists()
+    assert Path(pdf_document.pdf_path).exists()
+    assert session.query(OpenItem).count() == 1

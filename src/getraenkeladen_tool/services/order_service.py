@@ -134,6 +134,7 @@ def create_order_delivery_order(
     delivery_order_number: str,
     line_items: list[DocumentLineItem] | None = None,
     deposit_returns: list[DepositReturnCreate] | None = None,
+    assets: set[str] | None = None,
 ) -> Document:
     order = get_order(session, order_id)
     delivery_order = create_document(
@@ -148,6 +149,7 @@ def create_order_delivery_order(
             line_items=line_items if line_items is not None else _document_line_items(order),
             deposit_returns=deposit_returns if deposit_returns is not None else _document_deposit_returns(order),
         ),
+        assets=assets,
     )
     if order.status != "fakturiert":
         order.status = "lieferauftrag_erstellt"
@@ -163,6 +165,7 @@ def create_order_invoice(
     line_items: list[DocumentLineItem] | None = None,
     deposit_returns: list[DepositReturnCreate] | None = None,
     datev_upload_dir: Path | None = None,
+    assets: set[str] | None = None,
 ) -> Document:
     order = get_order(session, order_id)
     invoice = create_document(
@@ -178,6 +181,7 @@ def create_order_invoice(
             deposit_returns=deposit_returns if deposit_returns is not None else _document_deposit_returns(order),
         ),
         datev_upload_dir=datev_upload_dir,
+        assets=assets,
     )
     order.status = "fakturiert"
     session.commit()

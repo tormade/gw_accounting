@@ -37,7 +37,8 @@ DOCUMENT_ORDER_COLUMNS = ("Auftrag", "Kunde", "Lieferdatum", "Zeitfenster", "Sta
 class DocumentWorkflowPanel(QWidget):
     document_type = ""
     number_label = ""
-    create_button_text = ""
+    create_excel_button_text = ""
+    create_pdf_button_text = ""
 
     def __init__(self, session_factory=None) -> None:
         super().__init__()
@@ -77,7 +78,7 @@ class DocumentWorkflowPanel(QWidget):
         self.deposit_return_eur.setPlaceholderText("z. B. 4,80")
         self.total_label = QLabel("Belegsumme: 0,00 EUR")
         self.total_label.setObjectName("stepTitle")
-        self.status_label = QLabel("Auftrag auswaehlen, Positionen pruefen, dann Datei erstellen.")
+        self.status_label = QLabel("Auftrag auswaehlen, Positionen pruefen, dann Excel oder PDF erstellen.")
         self.status_label.setObjectName("muted")
         self.result_label = QLabel("Noch keine Datei erstellt.")
         self.result_label.setObjectName("sectionSubtitle")
@@ -92,7 +93,7 @@ class DocumentWorkflowPanel(QWidget):
         layout.addWidget(
             PageHeader(
                 self.document_type,
-                "Auftrag waehlen, Positionen bei Bedarf fuer diesen Beleg anpassen und Excel/PDF erzeugen.",
+                "Auftrag waehlen, Positionen bei Bedarf fuer diesen Beleg anpassen und Excel oder PDF separat erzeugen.",
             )
         )
 
@@ -152,12 +153,14 @@ class DocumentWorkflowPanel(QWidget):
         total_layout.addWidget(self.total_label)
         document_layout.addWidget(total_bar)
         action_row = QHBoxLayout()
-        self.create_button = QPushButton(self.create_button_text)
+        self.create_excel_button = QPushButton(self.create_excel_button_text)
+        self.create_pdf_button = QPushButton(self.create_pdf_button_text)
         self.open_excel_button = QPushButton("Excel oeffnen")
         self.open_pdf_button = QPushButton("PDF oeffnen")
         self.open_excel_button.setEnabled(False)
         self.open_pdf_button.setEnabled(False)
-        action_row.addWidget(self.create_button)
+        action_row.addWidget(self.create_excel_button)
+        action_row.addWidget(self.create_pdf_button)
         action_row.addWidget(self.open_excel_button)
         action_row.addWidget(self.open_pdf_button)
         action_row.addStretch()
@@ -175,7 +178,8 @@ class DocumentWorkflowPanel(QWidget):
         self.add_return_button.clicked.connect(self.add_deposit_return)
         self.remove_return_button.clicked.connect(self.remove_selected_deposit_return)
         self.deposit_return_select.currentIndexChanged.connect(self.apply_selected_deposit_return)
-        self.create_button.clicked.connect(self.create_document)
+        self.create_excel_button.clicked.connect(self.create_excel_document)
+        self.create_pdf_button.clicked.connect(self.create_pdf_document)
         self.open_excel_button.clicked.connect(lambda: self._open_local_file(self.last_excel_path))
         self.open_pdf_button.clicked.connect(lambda: self._open_local_file(self.last_pdf_path))
         self.orders_table.itemDoubleClicked.connect(lambda _item: self.load_selected_order())
@@ -274,25 +278,32 @@ class DocumentWorkflowPanel(QWidget):
             session.close()
         self.document_number.setText(self._number_from_suggestions(suggestions))
 
-    def create_document(self) -> None:
+    def create_excel_document(self) -> None:
+        self.create_document({"excel"})
+
+    def create_pdf_document(self) -> None:
+        self.create_document({"pdf"})
+
+    def create_document(self, assets: set[str]) -> None:
         if self.current_order_id is None:
             self.load_selected_order()
         if self.current_order_id is None or self.session_factory is None:
             return
         session = self.session_factory()
         try:
-            document = self._create_document_for_order(session)
+            document = self._create_document_for_order(session, assets=assets)
             self.refresh_orders()
             self.last_excel_path = Path(document.excel_path)
             self.last_pdf_path = Path(document.pdf_path)
-            self.open_excel_button.setEnabled(True)
-            self.open_pdf_button.setEnabled(True)
+            self.open_excel_button.setEnabled(self.last_excel_path.exists())
+            self.open_pdf_button.setEnabled(self.last_pdf_path.exists())
             self.result_label.setText(f"Erstellt.\nExcel: {self.last_excel_path}\nPDF: {self.last_pdf_path}")
-            self.status_label.setText(f"{self.document_type} erstellt.")
+            created = "Excel" if assets == {"excel"} else "PDF"
+            self.status_label.setText(f"{self.document_type}: {created} erstellt.")
         finally:
             session.close()
 
-    def _create_document_for_order(self, session):
+    def _create_document_for_order(self, session, assets: set[str]):
         raise NotImplementedError
 
     def _number_from_suggestions(self, suggestions) -> str:
@@ -475,30 +486,33 @@ class DocumentWorkflowPanel(QWidget):
 class DeliveryNotePanel(DocumentWorkflowPanel):
     document_type = "Lieferscheine"
     number_label = "LS-Nummer"
-    create_button_text = "Lieferschein Excel/PDF erstellen"
+    create_excel_button_text = "Lieferschein Excel erstellen"
+    create_pdf_button_text = "Lieferschein PDF erstellen"
 
     def _number_from_suggestions(self, suggestions) -> str:
         return suggestions.delivery_note_number
 
-    def _create_document_for_order(self, session):
+    def _create_document_for_order(self, session, assets: set[str]):
         return create_order_delivery_order(
             session,
             self.current_order_id,
             self.document_number.text().strip(),
             line_items=self._line_items_from_table(),
             deposit_returns=self._deposit_returns_from_table(),
+            assets=assets,
         )
 
 
 class InvoicePanel(DocumentWorkflowPanel):
     document_type = "Rechnungen"
     number_label = "Rechnungsnummer"
-    create_button_text = "Rechnung Excel/PDF erstellen"
+    create_excel_button_text = "Rechnung Excel erstellen"
+    create_pdf_button_text = "Rechnung PDF erstellen"
 
     def _number_from_suggestions(self, suggestions) -> str:
         return suggestions.invoice_number
 
-    def _create_document_for_order(self, session):
+    def _create_document_for_order(self, session, assets: set[str]):
         return create_order_invoice(
             session,
             self.current_order_id,
@@ -506,4 +520,5 @@ class InvoicePanel(DocumentWorkflowPanel):
             line_items=self._line_items_from_table(),
             deposit_returns=self._deposit_returns_from_table(),
             datev_upload_dir=Path.cwd() / "outputs" / "datev_upload",
+            assets=assets,
         )

@@ -18,6 +18,8 @@ def test_build_document_pdf_uses_letterhead_config(tmp_path: Path):
     assert pdf_bytes.startswith(b"%PDF-")
     assert b"Getraenke Winklmeier" in pdf_bytes
     assert b"Wir bringen" in pdf_bytes
+    assert b"/Image" in pdf_bytes
+    assert b"RECHNUNG" in pdf_bytes
 
 
 def test_build_document_pdf_includes_line_and_document_totals(tmp_path: Path):
@@ -35,9 +37,10 @@ def test_build_document_pdf_includes_line_and_document_totals(tmp_path: Path):
     )
 
     pdf_text = output_path.read_bytes().decode("latin-1")
-    assert "Summe 32.58 EUR" in pdf_text
-    assert "Summe 19.29 EUR" in pdf_text
-    assert "Gesamt: 51.87 EUR" in pdf_text
+    assert "32,58 EUR" in pdf_text
+    assert "19,29 EUR" in pdf_text
+    assert "51,87 EUR" in pdf_text
+    assert "Gesamtbetrag" in pdf_text
 
 
 def test_build_document_pdf_reduces_total_by_deposit_returns(tmp_path: Path):
@@ -54,5 +57,27 @@ def test_build_document_pdf_reduces_total_by_deposit_returns(tmp_path: Path):
 
     pdf_text = output_path.read_bytes().decode("latin-1")
     assert "Pfandrueckgabe:" in pdf_text
-    assert "Gutschrift 4.80 EUR" in pdf_text
-    assert "Gesamt: 10.30 EUR" in pdf_text
+    assert "-4,80 EUR" in pdf_text
+    assert "10,30 EUR" in pdf_text
+
+
+def test_build_document_pdf_includes_customer_document_date_and_table_headers(tmp_path: Path):
+    output_path = tmp_path / "RG-1004.pdf"
+
+    build_document_pdf(
+        output_path=output_path,
+        document_title="Rechnung",
+        customer_name="Cafe Nord",
+        document_number="RG-1004",
+        line_items=[{"name": "Wasser", "quantity": 1, "unit_price_cents": 1299, "deposit_cents": 330}],
+        document_date="2026-06-21",
+        customer_address="Hauptstrasse 1",
+    )
+
+    pdf_text = output_path.read_bytes().decode("latin-1")
+    assert "Cafe Nord" in pdf_text
+    assert "Hauptstrasse 1" in pdf_text
+    assert "21.06.2026" in pdf_text
+    assert "Menge" in pdf_text
+    assert "Artikel" in pdf_text
+    assert "Pfand" in pdf_text
