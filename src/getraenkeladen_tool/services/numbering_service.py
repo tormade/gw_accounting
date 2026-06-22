@@ -41,8 +41,12 @@ SEQUENCE_DEFINITIONS = {
     "invoice": {"label": "Rechnung", "prefix": "RG", "start": 3001},
 }
 NUMBER_SEQUENCE_WORKBOOK = "Nummernkreise.xlsx"
-NUMBER_SEQUENCE_SHEET = "Nummernkreise"
-NUMBER_SEQUENCE_HEADERS = ("Bereich", "Schluessel", "Praefix", "Naechste Nummer", "Hinweis")
+NUMBER_SEQUENCE_HEADERS = ("Nummer", "Erstellt am", "Kunde", "Status")
+NUMBER_SEQUENCE_SHEETS = {
+    "order": "Auftraege",
+    "invoice": "Rechnungen",
+    "delivery_note": "Lieferscheine",
+}
 
 
 def suggest_next_numbers(session: Session) -> NumberSuggestions:
@@ -154,11 +158,7 @@ def reset_number_sequences_to_defaults(session: Session) -> list[NumberSequence]
 
 
 def number_sequence_workbook_path(session: Session) -> Path:
-    database = getattr(session.bind.url, "database", None)
-    if database in (None, "", ":memory:"):
-        return Path.cwd() / NUMBER_SEQUENCE_WORKBOOK
-    database_path = Path(database)
-    return database_path.parent.parent / NUMBER_SEQUENCE_WORKBOOK
+    return Path.cwd() / NUMBER_SEQUENCE_WORKBOOK
 
 
 def ensure_number_sequence_workbook(session: Session, workbook_path: Path | None = None) -> Path:
@@ -171,18 +171,21 @@ def ensure_number_sequence_workbook(session: Session, workbook_path: Path | None
 def load_number_sequences_from_workbook(session: Session, workbook_path: Path | None = None) -> Path:
     path = ensure_number_sequence_workbook(session, workbook_path)
     workbook = load_workbook(path)
-    if NUMBER_SEQUENCE_SHEET not in workbook.sheetnames:
-        raise ValueError(f"Die Datei {path.name} braucht ein Blatt '{NUMBER_SEQUENCE_SHEET}'.")
-    sheet = workbook[NUMBER_SEQUENCE_SHEET]
-    headers = [sheet.cell(row=1, column=column).value for column in range(1, len(NUMBER_SEQUENCE_HEADERS) + 1)]
-    if tuple(headers) != NUMBER_SEQUENCE_HEADERS:
-        raise ValueError("Nummernkreise.xlsx hat nicht die erwarteten Spalten.")
-    for row in range(2, sheet.max_row + 1):
-        sequence_key = str(sheet.cell(row=row, column=2).value or "").strip()
-        prefix = str(sheet.cell(row=row, column=3).value or "").strip()
-        next_number = str(sheet.cell(row=row, column=4).value or "").strip()
-        if sequence_key in SEQUENCE_DEFINITIONS and prefix and next_number:
-            set_next_number(session, sequence_key=sequence_key, prefix=prefix, value=next_number)
+    for sequence_key, sheet_name in NUMBER_SEQUENCE_SHEETS.items():
+        if sheet_name not in workbook.sheetnames:
+            raise ValueError(f"Die Datei {path.name} braucht ein Blatt '{sheet_name}'.")
+        sheet = workbook[sheet_name]
+        headers = [sheet.cell(row=1, column=column).value for column in range(1, len(NUMBER_SEQUENCE_HEADERS) + 1)]
+        if tuple(headers) != NUMBER_SEQUENCE_HEADERS:
+            raise ValueError(f"{sheet_name} hat nicht die erwarteten Spalten.")
+        next_number = _next_number_from_sequence_sheet(sheet)
+        if next_number:
+            set_next_number(
+                session,
+                sequence_key=sequence_key,
+                prefix=str(SEQUENCE_DEFINITIONS[sequence_key]["prefix"]),
+                value=next_number,
+            )
     return path
 
 
@@ -190,22 +193,16 @@ def write_number_sequences_to_workbook(session: Session, workbook_path: Path | N
     path = workbook_path or number_sequence_workbook_path(session)
     path.parent.mkdir(parents=True, exist_ok=True)
     workbook = Workbook()
-    sheet = workbook.active
-    sheet.title = NUMBER_SEQUENCE_SHEET
-    sheet.append(NUMBER_SEQUENCE_HEADERS)
-    statuses = list_number_sequence_statuses(session)
-    for status in statuses:
-        sheet.append(
-            [
-                status.label,
-                status.sequence_key,
-                status.prefix,
-                status.next_number,
-                "Diese Nummer kann in Excel geaendert werden. Danach Einstellungen in der App neu laden.",
-            ]
-        )
-    for column_width, column in ((18, "A"), (18, "B"), (10, "C"), (18, "D"), (78, "E")):
-        sheet.column_dimensions[column].width = column_width
+    workbook.remove(workbook.active)
+    statuses = {status.sequence_key: status for status in list_number_sequence_statuses(session)}
+    for sequence_key, sheet_name in NUMBER_SEQUENCE_SHEETS.items():
+        sheet = workbook.create_sheet(sheet_name)
+        sheet.append(NUMBER_SEQUENCE_HEADERS)
+        for row in _number_sequence_rows(session, sequence_key):
+            sheet.append(row)
+        sheet.append([statuses[sequence_key].next_number, "", "", "Naechste Nummer"])
+        for column_width, column in ((18, "A"), (18, "B"), (32, "C"), (22, "D")):
+            sheet.column_dimensions[column].width = column_width
     workbook.save(path)
     return path
 
@@ -344,6 +341,54 @@ def _normalize_sequence_value(value: str, prefix: str) -> str:
     if match is None:
         raise ValueError(f"Nummer muss dem Format {prefix}-1234 entsprechen.")
     return clean_value
+
+
+def _next_number_from_sequence_sheet(sheet) -> str | None:
+    for row in range(2, sheet.max_row + 1):
+        number = str(sheet.cell(row=row, column=1).value or "").strip()
+        created_at = str(sheet.cell(row=row, column=2).value or "").strip()
+        customer = str(sheet.cell(row=row, column=3).value or "").strip()
+        status = str(sheet.cell(row=row, column=4).value or "").strip().lower()
+        if number and (status == "naechste nummer" or (not created_at and not customer)):
+            return number
+    return None
+
+
+def _number_sequence_rows(session: Session, sequence_key: str) -> list[list[str]]:
+    if sequence_key == "order":
+        orders = session.scalars(
+            select(Order)
+            .options(selectinload(Order.customer))
+            .where(Order.status != "archiviert")
+            .where(Order.number_released == False)  # noqa: E712
+            .order_by(Order.order_number)
+        ).all()
+        return [
+            [
+                order.order_number,
+                order.order_date or order.delivery_date,
+                order.customer.name if order.customer is not None else "",
+                "verwendet",
+            ]
+            for order in orders
+        ]
+
+    documents = session.scalars(
+        select(Document)
+        .options(selectinload(Document.customer))
+        .where(Document.document_type.in_(_document_types_for_sequence(sequence_key)))
+        .where(Document.number_released == False)  # noqa: E712
+        .order_by(Document.document_number)
+    ).all()
+    return [
+        [
+            document.document_number,
+            document.delivery_date or "",
+            document.customer.name if document.customer is not None else "",
+            "verwendet",
+        ]
+        for document in documents
+    ]
 
 
 def _document_types_for_sequence(sequence_key: str) -> tuple[str, ...]:

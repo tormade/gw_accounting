@@ -5,6 +5,7 @@ from getraenkeladen_tool.services.customer_service import create_customer
 from getraenkeladen_tool.services.document_service import create_document
 from getraenkeladen_tool.models import OpenItem
 from getraenkeladen_tool.services.numbering_service import (
+    NUMBER_SEQUENCE_HEADERS,
     NumberSuggestions,
     check_number_conflict,
     load_number_sequences_from_workbook,
@@ -242,12 +243,68 @@ def test_number_sequence_workbook_is_leading_source_after_excel_edit(session, tm
     set_next_number(session, sequence_key="invoice", prefix="RG", value="RG-5555")
     write_number_sequences_to_workbook(session, workbook_path)
     workbook = load_workbook(workbook_path)
-    sheet = workbook["Nummernkreise"]
+    sheet = workbook["Rechnungen"]
     for row in range(2, sheet.max_row + 1):
-        if sheet.cell(row=row, column=2).value == "invoice":
-            sheet.cell(row=row, column=4).value = "RG-3333"
+        if sheet.cell(row=row, column=4).value == "Naechste Nummer":
+            sheet.cell(row=row, column=1).value = "RG-3333"
     workbook.save(workbook_path)
 
     load_number_sequences_from_workbook(session, workbook_path)
 
     assert list_number_sequence_statuses(session)[2].next_number == "RG-3333"
+
+
+def test_number_sequence_workbook_writes_three_business_sheets(session, tmp_path: Path):
+    workbook_path = tmp_path / "Nummernkreise.xlsx"
+    customer = create_customer(session, CustomerCreate(name="Cafe Liste", folder_path=str(tmp_path / "Cafe Liste")))
+    product = create_product(session, ProductCreate(name="Apfelschorle", unit="Menge", standard_price_cents=1499))
+    create_order(
+        session,
+        OrderCreate(
+            order_number="AUF-1010",
+            customer_id=customer.id,
+            order_date="2026-06-22",
+            delivery_date="2026-06-23",
+            lines=[OrderLineCreate(product_id=product.id, quantity=2)],
+        ),
+    )
+    create_document(
+        session,
+        DocumentCreate(
+            customer_id=customer.id,
+            document_type="Lieferschein",
+            document_number="LS-3010",
+            delivery_date="2026-06-23",
+            line_items=[DocumentLineItem(name="Apfelschorle", quantity=2, unit_price_cents=1499)],
+        ),
+    )
+    create_document(
+        session,
+        DocumentCreate(
+            customer_id=customer.id,
+            document_type="Rechnung",
+            document_number="RG-3010",
+            delivery_date="2026-06-23",
+            line_items=[DocumentLineItem(name="Apfelschorle", quantity=2, unit_price_cents=1499)],
+        ),
+    )
+
+    write_number_sequences_to_workbook(session, workbook_path)
+
+    workbook = load_workbook(workbook_path)
+    assert workbook.sheetnames == ["Auftraege", "Rechnungen", "Lieferscheine"]
+    for sheet_name in workbook.sheetnames:
+        assert [cell.value for cell in workbook[sheet_name][1]] == list(NUMBER_SEQUENCE_HEADERS)
+    assert any(row[0].value == "AUF-1010" and row[2].value == "Cafe Liste" for row in workbook["Auftraege"].iter_rows())
+    assert any(row[0].value == "RG-3010" and row[2].value == "Cafe Liste" for row in workbook["Rechnungen"].iter_rows())
+    assert any(row[0].value == "LS-3010" and row[2].value == "Cafe Liste" for row in workbook["Lieferscheine"].iter_rows())
+
+
+def test_number_sequence_workbook_path_prefers_visible_working_directory_file(session, tmp_path: Path, monkeypatch):
+    visible_workbook = tmp_path / "Nummernkreise.xlsx"
+    visible_workbook.touch()
+    monkeypatch.chdir(tmp_path)
+
+    from getraenkeladen_tool.services.numbering_service import number_sequence_workbook_path
+
+    assert number_sequence_workbook_path(session) == visible_workbook
