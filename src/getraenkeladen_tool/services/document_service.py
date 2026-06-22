@@ -135,6 +135,7 @@ def create_document(
 
     session.commit()
     session.refresh(document)
+    _sync_number_sequence_workbook(session)
     return document
 
 
@@ -163,3 +164,9 @@ def _copy_invoice_pdf_to_datev(pdf_path: Path, datev_upload_dir: Path, document_
     ensure_parent_folder(target_path)
     copy2(pdf_path, target_path)
     return target_path
+
+
+def _sync_number_sequence_workbook(session: Session) -> None:
+    from .numbering_service import write_number_sequences_to_workbook
+
+    write_number_sequences_to_workbook(session)

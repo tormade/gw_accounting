@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import pytest
+
 from getraenkeladen_tool.schemas import CustomerCreate, DocumentCreate, DocumentLineItem, OrderCreate, OrderLineCreate, ProductCreate
 from getraenkeladen_tool.services.customer_service import create_customer
 from getraenkeladen_tool.services.document_service import create_document
@@ -21,6 +23,11 @@ from getraenkeladen_tool.services.numbering_service import (
 from getraenkeladen_tool.services.order_service import create_order
 from getraenkeladen_tool.services.product_service import create_product
 from openpyxl import load_workbook
+
+
+@pytest.fixture(autouse=True)
+def isolate_visible_number_sequence_workbook(tmp_path: Path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
 
 
 def test_next_number_for_prefix_uses_default_when_no_numbers_exist():
@@ -252,6 +259,60 @@ def test_number_sequence_workbook_is_leading_source_after_excel_edit(session, tm
     load_number_sequences_from_workbook(session, workbook_path)
 
     assert list_number_sequence_statuses(session)[2].next_number == "RG-3333"
+
+
+def test_suggest_next_numbers_syncs_from_visible_workbook(session, tmp_path: Path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    workbook_path = tmp_path / "Nummernkreise.xlsx"
+    set_next_number(session, sequence_key="invoice", prefix="RG", value="RG-5555")
+    write_number_sequences_to_workbook(session, workbook_path)
+    workbook = load_workbook(workbook_path)
+    sheet = workbook["Rechnungen"]
+    for row in range(2, sheet.max_row + 1):
+        if sheet.cell(row=row, column=4).value == "Naechste Nummer":
+            sheet.cell(row=row, column=1).value = "RG-3333"
+    workbook.save(workbook_path)
+
+    assert suggest_next_numbers(session).invoice_number == "RG-3333"
+
+
+def test_create_order_updates_visible_number_sequence_workbook(session, tmp_path: Path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    customer = create_customer(session, CustomerCreate(name="Cafe Sync", folder_path=str(tmp_path / "Cafe Sync")))
+    product = create_product(session, ProductCreate(name="Spezi", unit="Menge", standard_price_cents=1599))
+
+    create_order(
+        session,
+        OrderCreate(
+            order_number="AUF-2020",
+            customer_id=customer.id,
+            order_date="2026-06-22",
+            delivery_date="2026-06-23",
+            lines=[OrderLineCreate(product_id=product.id, quantity=3)],
+        ),
+    )
+
+    workbook = load_workbook(tmp_path / "Nummernkreise.xlsx")
+    assert any(row[0].value == "AUF-2020" and row[2].value == "Cafe Sync" for row in workbook["Auftraege"].iter_rows())
+
+
+def test_create_document_updates_visible_number_sequence_workbook(session, tmp_path: Path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    customer = create_customer(session, CustomerCreate(name="Cafe Beleg", folder_path=str(tmp_path / "Cafe Beleg")))
+
+    create_document(
+        session,
+        DocumentCreate(
+            customer_id=customer.id,
+            document_type="Rechnung",
+            document_number="RG-2020",
+            delivery_date="2026-06-23",
+            line_items=[DocumentLineItem(name="Spezi", quantity=3, unit_price_cents=1599)],
+        ),
+    )
+
+    workbook = load_workbook(tmp_path / "Nummernkreise.xlsx")
+    assert any(row[0].value == "RG-2020" and row[2].value == "Cafe Beleg" for row in workbook["Rechnungen"].iter_rows())
 
 
 def test_number_sequence_workbook_writes_three_business_sheets(session, tmp_path: Path):

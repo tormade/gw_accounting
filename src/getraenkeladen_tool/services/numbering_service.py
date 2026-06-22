@@ -49,7 +49,9 @@ NUMBER_SEQUENCE_SHEETS = {
 }
 
 
-def suggest_next_numbers(session: Session) -> NumberSuggestions:
+def suggest_next_numbers(session: Session, *, sync_from_workbook: bool = True) -> NumberSuggestions:
+    if sync_from_workbook:
+        load_number_sequences_from_workbook(session)
     return NumberSuggestions(
         order_number=next_order_number(session),
         delivery_note_number=next_document_number(
@@ -100,8 +102,10 @@ def next_document_number(
     )
 
 
-def list_number_sequence_statuses(session: Session) -> list[NumberSequenceStatus]:
-    suggestions = suggest_next_numbers(session)
+def list_number_sequence_statuses(session: Session, *, sync_from_workbook: bool = True) -> list[NumberSequenceStatus]:
+    if sync_from_workbook:
+        load_number_sequences_from_workbook(session)
+    suggestions = suggest_next_numbers(session, sync_from_workbook=False)
     next_numbers = {
         "order": suggestions.order_number,
         "delivery_note": suggestions.delivery_note_number,
@@ -125,7 +129,14 @@ def list_number_sequence_statuses(session: Session) -> list[NumberSequenceStatus
     return statuses
 
 
-def set_next_number(session: Session, sequence_key: str, prefix: str, value: str) -> NumberSequence:
+def set_next_number(
+    session: Session,
+    sequence_key: str,
+    prefix: str,
+    value: str,
+    *,
+    sync_to_workbook: bool = True,
+) -> NumberSequence:
     clean_value = _normalize_sequence_value(value, prefix)
     match = re.match(rf"^{re.escape(prefix)}-(\d+)$", clean_value)
     next_number = int(match.group(1))
@@ -140,6 +151,8 @@ def set_next_number(session: Session, sequence_key: str, prefix: str, value: str
         sequence.next_number = next_number
     session.commit()
     session.refresh(sequence)
+    if sync_to_workbook:
+        write_number_sequences_to_workbook(session)
     return sequence
 
 
@@ -152,8 +165,10 @@ def reset_number_sequences_to_defaults(session: Session) -> list[NumberSequence]
                 sequence_key=sequence_key,
                 prefix=str(definition["prefix"]),
                 value=f"{definition['prefix']}-{definition['start']}",
+                sync_to_workbook=False,
             )
         )
+    write_number_sequences_to_workbook(session)
     return sequences
 
 
@@ -185,6 +200,7 @@ def load_number_sequences_from_workbook(session: Session, workbook_path: Path | 
                 sequence_key=sequence_key,
                 prefix=str(SEQUENCE_DEFINITIONS[sequence_key]["prefix"]),
                 value=next_number,
+                sync_to_workbook=False,
             )
     return path
 
@@ -194,7 +210,7 @@ def write_number_sequences_to_workbook(session: Session, workbook_path: Path | N
     path.parent.mkdir(parents=True, exist_ok=True)
     workbook = Workbook()
     workbook.remove(workbook.active)
-    statuses = {status.sequence_key: status for status in list_number_sequence_statuses(session)}
+    statuses = {status.sequence_key: status for status in list_number_sequence_statuses(session, sync_from_workbook=False)}
     for sequence_key, sheet_name in NUMBER_SEQUENCE_SHEETS.items():
         sheet = workbook.create_sheet(sheet_name)
         sheet.append(NUMBER_SEQUENCE_HEADERS)
@@ -280,6 +296,7 @@ def release_number(session: Session, sequence_key: str, value: str) -> NumberCon
             if open_item is not None and open_item.status == "offen":
                 open_item.status = "freigegeben"
     session.commit()
+    write_number_sequences_to_workbook(session)
     return conflict
 
 
