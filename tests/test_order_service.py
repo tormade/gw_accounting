@@ -292,6 +292,112 @@ def test_create_order_invoice_generates_only_invoice_and_open_item(session, tmp_
     assert excel_sheet["F43"].value == 54.57
 
 
+def test_order_invoice_excel_export_does_not_create_pdf(session, tmp_path: Path):
+    customer = create_customer(session, CustomerCreate(name="Excel Rechnung", folder_path=str(tmp_path / "Excel Rechnung")))
+    product = create_product(session, ProductCreate(name="Wasser", unit="Kiste", standard_price_cents=1299))
+    order = create_order(
+        session,
+        OrderCreate(
+            order_number="AUF-3401",
+            customer_id=customer.id,
+            order_date="2026-06-21",
+            delivery_date="2026-06-22",
+            lines=[OrderLineCreate(product_id=product.id, quantity=1, deposit_cents=330)],
+        ),
+    )
+
+    document = create_order_invoice(session, order.id, "RG-3401", assets={"excel"})
+
+    assert Path(document.excel_path).exists()
+    assert not Path(document.pdf_path).exists()
+
+
+def test_order_delivery_excel_export_does_not_create_pdf(session, tmp_path: Path):
+    customer = create_customer(session, CustomerCreate(name="Excel Lieferung", folder_path=str(tmp_path / "Excel Lieferung")))
+    product = create_product(session, ProductCreate(name="Wasser", unit="Kiste", standard_price_cents=1299))
+    order = create_order(
+        session,
+        OrderCreate(
+            order_number="AUF-3402",
+            customer_id=customer.id,
+            order_date="2026-06-21",
+            delivery_date="2026-06-22",
+            lines=[OrderLineCreate(product_id=product.id, quantity=1, deposit_cents=330)],
+        ),
+    )
+
+    document = create_order_delivery_order(session, order.id, "LS-3402", assets={"excel"})
+
+    assert Path(document.excel_path).exists()
+    assert not Path(document.pdf_path).exists()
+
+
+def test_order_delivery_pdf_export_does_not_create_excel(session, tmp_path: Path):
+    customer = create_customer(session, CustomerCreate(name="PDF Lieferung", folder_path=str(tmp_path / "PDF Lieferung")))
+    product = create_product(session, ProductCreate(name="Wasser", unit="Kiste", standard_price_cents=1299))
+    order = create_order(
+        session,
+        OrderCreate(
+            order_number="AUF-3403",
+            customer_id=customer.id,
+            order_date="2026-06-21",
+            delivery_date="2026-06-22",
+            lines=[OrderLineCreate(product_id=product.id, quantity=1, deposit_cents=330)],
+        ),
+    )
+
+    document = create_order_delivery_order(session, order.id, "LS-3403", assets={"pdf"})
+
+    assert not Path(document.excel_path).exists()
+    assert Path(document.pdf_path).exists()
+
+
+def test_order_invoice_excel_export_does_not_overwrite_existing_pdf(session, tmp_path: Path):
+    customer = create_customer(session, CustomerCreate(name="Rechnung Bestehend", folder_path=str(tmp_path / "Rechnung Bestehend")))
+    product = create_product(session, ProductCreate(name="Wasser", unit="Kiste", standard_price_cents=1299))
+    order = create_order(
+        session,
+        OrderCreate(
+            order_number="AUF-3404",
+            customer_id=customer.id,
+            order_date="2026-06-21",
+            delivery_date="2026-06-22",
+            lines=[OrderLineCreate(product_id=product.id, quantity=1, deposit_cents=330)],
+        ),
+    )
+    document = create_order_invoice(session, order.id, "RG-3404", assets={"pdf"})
+    pdf_path = Path(document.pdf_path)
+    original_pdf = pdf_path.read_bytes()
+
+    create_order_invoice(session, order.id, "RG-3404", assets={"excel"})
+
+    assert pdf_path.read_bytes() == original_pdf
+    assert Path(document.excel_path).exists()
+
+
+def test_order_delivery_excel_export_does_not_overwrite_existing_pdf(session, tmp_path: Path):
+    customer = create_customer(session, CustomerCreate(name="Lieferung Bestehend", folder_path=str(tmp_path / "Lieferung Bestehend")))
+    product = create_product(session, ProductCreate(name="Wasser", unit="Kiste", standard_price_cents=1299))
+    order = create_order(
+        session,
+        OrderCreate(
+            order_number="AUF-3405",
+            customer_id=customer.id,
+            order_date="2026-06-21",
+            delivery_date="2026-06-22",
+            lines=[OrderLineCreate(product_id=product.id, quantity=1, deposit_cents=330)],
+        ),
+    )
+    document = create_order_delivery_order(session, order.id, "LS-3405", assets={"pdf"})
+    pdf_path = Path(document.pdf_path)
+    original_pdf = pdf_path.read_bytes()
+
+    create_order_delivery_order(session, order.id, "LS-3405", assets={"excel"})
+
+    assert pdf_path.read_bytes() == original_pdf
+    assert Path(document.excel_path).exists()
+
+
 def test_create_invoice_can_use_adjusted_document_positions_without_changing_order(session, tmp_path: Path):
     customer = create_customer(session, CustomerCreate(name="Gasthof Mitte", folder_path=str(tmp_path / "Gasthof Mitte")))
     product = create_product(session, ProductCreate(name="Wasser", unit="Kiste", standard_price_cents=1299))

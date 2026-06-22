@@ -297,11 +297,19 @@ class DocumentWorkflowPanel(QWidget):
             self.last_pdf_path = Path(document.pdf_path)
             self.open_excel_button.setEnabled(self.last_excel_path.exists())
             self.open_pdf_button.setEnabled(self.last_pdf_path.exists())
-            self.result_label.setText(f"Erstellt.\nExcel: {self.last_excel_path}\nPDF: {self.last_pdf_path}")
-            created = "Excel" if assets == {"excel"} else "PDF"
-            self.status_label.setText(f"{self.document_type}: {created} erstellt.")
+            asset_label = self._created_asset_label(assets)
+            self.result_label.setText(self._created_asset_result(asset_label))
+            self.status_label.setText(f"{self.document_type}: {asset_label} erstellt.")
         finally:
             session.close()
+
+    def _created_asset_label(self, assets: set[str]) -> str:
+        return "Excel" if assets == {"excel"} else "PDF"
+
+    def _created_asset_result(self, asset_label: str) -> str:
+        if asset_label == "Excel":
+            return f"Excel erstellt:\nExcel: {self.last_excel_path}"
+        return f"PDF erstellt:\nPDF: {self.last_pdf_path}"
 
     def _create_document_for_order(self, session, assets: set[str]):
         raise NotImplementedError
