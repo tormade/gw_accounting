@@ -42,7 +42,6 @@ def test_theme_uses_winklmeier_work_tool_direction():
     assert "pageHeader" in APP_STYLESHEET
     assert "actionCard" in APP_STYLESHEET
     assert "workspaceSplitter" in APP_STYLESHEET
-    assert "calendarPanel" in APP_STYLESHEET
 
 
 def test_shared_layout_widgets_are_available():
@@ -106,6 +105,8 @@ def test_order_tab_exposes_guided_order_actions():
         "saveOrderButton": "Auftrag speichern",
         "refreshOrdersButton": "Auftragsliste laden",
         "customerFilterLabel": "Auftraege filtern nach Kunde",
+        "createDeliveryNoteFromOrderButton": "Lieferschein erstellen",
+        "createInvoiceFromOrderButton": "Rechnung erstellen",
     }
     assert ORDER_PANEL_SECTIONS == (
         "Kopfdaten",
@@ -122,6 +123,8 @@ def test_order_tab_exposes_guided_order_actions():
     assert ORDER_CONTEXT_ACTIONS == {
         "open": "Auftrag oeffnen",
         "copy": "Als neuen Auftrag kopieren",
+        "create_delivery_note": "Lieferschein erstellen",
+        "create_invoice": "Rechnung erstellen",
         "archive": "Auftrag archivieren",
     }
 
@@ -233,15 +236,13 @@ def test_dashboard_tab_exposes_daily_guidance():
     )
 
 
-def test_dashboard_uses_cockpit_calendar_and_quick_actions():
+def test_dashboard_uses_cockpit_quick_actions_without_calendar():
     from pathlib import Path
 
     source = Path("src/getraenkeladen_tool/ui/dashboard_panel.py").read_text(encoding="utf-8")
 
-    assert "QCalendarWidget" in source
+    assert "QCalendarWidget" not in source
     assert "ActionCard" in source
-    assert "ResponsiveSplitter" in source
-    assert "self.calendar.setObjectName(\"calendarPanel\")" in source
     assert "self.quick_actions" in source
     assert "Auftrag suchen" in source
     assert "Rechnung erstellen" in source
@@ -269,6 +270,26 @@ def test_dashboard_quick_actions_open_order_and_invoice_workspaces():
     assert "manage_orders_requested.connect(self.open_orders_tab)" in main_source
     assert "invoice_requested.connect(self.open_invoices_tab)" in main_source
     assert 'MAIN_TABS.index("Rechnungen")' in main_source
+
+
+def test_order_manage_actions_open_delivery_or_invoice_with_selected_order():
+    from pathlib import Path
+
+    order_source = Path("src/getraenkeladen_tool/ui/order_panel.py").read_text(encoding="utf-8")
+    main_source = Path("src/getraenkeladen_tool/ui/main_window.py").read_text(encoding="utf-8")
+    document_source = Path("src/getraenkeladen_tool/ui/document_workflow_panel.py").read_text(encoding="utf-8")
+
+    assert "delivery_note_requested = Signal(int)" in order_source
+    assert "invoice_requested = Signal(int)" in order_source
+    assert '"createDeliveryNoteFromOrderButton": "Lieferschein erstellen"' in order_source
+    assert '"createInvoiceFromOrderButton": "Rechnung erstellen"' in order_source
+    assert "self.create_delivery_note_button.clicked.connect(self.request_delivery_note_for_selected_order)" in order_source
+    assert "self.create_invoice_button.clicked.connect(self.request_invoice_for_selected_order)" in order_source
+    assert "delivery_note_requested.connect(self.open_delivery_note_for_order)" in main_source
+    assert "invoice_requested.connect(self.open_invoice_for_order)" in main_source
+    assert "def open_delivery_note_for_order" in main_source
+    assert "def open_invoice_for_order" in main_source
+    assert "def select_order" in document_source
 
 
 def test_main_window_refreshes_tab_data_when_user_switches_tabs():

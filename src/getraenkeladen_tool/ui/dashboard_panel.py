@@ -1,10 +1,10 @@
 from datetime import date
 
 from PySide6.QtCore import Signal
-from PySide6.QtWidgets import QCalendarWidget, QGridLayout, QHBoxLayout, QLabel, QMessageBox, QPushButton, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QGridLayout, QHBoxLayout, QLabel, QMessageBox, QPushButton, QVBoxLayout, QWidget
 
 from ..services.report_service import DashboardSummary, get_dashboard_summary
-from .layouts import ActionCard, PageHeader, ResponsiveSplitter
+from .layouts import ActionCard, PageHeader
 
 
 DASHBOARD_ACTIONS = {
@@ -67,41 +67,20 @@ class DashboardPanel(QWidget):
             quick_action_row.addWidget(card)
         layout.addLayout(quick_action_row)
 
-        workspace = ResponsiveSplitter()
-        left_column = QWidget()
-        left_layout = QVBoxLayout(left_column)
-        left_layout.setContentsMargins(0, 0, 0, 0)
-        left_layout.setSpacing(14)
-        left_layout.addLayout(self._cards_grid())
+        layout.addLayout(self._cards_grid())
 
         action_row = QHBoxLayout()
         self.refresh_button = QPushButton(DASHBOARD_ACTIONS["refreshDashboardButton"])
         self.refresh_button.setObjectName("refreshDashboardButton")
         action_row.addWidget(self.refresh_button)
         action_row.addStretch()
-        left_layout.addLayout(action_row)
+        layout.addLayout(action_row)
 
         self.next_steps_label = QLabel("Noch keine Tagesdaten geladen.")
         self.next_steps_label.setObjectName("statusBox")
         self.next_steps_label.setWordWrap(True)
-        left_layout.addWidget(self.next_steps_label)
-        left_layout.addStretch()
-        workspace.addWidget(left_column)
-
-        calendar_column = QWidget()
-        calendar_layout = QVBoxLayout(calendar_column)
-        calendar_layout.setContentsMargins(0, 0, 0, 0)
-        calendar_title = QLabel("Kalender")
-        calendar_title.setObjectName("sectionTitle")
-        calendar_layout.addWidget(calendar_title)
-        self.calendar = QCalendarWidget()
-        self.calendar.setObjectName("calendarPanel")
-        self.calendar.setGridVisible(True)
-        calendar_layout.addWidget(self.calendar)
-        workspace.addWidget(calendar_column)
-        workspace.setStretchFactor(0, 2)
-        workspace.setStretchFactor(1, 1)
-        layout.addWidget(workspace, 1)
+        layout.addWidget(self.next_steps_label)
+        layout.addStretch()
 
         self.new_delivery_card.button.clicked.connect(self.new_delivery_requested.emit)
         self.search_order_card.button.clicked.connect(self.manage_orders_requested.emit)

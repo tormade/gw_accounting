@@ -67,6 +67,8 @@ class MainWindow(QMainWindow):
         self.dashboard_panel.new_delivery_requested.connect(self.open_orders_tab)
         self.dashboard_panel.manage_orders_requested.connect(self.open_orders_tab)
         self.dashboard_panel.invoice_requested.connect(self.open_invoices_tab)
+        self.order_panel.delivery_note_requested.connect(self.open_delivery_note_for_order)
+        self.order_panel.invoice_requested.connect(self.open_invoice_for_order)
         self.tabs.addTab(self._scrollable_tab(self.dashboard_panel), "Start")
         self.tabs.addTab(self._scrollable_tab(self.order_panel), "Auftraege")
         self.tabs.addTab(self._scrollable_tab(self.delivery_note_panel), "Lieferscheine")
@@ -84,6 +86,14 @@ class MainWindow(QMainWindow):
 
     def open_invoices_tab(self) -> None:
         self.tabs.setCurrentIndex(MAIN_TABS.index("Rechnungen"))
+
+    def open_delivery_note_for_order(self, order_id: int) -> None:
+        self.tabs.setCurrentIndex(MAIN_TABS.index("Lieferscheine"))
+        self.delivery_note_panel.select_order(order_id)
+
+    def open_invoice_for_order(self, order_id: int) -> None:
+        self.tabs.setCurrentIndex(MAIN_TABS.index("Rechnungen"))
+        self.invoice_panel.select_order(order_id)
 
     def refresh_current_tab(self, index: int) -> None:
         if index < 0:

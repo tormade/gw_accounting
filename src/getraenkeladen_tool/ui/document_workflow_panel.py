@@ -3,6 +3,7 @@ from pathlib import Path
 from PySide6.QtCore import Qt, QUrl
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
+    QComboBox,
     QFormLayout,
     QHBoxLayout,
     QHeaderView,
@@ -20,6 +21,7 @@ from ..services.customer_service import list_active_customers
 from ..services.numbering_service import suggest_next_numbers
 from ..services.order_service import create_order_delivery_order, create_order_invoice, get_order, list_active_orders
 from .date_input import to_display_date
+from .deposit_return_presets import DEPOSIT_RETURN_PRESETS
 from .layouts import PageHeader, ResponsiveSplitter, configure_form_layout
 from .searchable_select import SearchableSelect
 
@@ -48,6 +50,8 @@ class DocumentWorkflowPanel(QWidget):
         self.last_pdf_path: Path | None = None
 
         self.customer_filter = SearchableSelect("Alle Kunden anzeigen")
+        self.customer_filter.result_list.setMaximumHeight(56)
+        self.customer_filter.setMaximumWidth(340)
         self.orders_table = QTableWidget(0, len(DOCUMENT_ORDER_COLUMNS))
         self.orders_table.setHorizontalHeaderLabels(DOCUMENT_ORDER_COLUMNS)
         self.orders_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
@@ -66,8 +70,9 @@ class DocumentWorkflowPanel(QWidget):
         self.returns_table.setHorizontalHeaderLabels(DOCUMENT_RETURN_COLUMNS)
         self.returns_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         self.returns_table.setMaximumHeight(150)
-        self.deposit_return_name = QLineEdit()
-        self.deposit_return_name.setPlaceholderText("z. B. Leergut Kiste 4,80")
+        self.deposit_return_select = QComboBox()
+        for label, cents in DEPOSIT_RETURN_PRESETS:
+            self.deposit_return_select.addItem(label, cents)
         self.deposit_return_quantity = QLineEdit()
         self.deposit_return_quantity.setPlaceholderText("z. B. 1")
         self.deposit_return_eur = QLineEdit()
@@ -95,10 +100,13 @@ class DocumentWorkflowPanel(QWidget):
         layout.addWidget(body, 1)
 
         order_box, order_layout = self._section("1. Auftrag auswaehlen", "Liste filtern und Auftrag doppelt anklicken.")
-        filter_form = QFormLayout()
-        configure_form_layout(filter_form)
-        filter_form.addRow("Auftraege filtern nach Kunde", self.customer_filter)
-        order_layout.addLayout(filter_form)
+        filter_toolbar = QHBoxLayout()
+        filter_label = QLabel("Auftraege filtern nach Kunde")
+        filter_label.setObjectName("sectionSubtitle")
+        filter_toolbar.addWidget(filter_label)
+        filter_toolbar.addWidget(self.customer_filter)
+        filter_toolbar.addStretch()
+        order_layout.addLayout(filter_toolbar)
         order_layout.addWidget(self.orders_table)
         refresh_row = QHBoxLayout()
         self.refresh_button = QPushButton("Auftraege laden")
@@ -130,7 +138,7 @@ class DocumentWorkflowPanel(QWidget):
         document_layout.addLayout(line_action_row)
         return_form = QFormLayout()
         configure_form_layout(return_form)
-        return_form.addRow("Pfandart", self.deposit_return_name)
+        return_form.addRow("Pfandart", self.deposit_return_select)
         return_form.addRow("Menge", self.deposit_return_quantity)
         return_form.addRow("Pfand EUR", self.deposit_return_eur)
         document_layout.addLayout(return_form)
@@ -166,6 +174,7 @@ class DocumentWorkflowPanel(QWidget):
         self.remove_line_button.clicked.connect(self.remove_selected_line)
         self.add_return_button.clicked.connect(self.add_deposit_return)
         self.remove_return_button.clicked.connect(self.remove_selected_deposit_return)
+        self.deposit_return_select.currentIndexChanged.connect(self.apply_selected_deposit_return)
         self.create_button.clicked.connect(self.create_document)
         self.open_excel_button.clicked.connect(lambda: self._open_local_file(self.last_excel_path))
         self.open_pdf_button.clicked.connect(lambda: self._open_local_file(self.last_pdf_path))
@@ -176,6 +185,7 @@ class DocumentWorkflowPanel(QWidget):
         self.refresh_master_data()
         self.refresh_orders()
         self.suggest_document_number()
+        self.apply_selected_deposit_return()
 
     def _button(self, object_name: str) -> QPushButton:
         return QPushButton(DOCUMENT_WORKFLOW_ACTIONS[object_name])
@@ -237,6 +247,11 @@ class DocumentWorkflowPanel(QWidget):
         order_id = self.order_ids_by_row.get(row)
         if order_id is None or self.session_factory is None:
             self.status_label.setText("Bitte zuerst einen Auftrag auswaehlen.")
+            return
+        self.select_order(order_id)
+
+    def select_order(self, order_id: int) -> None:
+        if self.session_factory is None:
             return
         session = self.session_factory()
         try:
@@ -326,7 +341,7 @@ class DocumentWorkflowPanel(QWidget):
         return returns
 
     def add_deposit_return(self) -> None:
-        name = self.deposit_return_name.text().strip()
+        name = self.deposit_return_select.currentText().strip()
         if not name:
             self.status_label.setText("Bitte eine Pfandart eintragen.")
             return
@@ -337,6 +352,12 @@ class DocumentWorkflowPanel(QWidget):
             return
         self._append_return(name, quantity, deposit_cents)
         self.status_label.setText("Pfandrueckgabe fuer diesen Beleg hinzugefuegt.")
+
+    def apply_selected_deposit_return(self) -> None:
+        cents = self.deposit_return_select.currentData()
+        if cents is None:
+            return
+        self.deposit_return_eur.setText(f"{int(cents) / 100:.2f}".replace(".", ","))
 
     def remove_selected_line(self) -> None:
         row = self.lines_table.currentRow()

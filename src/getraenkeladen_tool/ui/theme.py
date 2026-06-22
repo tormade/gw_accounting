@@ -115,16 +115,6 @@ QSplitter#workspaceSplitter::handle {
     border-radius: 2px;
 }
 
-QCalendarWidget#calendarPanel {
-    background: #ffffff;
-    border: 1px solid #dedbd2;
-    border-radius: 14px;
-}
-
-QCalendarWidget#calendarPanel QWidget {
-    alternate-background-color: #fbfaf7;
-}
-
 QWidget#documentHeaderCard {
     background: #fbfaf7;
 }

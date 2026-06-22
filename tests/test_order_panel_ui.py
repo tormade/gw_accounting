@@ -34,7 +34,13 @@ def test_document_workflow_panels_make_excel_pdf_generation_flow_visible():
 
 def test_document_workflow_allows_editing_lines_and_deposit_returns():
     source = Path("src/getraenkeladen_tool/ui/document_workflow_panel.py").read_text(encoding="utf-8")
+    presets_source = Path("src/getraenkeladen_tool/ui/deposit_return_presets.py").read_text(encoding="utf-8")
 
+    assert "DEPOSIT_RETURN_PRESETS" in source
+    assert "Pfand 1,50 EUR" in presets_source
+    assert "Pfand 5,10 EUR" in presets_source
+    assert "self.deposit_return_select = QComboBox()" in source
+    assert "self.deposit_return_select.currentIndexChanged.connect(self.apply_selected_deposit_return)" in source
     assert '"removeDocumentLineButton": "Position entfernen"' in source
     assert '"addDocumentDepositReturnButton": "Pfand zurueck hinzufuegen"' in source
     assert '"removeDocumentDepositReturnButton": "Pfand zurueck entfernen"' in source
@@ -42,6 +48,7 @@ def test_document_workflow_allows_editing_lines_and_deposit_returns():
     assert "self.add_return_button.clicked.connect(self.add_deposit_return)" in source
     assert "self.remove_return_button.clicked.connect(self.remove_selected_deposit_return)" in source
     assert "def add_deposit_return" in source
+    assert "def apply_selected_deposit_return" in source
     assert "def remove_selected_line" in source
 
 
@@ -80,6 +87,8 @@ def test_order_panel_exposes_deposit_returns_new_order_and_copy_actions():
     assert '"copyOrderButton": "Aus Auftrag kopieren"' in source
     assert '"addDepositReturnButton": "Pfand zurueck hinzufuegen"' in source
     assert "self.deposit_returns_table" in source
+    assert "self.deposit_return_select = QComboBox()" in source
+    assert "DEPOSIT_RETURN_PRESETS" in source
     assert "def reset_order_form" in source
     assert "def copy_selected_order_as_new" in source
 
@@ -103,6 +112,7 @@ def test_order_panel_filters_orders_by_customer_and_can_copy_existing_order():
     assert "self.current_order_id = None" in source
     assert "Kopie aus Auftrag" in source
     assert "list_active_orders(session, customer_id=customer_id)" in source
+    assert "self.order_workspace_tabs.setCurrentIndex(0)" in source
 
 
 def test_order_panel_focuses_on_order_management_not_document_creation():
@@ -136,3 +146,26 @@ def test_order_panel_forms_expand_to_available_width_instead_of_floating_centere
     assert "configure_form_layout(deposit_return_form)" in source
     assert "setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow)" in layout_source
     assert "setLabelAlignment(Qt.AlignmentFlag.AlignLeft)" in layout_source
+
+
+def test_order_and_document_filters_are_compact_top_toolbars():
+    order_source = Path("src/getraenkeladen_tool/ui/order_panel.py").read_text(encoding="utf-8")
+    document_source = Path("src/getraenkeladen_tool/ui/document_workflow_panel.py").read_text(encoding="utf-8")
+
+    assert "self.order_customer_filter.result_list.setMaximumHeight(56)" in order_source
+    assert "self.order_customer_filter.setMaximumWidth(340)" in order_source
+    assert "filter_toolbar = QHBoxLayout()" in order_source
+    assert "orders_layout.addLayout(filter_toolbar)" in order_source
+    assert "self.customer_filter.result_list.setMaximumHeight(56)" in document_source
+    assert "self.customer_filter.setMaximumWidth(340)" in document_source
+    assert "filter_toolbar = QHBoxLayout()" in document_source
+    assert "order_layout.addLayout(filter_toolbar)" in document_source
+
+
+def test_order_context_menu_offers_copy_delivery_note_and_invoice_actions():
+    source = Path("src/getraenkeladen_tool/ui/order_panel.py").read_text(encoding="utf-8")
+
+    assert '"create_delivery_note": "Lieferschein erstellen"' in source
+    assert '"create_invoice": "Rechnung erstellen"' in source
+    assert "self.request_delivery_note_for_selected_order()" in source
+    assert "self.request_invoice_for_selected_order()" in source
