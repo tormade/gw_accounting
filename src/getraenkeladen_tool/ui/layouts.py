@@ -38,6 +38,15 @@ class PageHeader(QWidget):
             layout.addWidget(action)
 
 
+class ContentSurface(QWidget):
+    def __init__(self) -> None:
+        super().__init__()
+        self.setObjectName("contentSurface")
+        self.layout = QVBoxLayout(self)
+        self.layout.setContentsMargins(24, 24, 24, 24)
+        self.layout.setSpacing(18)
+
+
 class ActionCard(QWidget):
     def __init__(self, title: str, subtitle: str, button_text: str = "") -> None:
         super().__init__()

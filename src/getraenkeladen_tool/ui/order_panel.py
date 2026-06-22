@@ -32,7 +32,7 @@ from ..services.order_service import (
 from ..services.product_service import list_active_products
 from .date_input import DateInput, to_display_date
 from .deposit_return_presets import DEPOSIT_RETURN_PRESETS
-from .layouts import FilterBar, PageHeader, ResponsiveSplitter, WorkspaceCard, configure_form_layout
+from .layouts import ContentSurface, FilterBar, PageHeader, ResponsiveSplitter, WorkspaceCard, configure_form_layout
 from .searchable_select import SearchableSelect
 
 
@@ -142,9 +142,11 @@ class OrderPanel(QWidget):
         self.status_label = QLabel("Schritt 1: Stammdaten laden, dann Kunde und Produkte auswaehlen.")
         self.status_label.setObjectName("muted")
 
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(32, 28, 32, 28)
-        layout.setSpacing(18)
+        root_layout = QVBoxLayout(self)
+        root_layout.setContentsMargins(0, 0, 0, 0)
+        surface = ContentSurface()
+        root_layout.addWidget(surface)
+        layout = surface.layout
 
         self.help_button = QPushButton(ORDER_PANEL_ACTIONS["orderHelpButton"])
         self.help_button.setObjectName("helpButton")

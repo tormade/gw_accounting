@@ -4,7 +4,7 @@ from PySide6.QtCore import Signal
 from PySide6.QtWidgets import QGridLayout, QHBoxLayout, QLabel, QMessageBox, QPushButton, QVBoxLayout, QWidget
 
 from ..services.report_service import DashboardSummary, get_dashboard_summary
-from .layouts import ActionCard, PageHeader
+from .layouts import ActionCard, ContentSurface, PageHeader
 
 
 DASHBOARD_ACTIONS = {
@@ -37,9 +37,11 @@ class DashboardPanel(QWidget):
         self.card_values: list[QLabel] = []
         self.quick_actions: list[ActionCard] = []
 
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(32, 28, 32, 28)
-        layout.setSpacing(18)
+        root_layout = QVBoxLayout(self)
+        root_layout.setContentsMargins(0, 0, 0, 0)
+        surface = ContentSurface()
+        root_layout.addWidget(surface)
+        layout = surface.layout
 
         self.help_button = QPushButton(DASHBOARD_ACTIONS["dashboardHelpButton"])
         self.help_button.setObjectName("helpButton")
@@ -61,11 +63,12 @@ class DashboardPanel(QWidget):
             "Zu Rechnungen",
         )
         self.quick_actions = [self.new_delivery_card, self.search_order_card, self.invoice_card]
-        quick_action_row = QHBoxLayout()
-        quick_action_row.setSpacing(14)
-        for card in self.quick_actions:
-            quick_action_row.addWidget(card)
-        layout.addLayout(quick_action_row)
+        quick_action_grid = QGridLayout()
+        quick_action_grid.setSpacing(14)
+        for column, card in enumerate(self.quick_actions):
+            quick_action_grid.addWidget(card, 0, column)
+            quick_action_grid.setColumnStretch(column, 1)
+        layout.addLayout(quick_action_grid)
 
         layout.addLayout(self._cards_grid())
 

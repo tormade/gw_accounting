@@ -2,6 +2,7 @@ from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
     QFormLayout,
+    QHeaderView,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -27,6 +28,7 @@ from ..services.product_service import (
     update_product,
 )
 from ..services.settings_service import DEFAULT_PRODUCT_UNITS, list_product_units
+from .layouts import ContentSurface, PageHeader, ResponsiveSplitter, WorkspaceCard, configure_form_layout
 
 
 PRODUCT_PANEL_ACTIONS = {
@@ -84,39 +86,27 @@ class ProductPanel(QWidget):
         self.status_label.setObjectName("muted")
         self.products_table = QTableWidget(0, len(PRODUCT_COLUMNS))
         self.products_table.setHorizontalHeaderLabels(PRODUCT_COLUMNS)
+        self.products_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
 
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(32, 28, 32, 28)
-        layout.setSpacing(14)
+        root_layout = QVBoxLayout(self)
+        root_layout.setContentsMargins(0, 0, 0, 0)
+        surface = ContentSurface()
+        root_layout.addWidget(surface)
+        layout = surface.layout
 
-        header_row = QHBoxLayout()
-        title_column = QVBoxLayout()
-        headline = QLabel("Produkte")
-        headline.setObjectName("headline")
-        title_column.addWidget(headline)
-        muted = QLabel("Zentrale Artikelliste und Standardpreise")
-        muted.setObjectName("muted")
-        title_column.addWidget(muted)
-        header_row.addLayout(title_column)
-        header_row.addStretch()
         self.help_button = QPushButton(PRODUCT_PANEL_ACTIONS["productHelpButton"])
         self.help_button.setObjectName("helpButton")
-        header_row.addWidget(self.help_button)
-        layout.addLayout(header_row)
+        layout.addWidget(PageHeader("Produkte", "Zentrale Artikelliste und Standardpreise.", self.help_button))
 
-        workspace = QHBoxLayout()
-        workspace.setSpacing(18)
-        left_column = QVBoxLayout()
-        right_column = QVBoxLayout()
-        workspace.addLayout(left_column, 1)
-        workspace.addLayout(right_column, 1)
-        layout.addLayout(workspace)
+        workspace = ResponsiveSplitter()
+        layout.addWidget(workspace, 1)
 
         edit_box, edit_layout = self._section(
             PRODUCT_PANEL_SECTIONS[0],
             "Produktname, Einheit und Preis sind die Basis fuer spaetere Auftraege.",
         )
         form = QFormLayout()
+        configure_form_layout(form)
         form.addRow("Produkt", self.product_name)
         form.addRow("Einheit", self.unit)
         form.addRow("Artikelnummer", self.article_number)
@@ -138,7 +128,6 @@ class ProductPanel(QWidget):
         action_row.addWidget(self.load_button)
         action_row.addStretch()
         edit_layout.addLayout(action_row)
-        left_column.addWidget(edit_box)
 
         list_box, list_layout = self._section(
             PRODUCT_PANEL_SECTIONS[1],
@@ -157,7 +146,10 @@ class ProductPanel(QWidget):
         list_actions.addStretch()
         list_layout.addLayout(list_actions)
         list_layout.addWidget(self.products_table)
-        right_column.addWidget(list_box)
+        workspace.addWidget(list_box)
+        workspace.addWidget(edit_box)
+        workspace.setStretchFactor(0, 3)
+        workspace.setStretchFactor(1, 2)
 
         layout.addWidget(self.status_label)
 
@@ -199,20 +191,8 @@ class ProductPanel(QWidget):
         return box
 
     def _section(self, title: str, subtitle: str) -> tuple[QWidget, QVBoxLayout]:
-        box = QWidget()
-        box.setObjectName("sectionBox")
-        layout = QVBoxLayout(box)
-        layout.setSpacing(10)
-
-        title_label = QLabel(title)
-        title_label.setObjectName("sectionTitle")
-        layout.addWidget(title_label)
-
-        subtitle_label = QLabel(subtitle)
-        subtitle_label.setObjectName("sectionSubtitle")
-        subtitle_label.setWordWrap(True)
-        layout.addWidget(subtitle_label)
-        return box, layout
+        box = WorkspaceCard(title, subtitle)
+        return box, box.layout
 
     def save_product(self) -> None:
         if self.session_factory is None:

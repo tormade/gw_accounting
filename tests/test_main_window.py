@@ -45,8 +45,8 @@ def test_main_window_uses_sidebar_app_shell_instead_of_top_tabs():
 
 def test_theme_uses_winklmeier_work_tool_direction():
     assert "#f4f1ea" in APP_STYLESHEET
-    assert "#b91c1c" in APP_STYLESHEET
-    assert "#2f6f3e" in APP_STYLESHEET
+    assert "#116149" in APP_STYLESHEET
+    assert "#c4312f" in APP_STYLESHEET
     assert "guidanceBox" in APP_STYLESHEET
     assert "sectionBox" in APP_STYLESHEET
     assert "helpButton" in APP_STYLESHEET
@@ -61,19 +61,22 @@ def test_theme_uses_winklmeier_work_tool_direction():
 
 
 def test_theme_uses_light_website_inspired_navigation_instead_of_black_bars():
-    assert "QWidget#brandHeader {\n    background: #fffaf0;" in APP_STYLESHEET
-    assert "QListWidget#sidebarNavigation {\n    background: #f8f0dc;" in APP_STYLESHEET
+    assert "QWidget#brandHeader {\n    background: #ffffff;" in APP_STYLESHEET
+    assert "QListWidget#sidebarNavigation {\n    background: #ffffff;" in APP_STYLESHEET
     assert "background: #111111;" not in APP_STYLESHEET
     assert "background: #151515;" not in APP_STYLESHEET
-    assert "QListWidget#sidebarNavigation::item:selected {\n    background: #2f6f3e;" in APP_STYLESHEET
+    assert "QListWidget#sidebarNavigation::item:selected {\n    background: #e8f3ee;" in APP_STYLESHEET
 
 
 def test_forms_and_tables_have_clean_work_area_treatment():
-    assert "QWidget#workspaceCard" in APP_STYLESHEET
+    assert "QWidget#contentSurface" in APP_STYLESHEET
     assert "QWidget#filterBar" in APP_STYLESHEET
     assert "QWidget#totalBar" in APP_STYLESHEET
     assert "QLineEdit:focus" in APP_STYLESHEET
     assert "QTableWidget::item:selected" in APP_STYLESHEET
+    assert "selection-background-color: #d7ebe2" in APP_STYLESHEET
+    assert "selection-color: #123326" in APP_STYLESHEET
+    assert "QTableWidget QLineEdit" in APP_STYLESHEET
 
 
 def test_shared_layout_widgets_are_available():
@@ -86,11 +89,13 @@ def test_shared_layout_widgets_are_available():
     assert "class ResponsiveSplitter" in source
     assert "class SidebarNavigation" in source
     assert "class PageToolbar" in source
+    assert "class ContentSurface" in source
     assert 'setObjectName("pageHeader")' in source
     assert 'setObjectName("actionCard")' in source
     assert 'setObjectName("workspaceSplitter")' in source
     assert 'setObjectName("sidebarNavigation")' in source
     assert 'setObjectName("pageToolbar")' in source
+    assert 'setObjectName("contentSurface")' in source
     assert "class WorkspaceCard" in source
     assert "class FilterBar" in source
     assert 'setObjectName("workspaceCard")' in source
@@ -103,12 +108,43 @@ def test_order_and_document_workspaces_use_named_layout_regions():
     order_source = Path("src/getraenkeladen_tool/ui/order_panel.py").read_text(encoding="utf-8")
     document_source = Path("src/getraenkeladen_tool/ui/document_workflow_panel.py").read_text(encoding="utf-8")
 
+    assert "ContentSurface" in order_source
     assert "WorkspaceCard" in order_source
     assert "FilterBar" in order_source
     assert 'setObjectName("totalBar")' in order_source
+    assert "ContentSurface" in document_source
     assert "WorkspaceCard" in document_source
     assert "FilterBar" in document_source
     assert 'setObjectName("totalBar")' in document_source
+
+
+def test_master_data_panels_use_modern_list_with_detail_layout():
+    from pathlib import Path
+
+    customer_source = Path("src/getraenkeladen_tool/ui/customer_panel.py").read_text(encoding="utf-8")
+    product_source = Path("src/getraenkeladen_tool/ui/product_panel.py").read_text(encoding="utf-8")
+
+    assert "ContentSurface" in customer_source
+    assert "ResponsiveSplitter" in customer_source
+    assert "WorkspaceCard" in customer_source
+    assert "setStretchFactor(0, 3)" in customer_source
+    assert "setStretchFactor(1, 2)" in customer_source
+    assert "ContentSurface" in product_source
+    assert "ResponsiveSplitter" in product_source
+    assert "WorkspaceCard" in product_source
+    assert "setStretchFactor(0, 3)" in product_source
+    assert "setStretchFactor(1, 2)" in product_source
+
+
+def test_dashboard_uses_modern_surface_and_action_grid():
+    from pathlib import Path
+
+    source = Path("src/getraenkeladen_tool/ui/dashboard_panel.py").read_text(encoding="utf-8")
+
+    assert "ContentSurface" in source
+    assert "QGridLayout" in source
+    assert "quick_action_grid" in source
+    assert "setColumnStretch" in source
 
 
 def test_order_form_gives_selection_fields_room_to_grow():

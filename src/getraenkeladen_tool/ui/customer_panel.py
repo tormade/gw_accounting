@@ -1,6 +1,7 @@
 from PySide6.QtWidgets import (
     QFileDialog,
     QFormLayout,
+    QHeaderView,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -26,6 +27,7 @@ from ..services.customer_service import (
     update_customer,
 )
 from .date_input import DateInput, to_display_date
+from .layouts import ContentSurface, PageHeader, ResponsiveSplitter, WorkspaceCard, configure_form_layout
 
 
 CUSTOMER_PANEL_ACTIONS = {
@@ -82,39 +84,27 @@ class CustomerPanel(QWidget):
         self.status_label.setObjectName("muted")
         self.customers_table = QTableWidget(0, len(CUSTOMER_COLUMNS))
         self.customers_table.setHorizontalHeaderLabels(CUSTOMER_COLUMNS)
+        self.customers_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
 
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(32, 28, 32, 28)
-        layout.setSpacing(14)
+        root_layout = QVBoxLayout(self)
+        root_layout.setContentsMargins(0, 0, 0, 0)
+        surface = ContentSurface()
+        root_layout.addWidget(surface)
+        layout = surface.layout
 
-        header_row = QHBoxLayout()
-        title_column = QVBoxLayout()
-        headline = QLabel("Kunden")
-        headline.setObjectName("headline")
-        title_column.addWidget(headline)
-        muted = QLabel("Stammdaten, Lieferhinweise und Kontakttermine")
-        muted.setObjectName("muted")
-        title_column.addWidget(muted)
-        header_row.addLayout(title_column)
-        header_row.addStretch()
         self.help_button = QPushButton(CUSTOMER_PANEL_ACTIONS["customerHelpButton"])
         self.help_button.setObjectName("helpButton")
-        header_row.addWidget(self.help_button)
-        layout.addLayout(header_row)
+        layout.addWidget(PageHeader("Kunden", "Stammdaten, Lieferhinweise und Kontakttermine.", self.help_button))
 
-        workspace = QHBoxLayout()
-        workspace.setSpacing(18)
-        left_column = QVBoxLayout()
-        right_column = QVBoxLayout()
-        workspace.addLayout(left_column, 1)
-        workspace.addLayout(right_column, 1)
-        layout.addLayout(workspace)
+        workspace = ResponsiveSplitter()
+        layout.addWidget(workspace, 1)
 
         edit_box, edit_layout = self._section(
             CUSTOMER_PANEL_SECTIONS[0],
             "Pflicht ist der Kundenname. Ordner, Zahlungsart und Kontakttermin helfen spaeter beim Tagesablauf.",
         )
         form = QFormLayout()
+        configure_form_layout(form)
         form.addRow("Kunde", self.customer_name)
         form.addRow("Kundenordner", self._folder_row())
         form.addRow("Adresse", self.address)
@@ -136,8 +126,6 @@ class CustomerPanel(QWidget):
         action_row.addWidget(self.load_button)
         action_row.addStretch()
         edit_layout.addLayout(action_row)
-        left_column.addWidget(edit_box)
-
         list_box, list_layout = self._section(
             CUSTOMER_PANEL_SECTIONS[1],
             "Kunden unten anklicken. Archivieren blendet sie aus dem Alltag aus, Wiederherstellen holt sie zurueck.",
@@ -155,7 +143,10 @@ class CustomerPanel(QWidget):
         list_actions.addStretch()
         list_layout.addLayout(list_actions)
         list_layout.addWidget(self.customers_table)
-        right_column.addWidget(list_box)
+        workspace.addWidget(list_box)
+        workspace.addWidget(edit_box)
+        workspace.setStretchFactor(0, 3)
+        workspace.setStretchFactor(1, 2)
 
         layout.addWidget(self.status_label)
 
@@ -206,20 +197,8 @@ class CustomerPanel(QWidget):
         return box
 
     def _section(self, title: str, subtitle: str) -> tuple[QWidget, QVBoxLayout]:
-        box = QWidget()
-        box.setObjectName("sectionBox")
-        layout = QVBoxLayout(box)
-        layout.setSpacing(10)
-
-        title_label = QLabel(title)
-        title_label.setObjectName("sectionTitle")
-        layout.addWidget(title_label)
-
-        subtitle_label = QLabel(subtitle)
-        subtitle_label.setObjectName("sectionSubtitle")
-        subtitle_label.setWordWrap(True)
-        layout.addWidget(subtitle_label)
-        return box, layout
+        box = WorkspaceCard(title, subtitle)
+        return box, box.layout
 
     def choose_folder(self) -> None:
         folder = QFileDialog.getExistingDirectory(self, "Kundenordner waehlen")

@@ -22,7 +22,7 @@ from ..services.numbering_service import suggest_next_numbers
 from ..services.order_service import create_order_delivery_order, create_order_invoice, get_order, list_active_orders
 from .date_input import to_display_date
 from .deposit_return_presets import DEPOSIT_RETURN_PRESETS
-from .layouts import FilterBar, PageHeader, ResponsiveSplitter, WorkspaceCard, configure_form_layout
+from .layouts import ContentSurface, FilterBar, PageHeader, ResponsiveSplitter, WorkspaceCard, configure_form_layout
 from .searchable_select import SearchableSelect
 
 
@@ -86,9 +86,11 @@ class DocumentWorkflowPanel(QWidget):
         self.result_label.setObjectName("sectionSubtitle")
         self.result_label.setWordWrap(True)
 
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(32, 28, 32, 28)
-        layout.setSpacing(14)
+        root_layout = QVBoxLayout(self)
+        root_layout.setContentsMargins(0, 0, 0, 0)
+        surface = ContentSurface()
+        root_layout.addWidget(surface)
+        layout = surface.layout
 
         layout.addWidget(
             PageHeader(

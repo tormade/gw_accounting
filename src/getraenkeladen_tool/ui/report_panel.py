@@ -3,6 +3,7 @@ from datetime import date
 
 from PySide6.QtWidgets import (
     QFormLayout,
+    QHeaderView,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -14,6 +15,7 @@ from PySide6.QtWidgets import (
 )
 
 from .date_input import DateInput, to_display_date
+from .layouts import ContentSurface, PageHeader, WorkspaceCard, configure_form_layout
 from ..services.report_service import (
     export_daily_deliveries_csv,
     export_due_contacts_csv,
@@ -49,37 +51,41 @@ class ReportPanel(QWidget):
         self.session_factory = session_factory
         self.open_item_ids_by_row = {}
 
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(32, 28, 32, 28)
-        layout.setSpacing(14)
-
-        headline = QLabel("Listen")
-        headline.setObjectName("headline")
-        layout.addWidget(headline)
-
-        muted = QLabel("Offene Posten, Tageslieferungen und Kontaktliste")
-        muted.setObjectName("muted")
-        layout.addWidget(muted)
+        root_layout = QVBoxLayout(self)
+        root_layout.setContentsMargins(0, 0, 0, 0)
+        surface = ContentSurface()
+        root_layout.addWidget(surface)
+        layout = surface.layout
+        layout.addWidget(PageHeader("Listen", "Offene Posten, Tageslieferungen und Kontaktliste."))
 
         self.target_date = DateInput(date.today().isoformat())
         form = QFormLayout()
+        configure_form_layout(form)
         form.addRow("Stichtag", self.target_date)
-        layout.addLayout(form)
+        filter_box = WorkspaceCard("Auswertung", "Stichtag waehlen und die Listen darunter aktualisieren.")
+        filter_box.layout.addLayout(form)
+        layout.addWidget(filter_box)
 
         self.open_items_table = QTableWidget(0, len(OPEN_ITEMS_COLUMNS))
         self.open_items_table.setHorizontalHeaderLabels(OPEN_ITEMS_COLUMNS)
-        layout.addWidget(QLabel("Offene Posten"))
-        layout.addWidget(self.open_items_table)
+        self.open_items_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        open_items_box = WorkspaceCard("Offene Posten")
+        open_items_box.layout.addWidget(self.open_items_table)
+        layout.addWidget(open_items_box)
 
         self.deliveries_table = QTableWidget(0, len(DELIVERY_COLUMNS))
         self.deliveries_table.setHorizontalHeaderLabels(DELIVERY_COLUMNS)
-        layout.addWidget(QLabel("Tageslieferungen"))
-        layout.addWidget(self.deliveries_table)
+        self.deliveries_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        deliveries_box = WorkspaceCard("Tageslieferungen")
+        deliveries_box.layout.addWidget(self.deliveries_table)
+        layout.addWidget(deliveries_box)
 
         self.contacts_table = QTableWidget(0, len(CONTACT_COLUMNS))
         self.contacts_table.setHorizontalHeaderLabels(CONTACT_COLUMNS)
-        layout.addWidget(QLabel("Kontaktliste"))
-        layout.addWidget(self.contacts_table)
+        self.contacts_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        contacts_box = WorkspaceCard("Kontaktliste")
+        contacts_box.layout.addWidget(self.contacts_table)
+        layout.addWidget(contacts_box)
 
         action_row = QHBoxLayout()
         self.seed_button = self._button("seedDemoDataButton")

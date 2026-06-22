@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
 
 from ..services.master_data_import_service import import_master_data_from_folder
 from ..services.settings_service import add_product_unit, list_product_units
+from .layouts import ContentSurface, PageHeader, WorkspaceCard, configure_form_layout
 
 
 SETTINGS_PANEL_ACTIONS = {
@@ -46,36 +47,29 @@ class SettingsPanel(QWidget):
         )
         self.status_label.setObjectName("muted")
 
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(32, 28, 32, 28)
-        layout.setSpacing(14)
+        root_layout = QVBoxLayout(self)
+        root_layout.setContentsMargins(0, 0, 0, 0)
+        surface = ContentSurface()
+        root_layout.addWidget(surface)
+        layout = surface.layout
 
-        header_row = QHBoxLayout()
-        title_column = QVBoxLayout()
-        headline = QLabel("Einstellungen")
-        headline.setObjectName("headline")
-        title_column.addWidget(headline)
-        muted = QLabel("Listenwerte, die an anderer Stelle als Auswahlfeld verwendet werden")
-        muted.setObjectName("muted")
-        title_column.addWidget(muted)
-        header_row.addLayout(title_column)
-        header_row.addStretch()
         self.help_button = QPushButton(SETTINGS_PANEL_ACTIONS["settingsHelpButton"])
         self.help_button.setObjectName("helpButton")
-        header_row.addWidget(self.help_button)
-        layout.addLayout(header_row)
+        layout.addWidget(
+            PageHeader(
+                "Einstellungen",
+                "Listenwerte, die an anderer Stelle als Auswahlfeld verwendet werden.",
+                self.help_button,
+            )
+        )
 
-        box = QWidget()
-        box.setObjectName("sectionBox")
-        box_layout = QVBoxLayout(box)
-        title = QLabel(SETTINGS_PANEL_SECTIONS[0])
-        title.setObjectName("sectionTitle")
-        box_layout.addWidget(title)
-        hint = QLabel("Hier bearbeiten Sie die Auswahlwerte fuer das Feld Einheit im Produkte-Reiter.")
-        hint.setObjectName("sectionSubtitle")
-        hint.setWordWrap(True)
-        box_layout.addWidget(hint)
+        box = WorkspaceCard(
+            SETTINGS_PANEL_SECTIONS[0],
+            "Hier bearbeiten Sie die Auswahlwerte fuer das Feld Einheit im Produkte-Reiter.",
+        )
+        box_layout = box.layout
         form = QFormLayout()
+        configure_form_layout(form)
         form.addRow("Neue Einheit", self.unit_input)
         box_layout.addLayout(form)
 
@@ -89,17 +83,13 @@ class SettingsPanel(QWidget):
         box_layout.addWidget(self.units_list)
         layout.addWidget(box)
 
-        import_box = QWidget()
-        import_box.setObjectName("sectionBox")
-        import_layout = QVBoxLayout(import_box)
-        import_title = QLabel("Stammdaten aus Excel importieren")
-        import_title.setObjectName("sectionTitle")
-        import_layout.addWidget(import_title)
-        import_hint = QLabel("Die Excel-Dateien werden nur gelesen. Aenderungen landen in der Datenbank und werden protokolliert.")
-        import_hint.setObjectName("sectionSubtitle")
-        import_hint.setWordWrap(True)
-        import_layout.addWidget(import_hint)
+        import_box = WorkspaceCard(
+            "Stammdaten aus Excel importieren",
+            "Die Excel-Dateien werden nur gelesen. Aenderungen landen in der Datenbank und werden protokolliert.",
+        )
+        import_layout = import_box.layout
         import_form = QFormLayout()
+        configure_form_layout(import_form)
         import_form.addRow("Input-Ordner", self._input_folder_row())
         import_layout.addLayout(import_form)
         self.import_master_data_button = self._button("importMasterDataButton")
