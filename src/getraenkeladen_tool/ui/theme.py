@@ -73,6 +73,58 @@ QWidget#documentHeaderCard {
     padding: 16px;
 }
 
+QWidget#pageHeader {
+    background: transparent;
+}
+
+QWidget#actionCard {
+    background: #ffffff;
+    border: 1px solid #dedbd2;
+    border-radius: 16px;
+    padding: 18px;
+}
+
+QWidget#actionCard:hover {
+    border-color: #b91c1c;
+}
+
+QLabel#actionCardTitle {
+    color: #111111;
+    font-size: 18px;
+    font-weight: 900;
+}
+
+QLabel#actionCardSubtitle {
+    color: #5f625c;
+    font-size: 13px;
+}
+
+QPushButton#actionCardButton {
+    background: #111111;
+    border: 0;
+    color: #ffffff;
+    font-weight: 900;
+}
+
+QPushButton#actionCardButton:hover {
+    background: #333333;
+}
+
+QSplitter#workspaceSplitter::handle {
+    background: #e6e0d3;
+    border-radius: 2px;
+}
+
+QCalendarWidget#calendarPanel {
+    background: #ffffff;
+    border: 1px solid #dedbd2;
+    border-radius: 14px;
+}
+
+QCalendarWidget#calendarPanel QWidget {
+    alternate-background-color: #fbfaf7;
+}
+
 QWidget#documentHeaderCard {
     background: #fbfaf7;
 }

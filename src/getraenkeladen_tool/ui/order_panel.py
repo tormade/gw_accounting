@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QPushButton,
     QHeaderView,
+    QTabWidget,
     QSpinBox,
     QTableWidget,
     QTableWidgetItem,
@@ -30,6 +31,7 @@ from ..services.order_service import (
 )
 from ..services.product_service import list_active_products
 from .date_input import DateInput, to_display_date
+from .layouts import PageHeader, ResponsiveSplitter
 from .searchable_select import SearchableSelect
 
 
@@ -121,29 +123,18 @@ class OrderPanel(QWidget):
         self.order_total_label.setObjectName("stepTitle")
         self.orders_table = QTableWidget(0, len(ORDER_COLUMNS))
         self.orders_table.setHorizontalHeaderLabels(ORDER_COLUMNS)
-        self.orders_table.setMaximumHeight(180)
+        self.orders_table.setMinimumHeight(360)
         self.orders_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         self.status_label = QLabel("Schritt 1: Stammdaten laden, dann Kunde und Produkte auswaehlen.")
         self.status_label.setObjectName("muted")
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(32, 28, 32, 28)
-        layout.setSpacing(14)
+        layout.setSpacing(18)
 
-        header_row = QHBoxLayout()
-        title_column = QVBoxLayout()
-        headline = QLabel("Auftraege")
-        headline.setObjectName("headline")
-        title_column.addWidget(headline)
-        muted = QLabel("Kopfdaten erfassen, Positionen pruefen, Belege erzeugen")
-        muted.setObjectName("muted")
-        title_column.addWidget(muted)
-        header_row.addLayout(title_column)
-        header_row.addStretch()
         self.help_button = QPushButton(ORDER_PANEL_ACTIONS["orderHelpButton"])
         self.help_button.setObjectName("helpButton")
-        header_row.addWidget(self.help_button)
-        layout.addLayout(header_row)
+        layout.addWidget(PageHeader("Auftraege", "Auftrag neu erfassen oder vorhandene Auftraege verwalten.", self.help_button))
 
         self.refresh_data_button = self._button("refreshOrderDataButton")
         self.suggest_order_number_button = self._button("suggestOrderNumberButton")
@@ -155,6 +146,14 @@ class OrderPanel(QWidget):
         self.refresh_orders_button = self._button("refreshOrdersButton")
         self.new_order_button = self._button("newOrderButton")
         self.copy_order_button = self._button("copyOrderButton")
+
+        self.order_workspace_tabs = QTabWidget()
+        layout.addWidget(self.order_workspace_tabs, 1)
+
+        new_order_tab = QWidget()
+        new_order_layout = QVBoxLayout(new_order_tab)
+        new_order_layout.setContentsMargins(0, 0, 0, 0)
+        new_order_layout.setSpacing(14)
 
         customer_box, customer_layout = self._section(
             ORDER_PANEL_SECTIONS[0],
@@ -174,11 +173,10 @@ class OrderPanel(QWidget):
         customer_actions.addWidget(self.save_order_button)
         customer_actions.addStretch()
         customer_layout.addLayout(customer_actions)
-        layout.addWidget(customer_box)
+        new_order_layout.addWidget(customer_box)
 
-        middle_row = QHBoxLayout()
-        middle_row.setSpacing(18)
-        layout.addLayout(middle_row)
+        order_entry_splitter = ResponsiveSplitter()
+        new_order_layout.addWidget(order_entry_splitter, 1)
 
         position_box, position_layout = self._section(
             ORDER_PANEL_SECTIONS[1],
@@ -209,17 +207,20 @@ class OrderPanel(QWidget):
         deposit_return_actions.addWidget(self.remove_deposit_return_button)
         deposit_return_actions.addStretch()
         position_layout.addLayout(deposit_return_actions)
-        middle_row.addWidget(position_box, 1)
+        order_entry_splitter.addWidget(position_box)
 
         line_box, line_layout = self._section("Belegpositionen", "Alle hinzugefuegten Artikel dieses Auftrags.")
         line_layout.addWidget(self.order_lines_table)
         line_layout.addWidget(self.deposit_returns_table)
         line_layout.addWidget(self.order_total_label)
-        middle_row.addWidget(line_box, 3)
+        order_entry_splitter.addWidget(line_box)
+        order_entry_splitter.setStretchFactor(0, 1)
+        order_entry_splitter.setStretchFactor(1, 3)
 
-        bottom_row = QHBoxLayout()
-        bottom_row.setSpacing(18)
-        layout.addLayout(bottom_row)
+        manage_orders_tab = QWidget()
+        manage_orders_layout = QVBoxLayout(manage_orders_tab)
+        manage_orders_layout.setContentsMargins(0, 0, 0, 0)
+        manage_orders_layout.setSpacing(14)
 
         orders_box, orders_layout = self._section(
             ORDER_PANEL_SECTIONS[2],
@@ -234,7 +235,10 @@ class OrderPanel(QWidget):
         orders_actions.addStretch()
         orders_layout.addLayout(orders_actions)
         orders_layout.addWidget(self.orders_table)
-        bottom_row.addWidget(orders_box, 2)
+        manage_orders_layout.addWidget(orders_box, 1)
+
+        self.order_workspace_tabs.addTab(new_order_tab, "Neuer Auftrag")
+        self.order_workspace_tabs.addTab(manage_orders_tab, "Auftraege verwalten")
 
         layout.addWidget(self.status_label)
 

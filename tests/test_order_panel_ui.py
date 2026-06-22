@@ -99,3 +99,16 @@ def test_order_panel_focuses_on_order_management_not_document_creation():
     assert '"createDeliveryOrderButton"' not in source
     assert '"createInvoiceButton"' not in source
     assert "Excel/PDF aus Auftrag erstellen" not in source
+
+
+def test_order_panel_splits_creation_and_management_into_resize_friendly_workspaces():
+    source = Path("src/getraenkeladen_tool/ui/order_panel.py").read_text(encoding="utf-8")
+
+    assert "QTabWidget" in source
+    assert "ResponsiveSplitter" in source
+    assert "PageHeader" in source
+    assert 'addTab(new_order_tab, "Neuer Auftrag")' in source
+    assert 'addTab(manage_orders_tab, "Auftraege verwalten")' in source
+    assert "setStretchFactor(0, 1)" in source
+    assert "setStretchFactor(1, 3)" in source
+    assert "setMaximumHeight(180)" not in source

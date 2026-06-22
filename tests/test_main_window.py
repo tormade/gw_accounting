@@ -39,6 +39,23 @@ def test_theme_uses_winklmeier_work_tool_direction():
     assert "helpButton" in APP_STYLESHEET
     assert "sectionTitle" in APP_STYLESHEET
     assert "documentHeaderCard" in APP_STYLESHEET
+    assert "pageHeader" in APP_STYLESHEET
+    assert "actionCard" in APP_STYLESHEET
+    assert "workspaceSplitter" in APP_STYLESHEET
+    assert "calendarPanel" in APP_STYLESHEET
+
+
+def test_shared_layout_widgets_are_available():
+    from pathlib import Path
+
+    source = Path("src/getraenkeladen_tool/ui/layouts.py").read_text(encoding="utf-8")
+
+    assert "class PageHeader" in source
+    assert "class ActionCard" in source
+    assert "class ResponsiveSplitter" in source
+    assert 'setObjectName("pageHeader")' in source
+    assert 'setObjectName("actionCard")' in source
+    assert 'setObjectName("workspaceSplitter")' in source
 
 
 def test_date_fields_use_calendar_input():
@@ -216,6 +233,20 @@ def test_dashboard_tab_exposes_daily_guidance():
     )
 
 
+def test_dashboard_uses_cockpit_calendar_and_quick_actions():
+    from pathlib import Path
+
+    source = Path("src/getraenkeladen_tool/ui/dashboard_panel.py").read_text(encoding="utf-8")
+
+    assert "QCalendarWidget" in source
+    assert "ActionCard" in source
+    assert "ResponsiveSplitter" in source
+    assert "self.calendar.setObjectName(\"calendarPanel\")" in source
+    assert "self.quick_actions" in source
+    assert "Auftrag suchen" in source
+    assert "Rechnung erstellen" in source
+
+
 def test_dashboard_primary_action_opens_order_tab():
     from pathlib import Path
 
@@ -223,6 +254,21 @@ def test_dashboard_primary_action_opens_order_tab():
 
     assert "new_delivery_requested.connect(self.open_orders_tab)" in source
     assert 'MAIN_TABS.index("Auftraege")' in source
+
+
+def test_dashboard_quick_actions_open_order_and_invoice_workspaces():
+    from pathlib import Path
+
+    dashboard_source = Path("src/getraenkeladen_tool/ui/dashboard_panel.py").read_text(encoding="utf-8")
+    main_source = Path("src/getraenkeladen_tool/ui/main_window.py").read_text(encoding="utf-8")
+
+    assert "manage_orders_requested = Signal()" in dashboard_source
+    assert "invoice_requested = Signal()" in dashboard_source
+    assert "self.search_order_card.button.clicked.connect(self.manage_orders_requested.emit)" in dashboard_source
+    assert "self.invoice_card.button.clicked.connect(self.invoice_requested.emit)" in dashboard_source
+    assert "manage_orders_requested.connect(self.open_orders_tab)" in main_source
+    assert "invoice_requested.connect(self.open_invoices_tab)" in main_source
+    assert 'MAIN_TABS.index("Rechnungen")' in main_source
 
 
 def test_main_window_refreshes_tab_data_when_user_switches_tabs():
