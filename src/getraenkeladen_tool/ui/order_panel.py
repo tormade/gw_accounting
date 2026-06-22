@@ -42,8 +42,8 @@ ORDER_PANEL_ACTIONS = {
     "addOrderLineButton": "Position hinzufuegen",
     "removeOrderLineButton": "Position entfernen",
     "saveOrderButton": "Auftrag speichern",
-    "createDeliveryOrderButton": "Lieferauftrag erstellen (LS)",
-    "createInvoiceButton": "Rechnung erstellen",
+    "createDeliveryOrderButton": "LS Excel/PDF erstellen",
+    "createInvoiceButton": "Rechnung Excel/PDF erstellen",
     "refreshOrdersButton": "Auftragsliste laden",
 }
 
@@ -52,7 +52,7 @@ ORDER_COLUMNS = ("Auftrag", "Kunde", "Lieferdatum", "Zeitfenster", "Status")
 ORDER_PANEL_SECTIONS = (
     "Kopfdaten",
     "Positionen",
-    "Belegabschluss",
+    "Excel/PDF aus Auftrag erstellen",
     "Bestehende Auftraege",
 )
 ORDER_HELP_TEXT = (
@@ -67,8 +67,8 @@ ORDER_GUIDANCE_STEPS = (
 )
 ORDER_CONTEXT_ACTIONS = {
     "open": "Auftrag oeffnen",
-    "create_delivery_order": "Lieferauftrag erstellen (LS)",
-    "create_invoice": "Rechnung erstellen",
+    "create_delivery_order": "LS Excel/PDF erstellen",
+    "create_invoice": "Rechnung Excel/PDF erstellen",
     "archive": "Auftrag archivieren",
 }
 DATE_FIELD_WIDGETS = ("delivery_date",)
@@ -111,6 +111,11 @@ class OrderPanel(QWidget):
         self.orders_table.setMaximumHeight(220)
         self.status_label = QLabel("Schritt 1: Stammdaten laden, dann Kunde und Produkte auswaehlen.")
         self.status_label.setObjectName("muted")
+        self.document_result_label = QLabel(
+            "Noch keine Datei erstellt. Erst Auftrag speichern, dann LS oder Rechnung als Excel/PDF erzeugen."
+        )
+        self.document_result_label.setObjectName("sectionSubtitle")
+        self.document_result_label.setWordWrap(True)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(32, 28, 32, 28)
@@ -190,7 +195,7 @@ class OrderPanel(QWidget):
 
         document_box, document_layout = self._section(
             ORDER_PANEL_SECTIONS[2],
-            "Wenn die Positionen stimmen: Auftrag speichern, dann Lieferauftrag oder Rechnung gezielt erstellen.",
+            "Erst Auftrag speichern. Danach wird die Excel-Vorlage automatisch befuellt und als Excel/PDF abgelegt.",
         )
         document_form = QFormLayout()
         document_form.addRow(
@@ -208,6 +213,7 @@ class OrderPanel(QWidget):
         document_actions.addWidget(self.create_invoice_button)
         document_actions.addStretch()
         document_layout.addLayout(document_actions)
+        document_layout.addWidget(self.document_result_label)
         bottom_row.addWidget(document_box, 1)
 
         orders_box, orders_layout = self._section(
@@ -462,7 +468,7 @@ class OrderPanel(QWidget):
         if self.current_order_id is None:
             self.load_selected_order_id()
         if self.current_order_id is None:
-            self.status_label.setText("Bitte zuerst Auftrag speichern oder aus der Liste waehlen.")
+            self.status_label.setText("Bitte zuerst Auftrag speichern.")
             return
         session = self.session_factory()
         try:
@@ -472,7 +478,7 @@ class OrderPanel(QWidget):
                 self.delivery_note_number.text().strip(),
             )
             self.show_orders(list_active_orders(session))
-            self.status_label.setText(f"Lieferauftrag erstellt: {Path(document.pdf_path).name}")
+            self._show_document_result("Lieferauftrag", document.excel_path, document.pdf_path)
         finally:
             session.close()
 
@@ -483,7 +489,7 @@ class OrderPanel(QWidget):
         if self.current_order_id is None:
             self.load_selected_order_id()
         if self.current_order_id is None:
-            self.status_label.setText("Bitte zuerst Auftrag speichern oder aus der Liste waehlen.")
+            self.status_label.setText("Bitte zuerst Auftrag speichern.")
             return
         session = self.session_factory()
         try:
@@ -494,9 +500,17 @@ class OrderPanel(QWidget):
                 datev_upload_dir=Path.cwd() / "outputs" / "datev_upload",
             )
             self.show_orders(list_active_orders(session))
-            self.status_label.setText(f"Rechnung erstellt: {Path(document.pdf_path).name}")
+            self._show_document_result("Rechnung", document.excel_path, document.pdf_path)
         finally:
             session.close()
+
+    def _show_document_result(self, document_label: str, excel_path: str, pdf_path: str) -> None:
+        excel = Path(excel_path)
+        pdf = Path(pdf_path)
+        self.status_label.setText(f"{document_label} erstellt. Excel und PDF liegen im Kundenordner.")
+        self.document_result_label.setText(
+            f"{document_label} erstellt.\nExcel: {excel}\nPDF: {pdf}"
+        )
 
     def refresh_orders(self) -> None:
         if self.session_factory is None:

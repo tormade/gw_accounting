@@ -76,14 +76,14 @@ def test_order_tab_exposes_guided_order_actions():
         "addOrderLineButton": "Position hinzufuegen",
         "removeOrderLineButton": "Position entfernen",
         "saveOrderButton": "Auftrag speichern",
-        "createDeliveryOrderButton": "Lieferauftrag erstellen (LS)",
-        "createInvoiceButton": "Rechnung erstellen",
+        "createDeliveryOrderButton": "LS Excel/PDF erstellen",
+        "createInvoiceButton": "Rechnung Excel/PDF erstellen",
         "refreshOrdersButton": "Auftragsliste laden",
     }
     assert ORDER_PANEL_SECTIONS == (
         "Kopfdaten",
         "Positionen",
-        "Belegabschluss",
+        "Excel/PDF aus Auftrag erstellen",
         "Bestehende Auftraege",
     )
     assert "Kopfdaten" in ORDER_HELP_TEXT
@@ -95,8 +95,8 @@ def test_order_tab_exposes_guided_order_actions():
     )
     assert ORDER_CONTEXT_ACTIONS == {
         "open": "Auftrag oeffnen",
-        "create_delivery_order": "Lieferauftrag erstellen (LS)",
-        "create_invoice": "Rechnung erstellen",
+        "create_delivery_order": "LS Excel/PDF erstellen",
+        "create_invoice": "Rechnung Excel/PDF erstellen",
         "archive": "Auftrag archivieren",
     }
 

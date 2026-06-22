@@ -18,3 +18,14 @@ def test_order_panel_uses_searchable_customer_and_product_selects():
     assert "self.product_select.set_items(" in source
     assert "self.customer_select.current_value()" in source
     assert "self.product_select.current_value()" in source
+
+
+def test_order_panel_makes_excel_pdf_generation_flow_visible():
+    source = Path("src/getraenkeladen_tool/ui/order_panel.py").read_text(encoding="utf-8")
+
+    assert "Excel/PDF aus Auftrag erstellen" in source
+    assert "Erst Auftrag speichern" in source
+    assert "self.document_result_label" in source
+    assert "Excel:" in source
+    assert "PDF:" in source
+    assert "Bitte zuerst Auftrag speichern." in source
