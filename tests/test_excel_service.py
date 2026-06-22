@@ -34,7 +34,7 @@ def test_build_invoice_workbook_writes_customer_excel_file(tmp_path: Path):
     assert sheet.print_area == "'Tabelle1'!$A$1:$F$48"
 
 
-def test_build_delivery_note_workbook_writes_customer_excel_file(tmp_path: Path):
+def test_build_delivery_order_workbook_writes_customer_excel_file(tmp_path: Path):
     output_path = tmp_path / "Kunden" / "Cafe Nord" / "LS-2001.xlsx"
 
     build_delivery_note_workbook(
@@ -46,7 +46,7 @@ def test_build_delivery_note_workbook_writes_customer_excel_file(tmp_path: Path)
 
     workbook = load_workbook(output_path)
     sheet = workbook.active
-    assert sheet["A8"].value == "Lieferschein"
+    assert sheet["A8"].value == "Lieferauftrag"
     assert sheet["F8"].value == "LS-2001"
     assert sheet["A13"].value == 4
     assert sheet["B13"].value == "Apfelschorle"

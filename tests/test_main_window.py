@@ -3,7 +3,7 @@ from getraenkeladen_tool.ui.theme import APP_STYLESHEET
 
 
 def test_main_window_exposes_first_version_tabs():
-    assert MAIN_TABS == ("Start", "Kunden", "Produkte", "Auftraege", "Belege", "Listen", "Einstellungen")
+    assert MAIN_TABS == ("Start", "Kunden", "Produkte", "Auftraege", "Listen", "Einstellungen")
 
 
 def test_main_window_uses_resizable_screen_friendly_size():
@@ -49,28 +49,13 @@ def test_brand_assets_are_available():
     assert CLAIM_PATH.exists()
 
 
-def test_document_tab_exposes_first_document_form_actions():
-    from getraenkeladen_tool.ui.document_panel import DOCUMENT_FORM_ACTIONS
+def test_main_window_removes_separate_document_tab_special_path():
+    from pathlib import Path
 
-    assert DOCUMENT_FORM_ACTIONS == {
-        "documentHelpButton": "?",
-        "sampleDocumentButton": "Beispiel laden",
-        "chooseCustomerFolderButton": "Ordner waehlen",
-        "refreshMasterDataButton": "Stammdaten laden",
-        "addLineItemButton": "Position hinzufuegen",
-        "removeLineItemButton": "Position entfernen",
-        "saveOrderButton": "Auftrag speichern",
-        "createOrderDocumentsButton": "Lieferschein und Rechnung aus Auftrag",
-        "createDocumentButton": "Excel und PDF erstellen",
-    }
+    source = Path("src/getraenkeladen_tool/ui/main_window.py").read_text(encoding="utf-8")
 
-
-def test_document_tab_uses_beleg_sections_and_context_help():
-    from getraenkeladen_tool.ui.document_panel import DOCUMENT_HELP_TEXT, DOCUMENT_PANEL_SECTIONS
-
-    assert DOCUMENT_PANEL_SECTIONS == ("Kopfdaten", "Positionen", "Belegabschluss")
-    assert "Kopfdaten" in DOCUMENT_HELP_TEXT
-    assert "Sonderweg" in DOCUMENT_HELP_TEXT
+    assert "DocumentPanel" not in source
+    assert '"Belege"' not in source
 
 
 def test_order_tab_exposes_guided_order_actions():
@@ -91,7 +76,8 @@ def test_order_tab_exposes_guided_order_actions():
         "addOrderLineButton": "Position hinzufuegen",
         "removeOrderLineButton": "Position entfernen",
         "saveOrderButton": "Auftrag speichern",
-        "createOrderDocumentsButton": "Lieferschein und Rechnung erzeugen",
+        "createDeliveryOrderButton": "Lieferauftrag erstellen (LS)",
+        "createInvoiceButton": "Rechnung erstellen",
         "refreshOrdersButton": "Auftragsliste laden",
     }
     assert ORDER_PANEL_SECTIONS == (
@@ -105,11 +91,12 @@ def test_order_tab_exposes_guided_order_actions():
     assert ORDER_GUIDANCE_STEPS == (
         "Kunden suchen und Lieferdatum pruefen.",
         "Produkte hinzufuegen und Positionen kontrollieren.",
-        "Auftrag speichern, danach Lieferschein oder Rechnung vorbereiten.",
+        "Auftrag speichern, danach Lieferauftrag oder Rechnung gezielt erstellen.",
     )
     assert ORDER_CONTEXT_ACTIONS == {
         "open": "Auftrag oeffnen",
-        "create_documents": "Belege erzeugen",
+        "create_delivery_order": "Lieferauftrag erstellen (LS)",
+        "create_invoice": "Rechnung erstellen",
         "archive": "Auftrag archivieren",
     }
 

@@ -6,14 +6,13 @@ from PySide6.QtWidgets import QLabel, QMainWindow, QPushButton, QScrollArea, QTa
 
 from .customer_panel import CustomerPanel
 from .dashboard_panel import DashboardPanel
-from .document_panel import DocumentPanel
 from .order_panel import OrderPanel
 from .product_panel import ProductPanel
 from .report_panel import ReportPanel
 from .settings_panel import SettingsPanel
 
 
-MAIN_TABS = ("Start", "Kunden", "Produkte", "Auftraege", "Belege", "Listen", "Einstellungen")
+MAIN_TABS = ("Start", "Kunden", "Produkte", "Auftraege", "Listen", "Einstellungen")
 MAIN_WINDOW_INITIAL_SIZE = (1180, 760)
 MAIN_WINDOW_MINIMUM_SIZE = (900, 560)
 BRAND_DIR = Path(__file__).resolve().parents[3] / "assets" / "brand"
@@ -40,7 +39,6 @@ class MainWindow(QMainWindow):
         self.customer_panel = CustomerPanel(session_factory=session_factory)
         self.product_panel = ProductPanel(session_factory=session_factory)
         self.order_panel = OrderPanel(session_factory=session_factory)
-        self.document_panel = DocumentPanel(session_factory=session_factory)
         self.report_panel = ReportPanel(session_factory=session_factory)
         self.settings_panel = SettingsPanel(session_factory=session_factory)
         self.refreshable_panels = {
@@ -48,7 +46,6 @@ class MainWindow(QMainWindow):
             "Kunden": (self.customer_panel.refresh_customers,),
             "Produkte": (self.product_panel.refresh_units, self.product_panel.refresh_products),
             "Auftraege": (self.order_panel.refresh_master_data, self.order_panel.refresh_orders),
-            "Belege": (self.document_panel.refresh_master_data,),
             "Listen": (self.report_panel.refresh_all_lists,),
             "Einstellungen": (self.settings_panel.refresh_units,),
         }
@@ -58,7 +55,6 @@ class MainWindow(QMainWindow):
         self.tabs.addTab(self._scrollable_tab(self.customer_panel), "Kunden")
         self.tabs.addTab(self._scrollable_tab(self.product_panel), "Produkte")
         self.tabs.addTab(self._scrollable_tab(self.order_panel), "Auftraege")
-        self.tabs.addTab(self._scrollable_tab(self.document_panel), "Belege")
         self.tabs.addTab(self._scrollable_tab(self.report_panel), "Listen")
         self.tabs.addTab(self._scrollable_tab(self.settings_panel), "Einstellungen")
         self.tabs.currentChanged.connect(self.refresh_current_tab)

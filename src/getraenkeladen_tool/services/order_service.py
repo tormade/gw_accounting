@@ -81,28 +81,39 @@ def create_order_documents(
     invoice_number: str,
     datev_upload_dir: Path | None = None,
 ) -> list[Document]:
+    delivery_order = create_order_delivery_order(session, order_id, delivery_note_number)
+    invoice = create_order_invoice(session, order_id, invoice_number, datev_upload_dir=datev_upload_dir)
+    return [delivery_order, invoice]
+
+
+def create_order_delivery_order(session: Session, order_id: int, delivery_order_number: str) -> Document:
     order = get_order(session, order_id)
-    line_items = [
-        DocumentLineItem(
-            name=line.product_name,
-            quantity=line.quantity,
-            unit_price_cents=line.unit_price_cents,
-            deposit_cents=line.deposit_cents,
-        )
-        for line in order.lines
-    ]
-    delivery_note = create_document(
+    delivery_order = create_document(
         session,
         DocumentCreate(
             customer_id=order.customer_id,
             order_id=order.id,
-            document_type="Lieferschein",
-            document_number=delivery_note_number,
+            document_type="Lieferauftrag",
+            document_number=delivery_order_number,
             delivery_date=order.delivery_date,
             delivery_slot=order.delivery_slot,
-            line_items=line_items,
+            line_items=_document_line_items(order),
         ),
     )
+    if order.status != "fakturiert":
+        order.status = "lieferauftrag_erstellt"
+        session.commit()
+    session.refresh(delivery_order)
+    return delivery_order
+
+
+def create_order_invoice(
+    session: Session,
+    order_id: int,
+    invoice_number: str,
+    datev_upload_dir: Path | None = None,
+) -> Document:
+    order = get_order(session, order_id)
     invoice = create_document(
         session,
         DocumentCreate(
@@ -112,12 +123,23 @@ def create_order_documents(
             document_number=invoice_number,
             delivery_date=order.delivery_date,
             delivery_slot=order.delivery_slot,
-            line_items=line_items,
+            line_items=_document_line_items(order),
         ),
         datev_upload_dir=datev_upload_dir,
     )
     order.status = "fakturiert"
     session.commit()
-    session.refresh(delivery_note)
     session.refresh(invoice)
-    return [delivery_note, invoice]
+    return invoice
+
+
+def _document_line_items(order: Order) -> list[DocumentLineItem]:
+    return [
+        DocumentLineItem(
+            name=line.product_name,
+            quantity=line.quantity,
+            unit_price_cents=line.unit_price_cents,
+            deposit_cents=line.deposit_cents,
+        )
+        for line in order.lines
+    ]

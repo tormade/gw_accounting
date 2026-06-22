@@ -1,4 +1,6 @@
+.venv
 .venv/
+.venv.broken-*
 .venv.broken-*/
 .pytest_cache/
 __pycache__/
@@ -8,3 +10,4 @@ __pycache__/
 dist/
 build/
 outputs/
+Kunden/

@@ -6,7 +6,9 @@ from getraenkeladen_tool.services.customer_service import create_customer
 from getraenkeladen_tool.services.order_service import (
     archive_order,
     create_order,
+    create_order_delivery_order,
     create_order_documents,
+    create_order_invoice,
     get_order,
     list_active_orders,
 )
@@ -102,11 +104,78 @@ def test_create_order_documents_generates_delivery_note_and_invoice_from_same_or
         datev_upload_dir=tmp_path / "DATEV",
     )
 
-    assert [document.document_type for document in documents] == ["Lieferschein", "Rechnung"]
+    assert [document.document_type for document in documents] == ["Lieferauftrag", "Rechnung"]
     assert [document.order_id for document in documents] == [order.id, order.id]
     assert Path(documents[0].excel_path).exists()
     assert Path(documents[1].pdf_path).exists()
     assert documents[1].datev_export_path is not None
+    assert get_order(session, order.id).status == "fakturiert"
+
+
+def test_create_order_delivery_order_generates_only_ls_document(session, tmp_path: Path):
+    customer = create_customer(
+        session,
+        CustomerCreate(name="Gasthof Nord", folder_path=str(tmp_path / "Kunden" / "Gasthof Nord")),
+    )
+    product = create_product(
+        session,
+        ProductCreate(name="Wasser 12x0,7", unit="Kiste", standard_price_cents=1299),
+    )
+    order = create_order(
+        session,
+        OrderCreate(
+            order_number="AUF-3101",
+            customer_id=customer.id,
+            order_date="2026-06-21",
+            delivery_date="2026-06-22",
+            lines=[OrderLineCreate(product_id=product.id, quantity=2, deposit_cents=330)],
+        ),
+    )
+
+    document = create_order_delivery_order(session, order.id, "LS-3101")
+
+    assert document.document_type == "Lieferauftrag"
+    assert document.document_number == "LS-3101"
+    assert document.order_id == order.id
+    assert Path(document.excel_path).exists()
+    assert Path(document.pdf_path).exists()
+    assert session.query(Document).count() == 1
+    assert get_order(session, order.id).status == "lieferauftrag_erstellt"
+
+
+def test_create_order_invoice_generates_only_invoice_and_open_item(session, tmp_path: Path):
+    customer = create_customer(
+        session,
+        CustomerCreate(
+            name="Gasthof West",
+            folder_path=str(tmp_path / "Kunden" / "Gasthof West"),
+            payment_method="SEPA",
+        ),
+    )
+    product = create_product(
+        session,
+        ProductCreate(name="Spezi 20x0,5", unit="Kiste", standard_price_cents=1599),
+    )
+    order = create_order(
+        session,
+        OrderCreate(
+            order_number="AUF-3201",
+            customer_id=customer.id,
+            order_date="2026-06-21",
+            delivery_date="2026-06-22",
+            lines=[OrderLineCreate(product_id=product.id, quantity=3, deposit_cents=330)],
+        ),
+    )
+
+    document = create_order_invoice(session, order.id, "RG-3201", datev_upload_dir=tmp_path / "DATEV")
+
+    assert document.document_type == "Rechnung"
+    assert document.document_number == "RG-3201"
+    assert document.order_id == order.id
+    assert Path(document.excel_path).exists()
+    assert Path(document.pdf_path).exists()
+    assert document.datev_export_path is not None
+    assert session.query(Document).count() == 1
     assert get_order(session, order.id).status == "fakturiert"
 
 

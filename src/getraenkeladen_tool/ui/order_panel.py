@@ -21,7 +21,13 @@ from PySide6.QtCore import Qt
 from ..schemas import OrderCreate, OrderLineCreate
 from ..services.customer_service import list_active_customers
 from ..services.numbering_service import suggest_next_numbers
-from ..services.order_service import archive_order, create_order, create_order_documents, list_active_orders
+from ..services.order_service import (
+    archive_order,
+    create_order,
+    create_order_delivery_order,
+    create_order_invoice,
+    list_active_orders,
+)
 from ..services.product_service import list_active_products
 from .date_input import DateInput, to_display_date
 from .searchable_select import SearchableSelect
@@ -36,7 +42,8 @@ ORDER_PANEL_ACTIONS = {
     "addOrderLineButton": "Position hinzufuegen",
     "removeOrderLineButton": "Position entfernen",
     "saveOrderButton": "Auftrag speichern",
-    "createOrderDocumentsButton": "Lieferschein und Rechnung erzeugen",
+    "createDeliveryOrderButton": "Lieferauftrag erstellen (LS)",
+    "createInvoiceButton": "Rechnung erstellen",
     "refreshOrdersButton": "Auftragsliste laden",
 }
 
@@ -51,16 +58,17 @@ ORDER_PANEL_SECTIONS = (
 ORDER_HELP_TEXT = (
     "Kopfdaten: Kunde, Lieferdatum, Zeitfenster und Auftragsnummer pruefen.\n\n"
     "Positionen: Produkt waehlen, Menge eintragen und Position hinzufuegen.\n\n"
-    "Belegabschluss: Erst speichern, danach Lieferschein- oder Rechnungsnummer vorschlagen und Belege erzeugen."
+    "Belegabschluss: Erst speichern, danach entweder Lieferauftrag (LS) oder Rechnung gezielt erzeugen."
 )
 ORDER_GUIDANCE_STEPS = (
     "Kunden suchen und Lieferdatum pruefen.",
     "Produkte hinzufuegen und Positionen kontrollieren.",
-    "Auftrag speichern, danach Lieferschein oder Rechnung vorbereiten.",
+    "Auftrag speichern, danach Lieferauftrag oder Rechnung gezielt erstellen.",
 )
 ORDER_CONTEXT_ACTIONS = {
     "open": "Auftrag oeffnen",
-    "create_documents": "Belege erzeugen",
+    "create_delivery_order": "Lieferauftrag erstellen (LS)",
+    "create_invoice": "Rechnung erstellen",
     "archive": "Auftrag archivieren",
 }
 DATE_FIELD_WIDGETS = ("delivery_date",)
@@ -130,7 +138,8 @@ class OrderPanel(QWidget):
         self.add_line_button = self._button("addOrderLineButton")
         self.remove_line_button = self._button("removeOrderLineButton")
         self.save_order_button = self._button("saveOrderButton")
-        self.create_documents_button = self._button("createOrderDocumentsButton")
+        self.create_delivery_order_button = self._button("createDeliveryOrderButton")
+        self.create_invoice_button = self._button("createInvoiceButton")
         self.refresh_orders_button = self._button("refreshOrdersButton")
 
         customer_box, customer_layout = self._section(
@@ -181,11 +190,11 @@ class OrderPanel(QWidget):
 
         document_box, document_layout = self._section(
             ORDER_PANEL_SECTIONS[2],
-            "Wenn die Positionen stimmen: speichern und danach Lieferschein/Rechnung erzeugen.",
+            "Wenn die Positionen stimmen: Auftrag speichern, dann Lieferauftrag oder Rechnung gezielt erstellen.",
         )
         document_form = QFormLayout()
         document_form.addRow(
-            "Lieferscheinnummer",
+            "LS-Nummer",
             self._number_row(self.delivery_note_number, self.suggest_delivery_note_number_button),
         )
         document_form.addRow(
@@ -195,7 +204,8 @@ class OrderPanel(QWidget):
         document_layout.addLayout(document_form)
         document_actions = QHBoxLayout()
         document_actions.addWidget(self.save_order_button)
-        document_actions.addWidget(self.create_documents_button)
+        document_actions.addWidget(self.create_delivery_order_button)
+        document_actions.addWidget(self.create_invoice_button)
         document_actions.addStretch()
         document_layout.addLayout(document_actions)
         bottom_row.addWidget(document_box, 1)
@@ -221,7 +231,8 @@ class OrderPanel(QWidget):
         self.add_line_button.clicked.connect(self.add_order_line)
         self.remove_line_button.clicked.connect(self.remove_selected_order_line)
         self.save_order_button.clicked.connect(self.save_order)
-        self.create_documents_button.clicked.connect(self.create_documents_from_order)
+        self.create_delivery_order_button.clicked.connect(self.create_delivery_order_from_order)
+        self.create_invoice_button.clicked.connect(self.create_invoice_from_order)
         self.refresh_orders_button.clicked.connect(self.refresh_orders)
         self.customer_select.selection_changed.connect(self.apply_selected_customer)
         self.product_select.selection_changed.connect(self.apply_selected_product)
@@ -440,11 +451,11 @@ class OrderPanel(QWidget):
             )
             self.current_order_id = order.id
             self.show_orders(list_active_orders(session))
-            self.status_label.setText("Auftrag gespeichert. Jetzt Lieferschein und Rechnung erzeugen.")
+            self.status_label.setText("Auftrag gespeichert. Jetzt Lieferauftrag oder Rechnung erstellen.")
         finally:
             session.close()
 
-    def create_documents_from_order(self) -> None:
+    def create_delivery_order_from_order(self) -> None:
         if self.session_factory is None:
             self.status_label.setText("Keine Datenbankverbindung vorhanden.")
             return
@@ -455,17 +466,35 @@ class OrderPanel(QWidget):
             return
         session = self.session_factory()
         try:
-            documents = create_order_documents(
+            document = create_order_delivery_order(
                 session,
-                order_id=self.current_order_id,
-                delivery_note_number=self.delivery_note_number.text().strip(),
-                invoice_number=self.invoice_number.text().strip(),
+                self.current_order_id,
+                self.delivery_note_number.text().strip(),
+            )
+            self.show_orders(list_active_orders(session))
+            self.status_label.setText(f"Lieferauftrag erstellt: {Path(document.pdf_path).name}")
+        finally:
+            session.close()
+
+    def create_invoice_from_order(self) -> None:
+        if self.session_factory is None:
+            self.status_label.setText("Keine Datenbankverbindung vorhanden.")
+            return
+        if self.current_order_id is None:
+            self.load_selected_order_id()
+        if self.current_order_id is None:
+            self.status_label.setText("Bitte zuerst Auftrag speichern oder aus der Liste waehlen.")
+            return
+        session = self.session_factory()
+        try:
+            document = create_order_invoice(
+                session,
+                self.current_order_id,
+                self.invoice_number.text().strip(),
                 datev_upload_dir=Path.cwd() / "outputs" / "datev_upload",
             )
             self.show_orders(list_active_orders(session))
-            self.status_label.setText(
-                f"Erstellt: {Path(documents[0].pdf_path).name} und {Path(documents[1].pdf_path).name}"
-            )
+            self.status_label.setText(f"Rechnung erstellt: {Path(document.pdf_path).name}")
         finally:
             session.close()
 
@@ -499,7 +528,7 @@ class OrderPanel(QWidget):
         row = self.orders_table.currentRow()
         self.current_order_id = self.order_ids_by_row.get(row)
         if self.current_order_id is not None:
-            self.status_label.setText("Auftrag ausgewaehlt. Jetzt Belege erzeugen.")
+            self.status_label.setText("Auftrag ausgewaehlt. Jetzt Lieferauftrag oder Rechnung erstellen.")
 
     def archive_selected_order(self) -> None:
         if self.session_factory is None:
@@ -525,14 +554,18 @@ class OrderPanel(QWidget):
             return
         menu = QMenu(self)
         open_action = menu.addAction(ORDER_CONTEXT_ACTIONS["open"])
-        documents_action = menu.addAction(ORDER_CONTEXT_ACTIONS["create_documents"])
+        delivery_order_action = menu.addAction(ORDER_CONTEXT_ACTIONS["create_delivery_order"])
+        invoice_action = menu.addAction(ORDER_CONTEXT_ACTIONS["create_invoice"])
         archive_action = menu.addAction(ORDER_CONTEXT_ACTIONS["archive"])
         selected = menu.exec(self.orders_table.viewport().mapToGlobal(position))
         if selected == open_action:
             self.load_selected_order_id()
-        elif selected == documents_action:
+        elif selected == delivery_order_action:
             self.load_selected_order_id()
-            self.create_documents_from_order()
+            self.create_delivery_order_from_order()
+        elif selected == invoice_action:
+            self.load_selected_order_id()
+            self.create_invoice_from_order()
         elif selected == archive_action:
             self.load_selected_order_id()
             self.archive_selected_order()

@@ -4,12 +4,14 @@ Local Windows desktop app for a beverage store, built with Python 3.11+ and PySi
 
 ## Development
 
-On macOS, use Homebrew Python 3.11 for the virtual environment. Python 3.12 can
-make Qt unable to find the native `cocoa` plugin on this Mac setup.
+On macOS, use Homebrew Python 3.11 and keep the virtual environment outside the
+project folder. A `.venv` folder directly below `Documents/Codex/...` can make Qt
+unable to scan the native `cocoa` plugin on this Mac setup.
 
 ```bash
 brew install python@3.11
-/opt/homebrew/bin/python3.11 -m venv .venv
+/opt/homebrew/bin/python3.11 -m venv ~/.venvs/gw_accounting_py311
+ln -s ~/.venvs/gw_accounting_py311 .venv
 source .venv/bin/activate
 python -m pip install -e ".[dev]"
 ```

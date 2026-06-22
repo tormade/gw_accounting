@@ -10,6 +10,7 @@ class DocumentPaths:
 
 DOCUMENT_TYPE_PREFIXES = {
     "Rechnung": "RE",
+    "Lieferauftrag": "LS",
     "Lieferschein": "LS",
 }
 

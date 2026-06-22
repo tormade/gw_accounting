@@ -16,10 +16,10 @@ def test_build_document_paths_uses_concept_file_schema():
     assert paths.pdf_path == Path("Kunden/Cafe Nord/2026-06-21_RE_RG-1001_Cafe_Nord_GmbH.pdf")
 
 
-def test_build_document_paths_uses_lieferschein_prefix():
+def test_build_document_paths_uses_delivery_order_ls_prefix():
     paths = build_document_paths(
         customer_folder=Path("Kunden/Gasthof Sued"),
-        document_type="Lieferschein",
+        document_type="Lieferauftrag",
         document_number="LS 42",
         customer_name="Gasthof Sued",
         document_date="2026-06-21",

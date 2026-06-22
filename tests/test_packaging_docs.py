@@ -33,7 +33,8 @@ def test_project_supports_python_311_for_stable_macos_qt_startup():
 
     assert project["project"]["requires-python"] == ">=3.11"
     assert "brew install python@3.11" in readme
-    assert "/opt/homebrew/bin/python3.11 -m venv .venv" in readme
+    assert "/opt/homebrew/bin/python3.11 -m venv ~/.venvs/gw_accounting_py311" in readme
+    assert "ln -s ~/.venvs/gw_accounting_py311 .venv" in readme
 
 
 def test_package_discovery_uses_src_layout():

@@ -25,7 +25,7 @@ def build_delivery_note_workbook(
     document_number: str,
     line_items: list[dict],
 ) -> None:
-    _build_document_workbook(output_path, "Lieferschein", customer_name, document_number, line_items)
+    _build_document_workbook(output_path, "Lieferauftrag", customer_name, document_number, line_items)
 
 
 def _build_document_workbook(

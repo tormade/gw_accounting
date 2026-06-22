@@ -34,10 +34,10 @@ def create_document(session: Session, payload: DocumentCreate, datev_upload_dir:
 
     if document_type == "Rechnung":
         build_invoice_workbook(paths.excel_path, customer.name, document_number, line_items)
-    elif document_type == "Lieferschein":
+    elif document_type in {"Lieferauftrag", "Lieferschein"}:
         build_delivery_note_workbook(paths.excel_path, customer.name, document_number, line_items)
     else:
-        raise ValueError("Belegtyp muss Rechnung oder Lieferschein sein.")
+        raise ValueError("Belegtyp muss Rechnung oder Lieferauftrag sein.")
     build_document_pdf(paths.pdf_path, document_type, customer.name, document_number, line_items)
 
     datev_export_path = None
