@@ -2,8 +2,10 @@ from getraenkeladen_tool.schemas import CustomerCreate
 from getraenkeladen_tool.services.customer_service import (
     archive_customer,
     create_customer,
+    list_customer_changes,
     list_active_customers,
     list_customers,
+    revert_customer_change,
     restore_customer,
     update_customer,
 )
@@ -47,6 +49,26 @@ def test_update_customer_changes_existing_master_data(session):
     assert updated.name == "Cafe Nord GmbH"
     assert updated.folder_path == "Kunden/Cafe Nord GmbH"
     assert updated.payment_method == "SEPA"
+
+    changes = list_customer_changes(session, customer.id)
+    assert {change.field_name for change in changes} >= {"name", "folder_path", "payment_method"}
+
+
+def test_revert_customer_change_restores_previous_field_value(session):
+    customer = create_customer(
+        session,
+        CustomerCreate(name="Cafe Nord", folder_path="Kunden/Cafe Nord", address="Alte Str. 1"),
+    )
+    update_customer(
+        session,
+        customer.id,
+        CustomerCreate(name="Cafe Nord", folder_path="Kunden/Cafe Nord", address="Neue Str. 7"),
+    )
+    change = [change for change in list_customer_changes(session, customer.id) if change.field_name == "address"][0]
+
+    reverted = revert_customer_change(session, change.id)
+
+    assert reverted.address == "Alte Str. 1"
 
 
 def test_archive_customer_hides_from_active_list_and_restore_reactivates(session):

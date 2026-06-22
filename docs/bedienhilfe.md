@@ -51,6 +51,12 @@ Wichtig: Archivieren statt loeschen. Dadurch verschwinden Kunden oder Produkte a
 
 Im Bereich Einstellungen werden zentrale Auswahlwerte gepflegt. Aktuell koennen dort Produkteinheiten wie Kiste, Flasche, Fass oder Karton erweitert werden. Diese Werte erscheinen im Feld "Einheit" bei Produkten.
 
+Zusaetzlich koennen Stammdaten manuell aus dem Input-Ordner importiert werden. Erwartet werden die Dateien "Artikel Liste Preise.xlsx" und "Lieferkunden Liste.xlsx". Die App liest diese Excel-Dateien nur aus und schreibt keine Aenderungen in die Originaldateien zurueck.
+
+Beim Import werden neue Kunden und Produkte in die Datenbank uebernommen. Bereits vorhandene Kunden oder Produkte werden anhand des Namens aktualisiert. Archivierte Kunden und deaktivierte Produkte bleiben archiviert beziehungsweise deaktiviert.
+
+Preis-, Pfand- und Adressaenderungen werden als Aenderungshistorie gespeichert. Dadurch kann eine falsche Stammdatenkorrektur spaeter wieder nachvollzogen und gezielt zurueckgenommen werden.
+
 ## Listen bearbeiten
 
 Im Bereich Listen werden offene Posten, Tageslieferungen und faellige Kundenkontakte gesammelt. Hier koennen offene Zahlungen markiert und Listen exportiert werden.

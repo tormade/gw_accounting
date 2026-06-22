@@ -63,6 +63,43 @@ def test_bootstrap_database_adds_customer_active_column(tmp_path: Path):
     assert active_default == []
 
 
+def test_bootstrap_database_adds_import_and_change_tracking_columns(tmp_path: Path):
+    config = AppConfig(base_dir=tmp_path)
+    config.database_path.parent.mkdir(parents=True, exist_ok=True)
+    connection = sqlite3.connect(config.database_path)
+    connection.execute(
+        "CREATE TABLE customers ("
+        "id INTEGER PRIMARY KEY, "
+        "name VARCHAR(200) NOT NULL, "
+        "folder_path VARCHAR(500) NOT NULL, "
+        "is_active BOOLEAN DEFAULT 1 NOT NULL"
+        ")"
+    )
+    connection.execute(
+        "CREATE TABLE products ("
+        "id INTEGER PRIMARY KEY, "
+        "name VARCHAR(200) NOT NULL, "
+        "unit VARCHAR(50) NOT NULL, "
+        "standard_price_cents INTEGER NOT NULL, "
+        "is_active BOOLEAN DEFAULT 1 NOT NULL"
+        ")"
+    )
+    connection.commit()
+    connection.close()
+
+    bootstrap_database(config)
+
+    connection = sqlite3.connect(config.database_path)
+    customer_columns = {row[1] for row in connection.execute("PRAGMA table_info(customers)").fetchall()}
+    product_columns = {row[1] for row in connection.execute("PRAGMA table_info(products)").fetchall()}
+    tables = {row[0] for row in connection.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()}
+    connection.close()
+
+    assert {"source_file", "source_row"}.issubset(customer_columns)
+    assert {"default_deposit_cents", "source_file", "source_row"}.issubset(product_columns)
+    assert "master_data_changes" in tables
+
+
 def test_bootstrap_database_creates_dropdown_options_with_units(tmp_path: Path):
     config = AppConfig(base_dir=tmp_path)
     bootstrap_database(config)

@@ -297,6 +297,7 @@ class DocumentPanel(QWidget):
             return
         self.product_name.setText(product.name)
         self.unit_price_eur.setText(f"{product.standard_price_cents / 100:.2f}".replace(".", ","))
+        self.deposit_eur.setText(f"{product.default_deposit_cents / 100:.2f}".replace(".", ","))
 
     def add_line_item(self) -> None:
         row = self.line_items_table.rowCount()

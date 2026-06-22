@@ -127,6 +127,7 @@ def test_customer_tab_exposes_master_data_actions():
         "newCustomerButton": "Neu",
         "saveCustomerButton": "Kunde speichern",
         "discardCustomerChangesButton": "Aenderungen verwerfen",
+        "undoCustomerChangeButton": "Letzte Aenderung rueckgaengig",
         "refreshCustomersButton": "Kundenliste laden",
         "loadCustomerButton": "Auswahl bearbeiten",
         "archiveCustomerButton": "Kunde archivieren",
@@ -159,6 +160,7 @@ def test_product_tab_exposes_price_list_actions():
         "newProductButton": "Neu",
         "saveProductButton": "Produkt speichern",
         "discardProductChangesButton": "Aenderungen verwerfen",
+        "undoProductChangeButton": "Letzte Aenderung rueckgaengig",
         "refreshProductsButton": "Produktliste laden",
         "loadProductButton": "Auswahl bearbeiten",
         "deactivateProductButton": "Produkt deaktivieren",
@@ -184,6 +186,8 @@ def test_settings_tab_exposes_dropdown_list_actions():
         "settingsHelpButton": "?",
         "refreshUnitsButton": "Einheiten laden",
         "addUnitButton": "Einheit hinzufuegen",
+        "chooseInputFolderButton": "Input-Ordner waehlen",
+        "importMasterDataButton": "Stammdaten importieren",
     }
     assert SETTINGS_PANEL_SECTIONS == ("Produkteinheiten bearbeiten",)
 

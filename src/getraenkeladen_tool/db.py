@@ -36,6 +36,18 @@ def _add_missing_columns(engine) -> None:
             customer_columns = {column["name"] for column in inspector.get_columns("customers")}
             if "is_active" not in customer_columns:
                 connection.execute(text("ALTER TABLE customers ADD COLUMN is_active BOOLEAN DEFAULT 1 NOT NULL"))
+            if "source_file" not in customer_columns:
+                connection.execute(text("ALTER TABLE customers ADD COLUMN source_file VARCHAR(500)"))
+            if "source_row" not in customer_columns:
+                connection.execute(text("ALTER TABLE customers ADD COLUMN source_row INTEGER"))
+        if "products" in table_names:
+            product_columns = {column["name"] for column in inspector.get_columns("products")}
+            if "default_deposit_cents" not in product_columns:
+                connection.execute(text("ALTER TABLE products ADD COLUMN default_deposit_cents INTEGER DEFAULT 0 NOT NULL"))
+            if "source_file" not in product_columns:
+                connection.execute(text("ALTER TABLE products ADD COLUMN source_file VARCHAR(500)"))
+            if "source_row" not in product_columns:
+                connection.execute(text("ALTER TABLE products ADD COLUMN source_row INTEGER"))
 
 
 def _seed_defaults(engine) -> None:

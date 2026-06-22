@@ -20,7 +20,9 @@ from ..schemas import ProductCreate
 from ..services.product_service import (
     create_product,
     deactivate_product,
+    list_product_changes,
     list_products,
+    revert_product_change,
     restore_product,
     update_product,
 )
@@ -32,6 +34,7 @@ PRODUCT_PANEL_ACTIONS = {
     "newProductButton": "Neu",
     "saveProductButton": "Produkt speichern",
     "discardProductChangesButton": "Aenderungen verwerfen",
+    "undoProductChangeButton": "Letzte Aenderung rueckgaengig",
     "refreshProductsButton": "Produktliste laden",
     "loadProductButton": "Auswahl bearbeiten",
     "deactivateProductButton": "Produkt deaktivieren",
@@ -43,7 +46,7 @@ PRODUCT_HELP_TEXT = (
     "Deaktivieren verhindert neue Nutzung, laesst alte Belege aber nachvollziehbar bestehen."
 )
 
-PRODUCT_COLUMNS = ("Produkt", "Einheit", "Artikelnummer", "Preis", "Status")
+PRODUCT_COLUMNS = ("Produkt", "Einheit", "Artikelnummer", "Preis", "Pfand", "Status")
 PRODUCT_PANEL_SECTIONS = ("1. Produkt erfassen", "2. Preisliste pruefen")
 PRODUCT_GUIDANCE_STEPS = (
     "Artikel mit Einheit und Standardpreis pflegen.",
@@ -73,6 +76,8 @@ class ProductPanel(QWidget):
         self.article_number = QLineEdit()
         self.price_eur = QLineEdit()
         self.price_eur.setPlaceholderText("z. B. 12,99")
+        self.deposit_eur = QLineEdit()
+        self.deposit_eur.setPlaceholderText("z. B. 3,30")
         self.is_active = QCheckBox("Aktiv")
         self.is_active.setChecked(True)
         self.status_label = QLabel("Noch kein Produkt gespeichert.")
@@ -116,6 +121,7 @@ class ProductPanel(QWidget):
         form.addRow("Einheit", self.unit)
         form.addRow("Artikelnummer", self.article_number)
         form.addRow("Preis EUR", self.price_eur)
+        form.addRow("Pfand EUR", self.deposit_eur)
         form.addRow("Status", self.is_active)
         edit_layout.addLayout(form)
 
@@ -123,10 +129,12 @@ class ProductPanel(QWidget):
         self.new_button = self._button("newProductButton")
         self.save_button = self._button("saveProductButton")
         self.discard_button = self._button("discardProductChangesButton")
+        self.undo_change_button = self._button("undoProductChangeButton")
         self.load_button = self._button("loadProductButton")
         action_row.addWidget(self.new_button)
         action_row.addWidget(self.save_button)
         action_row.addWidget(self.discard_button)
+        action_row.addWidget(self.undo_change_button)
         action_row.addWidget(self.load_button)
         action_row.addStretch()
         edit_layout.addLayout(action_row)
@@ -157,6 +165,7 @@ class ProductPanel(QWidget):
         self.new_button.clicked.connect(self.new_product)
         self.save_button.clicked.connect(self.save_product)
         self.discard_button.clicked.connect(self.discard_changes)
+        self.undo_change_button.clicked.connect(self.undo_last_change)
         self.refresh_button.clicked.connect(self.refresh_products)
         self.load_button.clicked.connect(self.load_selected_product)
         self.deactivate_button.clicked.connect(self.deactivate_current_product)
@@ -214,6 +223,7 @@ class ProductPanel(QWidget):
             name=self.product_name.text().strip(),
             unit=self.unit.currentText().strip(),
             standard_price_cents=self._parse_euro_cents(self.price_eur.text()),
+            default_deposit_cents=self._parse_euro_cents(self.deposit_eur.text()),
             article_number=self.article_number.text().strip() or None,
             is_active=self.is_active.isChecked(),
         )
@@ -251,6 +261,7 @@ class ProductPanel(QWidget):
                 product.unit,
                 product.article_number or "",
                 f"{product.standard_price_cents / 100:.2f} EUR".replace(".", ","),
+                f"{product.default_deposit_cents / 100:.2f} EUR".replace(".", ","),
                 "aktiv" if product.is_active else "archiviert",
             )
             for column, value in enumerate(values):
@@ -274,6 +285,7 @@ class ProductPanel(QWidget):
             self._set_unit_value(product.unit)
             self.article_number.setText(product.article_number or "")
             self.price_eur.setText(f"{product.standard_price_cents / 100:.2f}".replace(".", ","))
+            self.deposit_eur.setText(f"{product.default_deposit_cents / 100:.2f}".replace(".", ","))
             self.is_active.setChecked(product.is_active)
             self.loaded_form_snapshot = self._snapshot_from_product(product)
             self.status_label.setText(f"Produkt geladen: {product.name}")
@@ -314,6 +326,26 @@ class ProductPanel(QWidget):
         finally:
             session.close()
 
+    def undo_last_change(self) -> None:
+        product_id = self.current_product_id or self._selected_product_id()
+        if self.session_factory is None or product_id is None:
+            self.status_label.setText("Bitte zuerst ein Produkt auswaehlen.")
+            return
+
+        session = self.session_factory()
+        try:
+            changes = [change for change in list_product_changes(session, product_id) if change.action != "revert"]
+            if not changes:
+                self.status_label.setText("Keine Aenderung zum Rueckgaengigmachen gefunden.")
+                return
+            product = revert_product_change(session, changes[0].id)
+            self.current_product_id = product.id
+            self.show_products(list_products(session))
+            self.loaded_form_snapshot = self._snapshot_from_product(product)
+            self.status_label.setText(f"Letzte Aenderung rueckgaengig gemacht: {product.name}")
+        finally:
+            session.close()
+
     def _selected_product_id(self) -> int | None:
         row = self.products_table.currentRow()
         return self.product_ids_by_row.get(row)
@@ -338,6 +370,7 @@ class ProductPanel(QWidget):
         self._set_unit_value("Kiste")
         self.article_number.clear()
         self.price_eur.clear()
+        self.deposit_eur.clear()
         self.is_active.setChecked(True)
         self.loaded_form_snapshot = self._form_snapshot()
         self.status_label.setText("Neues Produkt. Erst Speichern uebernimmt die Angaben.")
@@ -371,6 +404,7 @@ class ProductPanel(QWidget):
             "unit": self.unit.currentText(),
             "article_number": self.article_number.text(),
             "price_eur": self.price_eur.text(),
+            "deposit_eur": self.deposit_eur.text(),
             "is_active": self.is_active.isChecked(),
         }
 
@@ -381,6 +415,7 @@ class ProductPanel(QWidget):
             "unit": product.unit,
             "article_number": product.article_number or "",
             "price_eur": f"{product.standard_price_cents / 100:.2f}".replace(".", ","),
+            "deposit_eur": f"{product.default_deposit_cents / 100:.2f}".replace(".", ","),
             "is_active": product.is_active,
         }
 
@@ -390,6 +425,7 @@ class ProductPanel(QWidget):
         self._set_unit_value(snapshot["unit"])
         self.article_number.setText(snapshot["article_number"])
         self.price_eur.setText(snapshot["price_eur"])
+        self.deposit_eur.setText(snapshot["deposit_eur"])
         self.is_active.setChecked(snapshot["is_active"])
 
     def _set_unit_value(self, value: str) -> None:
@@ -400,5 +436,7 @@ class ProductPanel(QWidget):
         self.unit.setCurrentIndex(index)
 
     def _parse_euro_cents(self, value: str) -> int:
+        if not value.strip():
+            return 0
         normalized = value.strip().replace(".", "").replace(",", ".")
         return int(round(float(normalized) * 100))

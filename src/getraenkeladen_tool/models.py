@@ -21,6 +21,8 @@ class Customer(Base):
     opening_hours: Mapped[str | None] = mapped_column(Text(), nullable=True)
     internal_notes: Mapped[str | None] = mapped_column(Text(), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean(), default=True)
+    source_file: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    source_row: Mapped[int | None] = mapped_column(Integer(), nullable=True)
 
 
 class Product(Base):
@@ -30,8 +32,25 @@ class Product(Base):
     name: Mapped[str] = mapped_column(String(200))
     unit: Mapped[str] = mapped_column(String(50))
     standard_price_cents: Mapped[int] = mapped_column(Integer())
+    default_deposit_cents: Mapped[int] = mapped_column(Integer(), default=0)
     article_number: Mapped[str | None] = mapped_column(String(50), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean(), default=True)
+    source_file: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    source_row: Mapped[int | None] = mapped_column(Integer(), nullable=True)
+
+
+class MasterDataChange(Base):
+    __tablename__ = "master_data_changes"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    entity_type: Mapped[str] = mapped_column(String(30))
+    entity_id: Mapped[int] = mapped_column(Integer())
+    action: Mapped[str] = mapped_column(String(30))
+    field_name: Mapped[str] = mapped_column(String(100))
+    old_value: Mapped[str | None] = mapped_column(Text(), nullable=True)
+    new_value: Mapped[str | None] = mapped_column(Text(), nullable=True)
+    source: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    created_at: Mapped[str] = mapped_column(String(30))
 
 
 class DropdownOption(Base):

@@ -390,6 +390,7 @@ class OrderPanel(QWidget):
         if product is None:
             return
         self.unit_price_eur.setText(f"{product.standard_price_cents / 100:.2f}".replace(".", ","))
+        self.deposit_eur.setText(f"{product.default_deposit_cents / 100:.2f}".replace(".", ","))
 
     def add_order_line(self) -> None:
         product_id = self.product_select.currentData()

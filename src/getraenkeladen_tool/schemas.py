@@ -13,14 +13,19 @@ class CustomerCreate(BaseModel):
     opening_hours: str | None = None
     internal_notes: str | None = None
     is_active: bool = True
+    source_file: str | None = None
+    source_row: int | None = None
 
 
 class ProductCreate(BaseModel):
     name: str = Field(min_length=1)
     unit: str = Field(min_length=1)
     standard_price_cents: int = Field(ge=0)
+    default_deposit_cents: int = Field(default=0, ge=0)
     article_number: str | None = None
     is_active: bool = True
+    source_file: str | None = None
+    source_row: int | None = None
 
 
 class DocumentLineItem(BaseModel):

@@ -19,7 +19,9 @@ from ..schemas import CustomerCreate
 from ..services.customer_service import (
     archive_customer,
     create_customer,
+    list_customer_changes,
     list_customers,
+    revert_customer_change,
     restore_customer,
     update_customer,
 )
@@ -31,6 +33,7 @@ CUSTOMER_PANEL_ACTIONS = {
     "newCustomerButton": "Neu",
     "saveCustomerButton": "Kunde speichern",
     "discardCustomerChangesButton": "Aenderungen verwerfen",
+    "undoCustomerChangeButton": "Letzte Aenderung rueckgaengig",
     "refreshCustomersButton": "Kundenliste laden",
     "loadCustomerButton": "Auswahl bearbeiten",
     "archiveCustomerButton": "Kunde archivieren",
@@ -124,10 +127,12 @@ class CustomerPanel(QWidget):
         self.new_button = self._button("newCustomerButton")
         self.save_button = self._button("saveCustomerButton")
         self.discard_button = self._button("discardCustomerChangesButton")
+        self.undo_change_button = self._button("undoCustomerChangeButton")
         self.load_button = self._button("loadCustomerButton")
         action_row.addWidget(self.new_button)
         action_row.addWidget(self.save_button)
         action_row.addWidget(self.discard_button)
+        action_row.addWidget(self.undo_change_button)
         action_row.addWidget(self.load_button)
         action_row.addStretch()
         edit_layout.addLayout(action_row)
@@ -158,6 +163,7 @@ class CustomerPanel(QWidget):
         self.new_button.clicked.connect(self.new_customer)
         self.save_button.clicked.connect(self.save_customer)
         self.discard_button.clicked.connect(self.discard_changes)
+        self.undo_change_button.clicked.connect(self.undo_last_change)
         self.refresh_button.clicked.connect(self.refresh_customers)
         self.load_button.clicked.connect(self.load_selected_customer)
         self.archive_button.clicked.connect(self.archive_selected_customer)
@@ -295,6 +301,26 @@ class CustomerPanel(QWidget):
 
     def restore_selected_customer(self) -> None:
         self._set_selected_customer_active(True)
+
+    def undo_last_change(self) -> None:
+        customer_id = self.current_customer_id or self._selected_customer_id()
+        if customer_id is None or self.session_factory is None:
+            self.status_label.setText("Bitte zuerst einen Kunden auswaehlen.")
+            return
+
+        session = self.session_factory()
+        try:
+            changes = [change for change in list_customer_changes(session, customer_id) if change.action != "revert"]
+            if not changes:
+                self.status_label.setText("Keine Aenderung zum Rueckgaengigmachen gefunden.")
+                return
+            customer = revert_customer_change(session, changes[0].id)
+            self.current_customer_id = customer.id
+            self.show_customers(list_customers(session))
+            self.loaded_form_snapshot = self._snapshot_from_customer(customer)
+            self.status_label.setText(f"Letzte Aenderung rueckgaengig gemacht: {customer.name}")
+        finally:
+            session.close()
 
     def _set_selected_customer_active(self, active: bool) -> None:
         customer_id = self._selected_customer_id()
