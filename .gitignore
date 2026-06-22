@@ -1,4 +1,5 @@
 .venv/
+.venv.broken-*/
 .pytest_cache/
 __pycache__/
 *.py[cod]
