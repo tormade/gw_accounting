@@ -45,6 +45,44 @@ def create_order(session: Session, payload: OrderCreate) -> Order:
     return get_order(session, order.id)
 
 
+def update_order(session: Session, order_id: int, payload: OrderCreate) -> Order:
+    customer = session.get(Customer, payload.customer_id)
+    if customer is None:
+        raise ValueError("Kunde wurde nicht gefunden.")
+
+    order = get_order(session, order_id)
+    order.order_number = payload.order_number.strip()
+    order.customer_id = payload.customer_id
+    order.order_date = payload.order_date
+    order.delivery_date = payload.delivery_date
+    order.delivery_slot = payload.delivery_slot
+    order.tour_area = payload.tour_area
+    if order.status == "geplant" or payload.status != "geplant":
+        order.status = payload.status
+    order.lines.clear()
+
+    for line in payload.lines:
+        product = session.get(Product, line.product_id)
+        if product is None:
+            raise ValueError("Produkt wurde nicht gefunden.")
+        order.lines.append(
+            OrderLine(
+                product_id=product.id,
+                product_name=product.name,
+                quantity=line.quantity,
+                unit_price_cents=(
+                    line.unit_price_cents
+                    if line.unit_price_cents is not None
+                    else product.standard_price_cents
+                ),
+                deposit_cents=line.deposit_cents,
+            )
+        )
+
+    session.commit()
+    return get_order(session, order.id)
+
+
 def get_order(session: Session, order_id: int) -> Order:
     order = session.scalar(
         select(Order)

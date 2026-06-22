@@ -11,6 +11,7 @@ from getraenkeladen_tool.services.order_service import (
     create_order_invoice,
     get_order,
     list_active_orders,
+    update_order,
 )
 from getraenkeladen_tool.services.product_service import create_product
 
@@ -69,6 +70,76 @@ def test_create_order_allows_price_override(session, tmp_path: Path):
     )
 
     assert order.lines[0].unit_price_cents == 1799
+
+
+def test_update_order_replaces_header_and_lines(session, tmp_path: Path):
+    customer = create_customer(session, CustomerCreate(name="Hotel Blau", folder_path=str(tmp_path / "Hotel Blau")))
+    water = create_product(session, ProductCreate(name="Wasser", unit="Kiste", standard_price_cents=1299))
+    spezi = create_product(session, ProductCreate(name="Spezi", unit="Kiste", standard_price_cents=1599))
+    order = create_order(
+        session,
+        OrderCreate(
+            order_number="AUF-1006",
+            customer_id=customer.id,
+            order_date="2026-06-21",
+            delivery_date="2026-06-22",
+            delivery_slot="vormittag",
+            lines=[OrderLineCreate(product_id=water.id, quantity=1)],
+        ),
+    )
+
+    updated = update_order(
+        session,
+        order.id,
+        OrderCreate(
+            order_number="AUF-1006-A",
+            customer_id=customer.id,
+            order_date="2026-06-23",
+            delivery_date="2026-06-24",
+            delivery_slot="nachmittag",
+            lines=[OrderLineCreate(product_id=spezi.id, quantity=5, unit_price_cents=1499, deposit_cents=330)],
+        ),
+    )
+
+    assert updated.order_number == "AUF-1006-A"
+    assert updated.delivery_date == "2026-06-24"
+    assert updated.delivery_slot == "nachmittag"
+    assert len(updated.lines) == 1
+    assert updated.lines[0].product_id == spezi.id
+    assert updated.lines[0].product_name == "Spezi"
+    assert updated.lines[0].quantity == 5
+    assert updated.lines[0].unit_price_cents == 1499
+    assert updated.lines[0].deposit_cents == 330
+
+
+def test_update_order_keeps_existing_document_status_by_default(session, tmp_path: Path):
+    customer = create_customer(session, CustomerCreate(name="Hotel Gruen", folder_path=str(tmp_path / "Hotel Gruen")))
+    product = create_product(session, ProductCreate(name="Wasser", unit="Kiste", standard_price_cents=1299))
+    order = create_order(
+        session,
+        OrderCreate(
+            order_number="AUF-1007",
+            customer_id=customer.id,
+            order_date="2026-06-21",
+            delivery_date="2026-06-22",
+            lines=[OrderLineCreate(product_id=product.id, quantity=1)],
+        ),
+    )
+    create_order_delivery_order(session, order.id, "LS-1007")
+
+    updated = update_order(
+        session,
+        order.id,
+        OrderCreate(
+            order_number="AUF-1007",
+            customer_id=customer.id,
+            order_date="2026-06-21",
+            delivery_date="2026-06-23",
+            lines=[OrderLineCreate(product_id=product.id, quantity=2)],
+        ),
+    )
+
+    assert updated.status == "lieferauftrag_erstellt"
 
 
 def test_create_order_documents_generates_delivery_note_and_invoice_from_same_order(session, tmp_path: Path):

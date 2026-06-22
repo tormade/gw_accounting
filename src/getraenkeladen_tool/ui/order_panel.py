@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (
     QMenu,
     QMessageBox,
     QPushButton,
+    QHeaderView,
     QSpinBox,
     QTableWidget,
     QTableWidgetItem,
@@ -26,7 +27,9 @@ from ..services.order_service import (
     create_order,
     create_order_delivery_order,
     create_order_invoice,
+    get_order,
     list_active_orders,
+    update_order,
 )
 from ..services.product_service import list_active_products
 from .date_input import DateInput, to_display_date
@@ -84,6 +87,8 @@ class OrderPanel(QWidget):
         self.order_ids_by_row = {}
         self.current_order_id = None
 
+        self.order_mode_label = QLabel("Neuer Auftrag")
+        self.order_mode_label.setObjectName("stepTitle")
         self.customer_select = SearchableSelect("Kunde suchen, z. B. Cafe oder Hotel")
         self.customer_summary = QLabel("Noch kein Kunde ausgewaehlt.")
         self.customer_summary.setObjectName("sectionSubtitle")
@@ -105,10 +110,12 @@ class OrderPanel(QWidget):
         self.deposit_eur.setPlaceholderText("z. B. 3,30")
         self.order_lines_table = QTableWidget(0, len(ORDER_LINE_COLUMNS))
         self.order_lines_table.setHorizontalHeaderLabels(ORDER_LINE_COLUMNS)
-        self.order_lines_table.setMinimumHeight(220)
+        self.order_lines_table.setMinimumHeight(320)
+        self.order_lines_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         self.orders_table = QTableWidget(0, len(ORDER_COLUMNS))
         self.orders_table.setHorizontalHeaderLabels(ORDER_COLUMNS)
-        self.orders_table.setMaximumHeight(220)
+        self.orders_table.setMaximumHeight(180)
+        self.orders_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         self.status_label = QLabel("Schritt 1: Stammdaten laden, dann Kunde und Produkte auswaehlen.")
         self.status_label.setObjectName("muted")
         self.document_result_label = QLabel(
@@ -151,6 +158,7 @@ class OrderPanel(QWidget):
             ORDER_PANEL_SECTIONS[0],
             "Wie beim Rechnungsformular: oben stehen Kunde, Lieferdatum, Zeitfenster und Auftragsnummer.",
         )
+        customer_layout.addWidget(self.order_mode_label)
         customer_form = QFormLayout()
         customer_form.addRow("Kunde", self.customer_select)
         customer_form.addRow("Auftragsnummer", self._number_row(self.order_number, self.suggest_order_number_button))
@@ -187,7 +195,7 @@ class OrderPanel(QWidget):
 
         line_box, line_layout = self._section("Belegpositionen", "Alle hinzugefuegten Artikel dieses Auftrags.")
         line_layout.addWidget(self.order_lines_table)
-        middle_row.addWidget(line_box, 2)
+        middle_row.addWidget(line_box, 3)
 
         bottom_row = QHBoxLayout()
         bottom_row.setSpacing(18)
@@ -412,16 +420,13 @@ class OrderPanel(QWidget):
         if product is None:
             self.status_label.setText("Bitte zuerst ein Produkt auswaehlen.")
             return
-        row = self.order_lines_table.rowCount()
-        self.order_lines_table.insertRow(row)
-        values = (
+        self._append_order_line_to_table(
             product.name,
-            str(self.quantity.value()),
-            self.unit_price_eur.text().strip(),
-            self.deposit_eur.text().strip() or "0,00",
+            self.quantity.value(),
+            self._parse_euro_cents(self.unit_price_eur.text().strip()),
+            self._parse_euro_cents(self.deposit_eur.text().strip() or "0"),
+            product.id,
         )
-        for column, value in enumerate(values):
-            self.order_lines_table.setItem(row, column, QTableWidgetItem(value))
         self.status_label.setText("Position hinzugefuegt. Weitere Positionen erfassen oder Auftrag speichern.")
 
     def remove_selected_order_line(self) -> None:
@@ -444,20 +449,23 @@ class OrderPanel(QWidget):
 
         session = self.session_factory()
         try:
-            order = create_order(
-                session,
-                OrderCreate(
-                    order_number=self.order_number.text().strip(),
-                    customer_id=customer_id,
-                    order_date=self.delivery_date.iso_date() or "ohne-datum",
-                    delivery_date=self.delivery_date.iso_date() or "ohne-datum",
-                    delivery_slot=self.delivery_slot.currentText() or None,
-                    lines=order_lines,
-                ),
+            payload = OrderCreate(
+                order_number=self.order_number.text().strip(),
+                customer_id=customer_id,
+                order_date=self.delivery_date.iso_date() or "ohne-datum",
+                delivery_date=self.delivery_date.iso_date() or "ohne-datum",
+                delivery_slot=self.delivery_slot.currentText() or None,
+                lines=order_lines,
             )
+            if self.current_order_id is None:
+                order = create_order(session, payload)
+                self.status_label.setText("Auftrag gespeichert. Jetzt Lieferauftrag oder Rechnung erstellen.")
+            else:
+                order = update_order(session, self.current_order_id, payload)
+                self.status_label.setText("Auftrag aktualisiert. Excel/PDF bei Bedarf neu erstellen.")
             self.current_order_id = order.id
+            self.order_mode_label.setText(f"Auftrag bearbeiten: {order.order_number}")
             self.show_orders(list_active_orders(session))
-            self.status_label.setText("Auftrag gespeichert. Jetzt Lieferauftrag oder Rechnung erstellen.")
         finally:
             session.close()
 
@@ -541,8 +549,31 @@ class OrderPanel(QWidget):
     def load_selected_order_id(self) -> None:
         row = self.orders_table.currentRow()
         self.current_order_id = self.order_ids_by_row.get(row)
-        if self.current_order_id is not None:
-            self.status_label.setText("Auftrag ausgewaehlt. Jetzt Lieferauftrag oder Rechnung erstellen.")
+        if self.current_order_id is None or self.session_factory is None:
+            return
+        session = self.session_factory()
+        try:
+            order = get_order(session, self.current_order_id)
+            self.populate_order_form(order)
+            self.status_label.setText("Auftrag geladen. Positionen anpassen und Auftrag speichern.")
+        finally:
+            session.close()
+
+    def populate_order_form(self, order) -> None:
+        self.order_mode_label.setText(f"Auftrag bearbeiten: {order.order_number}")
+        self.order_number.setText(order.order_number)
+        self.customer_select.select_value(order.customer_id)
+        self.delivery_date.set_iso_date(order.delivery_date)
+        self.delivery_slot.setCurrentText(order.delivery_slot or "")
+        self.order_lines_table.setRowCount(0)
+        for line in order.lines:
+            self._append_order_line_to_table(
+                line.product_name,
+                line.quantity,
+                line.unit_price_cents,
+                line.deposit_cents,
+                line.product_id,
+            )
 
     def archive_selected_order(self) -> None:
         if self.session_factory is None:
@@ -593,7 +624,7 @@ class OrderPanel(QWidget):
             deposit_item = self.order_lines_table.item(row, 3)
             if product_item is None:
                 continue
-            product_id = self._product_id_for_name(product_item.text())
+            product_id = product_item.data(Qt.ItemDataRole.UserRole) or self._product_id_for_name(product_item.text())
             if product_id is None:
                 continue
             order_lines.append(
@@ -605,6 +636,28 @@ class OrderPanel(QWidget):
                 )
             )
         return order_lines
+
+    def _append_order_line_to_table(
+        self,
+        product_name: str,
+        quantity: int,
+        unit_price_cents: int,
+        deposit_cents: int,
+        product_id: int | None = None,
+    ) -> None:
+        row = self.order_lines_table.rowCount()
+        self.order_lines_table.insertRow(row)
+        values = (
+            product_name,
+            str(quantity),
+            f"{unit_price_cents / 100:.2f}".replace(".", ","),
+            f"{deposit_cents / 100:.2f}".replace(".", ","),
+        )
+        for column, value in enumerate(values):
+            item = QTableWidgetItem(value)
+            if column == 0:
+                item.setData(Qt.ItemDataRole.UserRole, product_id)
+            self.order_lines_table.setItem(row, column, item)
 
     def _product_id_for_name(self, product_name: str) -> int | None:
         for product_id, product in self.products_by_id.items():

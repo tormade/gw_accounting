@@ -27,12 +27,17 @@ def build_document_pdf(
         "",
         "Positionen:",
     ]
+    document_total_cents = 0
     for item in line_items:
         unit_price = item["unit_price_cents"] / 100
         deposit = item.get("deposit_cents", 0) / 100
+        line_total_cents = (item["unit_price_cents"] + item.get("deposit_cents", 0)) * item["quantity"]
+        document_total_cents += line_total_cents
         lines.append(
-            f"{item['quantity']} x {item['name']} | Preis {unit_price:.2f} EUR | Pfand {deposit:.2f} EUR"
+            f"{item['quantity']} x {item['name']} | Preis {unit_price:.2f} EUR | "
+            f"Pfand {deposit:.2f} EUR | Summe {line_total_cents / 100:.2f} EUR"
         )
+    lines.extend(["", f"Gesamt: {document_total_cents / 100:.2f} EUR"])
 
     _write_simple_pdf(output_path, lines)
 

@@ -31,6 +31,9 @@ def test_build_invoice_workbook_writes_customer_excel_file(tmp_path: Path):
     assert sheet["B13"].value == "Wasser"
     assert sheet["D13"].value == 12.99
     assert sheet["E13"].value == "=(C13+D13)*A13"
+    assert sheet["F32"].value == "=SUM(E13:E30)"
+    assert workbook.calculation.calcMode == "auto"
+    assert workbook.calculation.forceFullCalc is True
     assert sheet.print_area == "'Tabelle1'!$A$1:$F$48"
 
 
@@ -50,3 +53,26 @@ def test_build_delivery_order_workbook_writes_customer_excel_file(tmp_path: Path
     assert sheet["F8"].value == "LS-2001"
     assert sheet["A13"].value == 4
     assert sheet["B13"].value == "Apfelschorle"
+
+
+def test_build_invoice_workbook_refreshes_sum_formulas_for_all_item_rows(tmp_path: Path):
+    output_path = tmp_path / "Kunden" / "Cafe Nord" / "RG-1002.xlsx"
+
+    build_invoice_workbook(
+        output_path=output_path,
+        customer_name="Cafe Nord",
+        document_number="RG-1002",
+        line_items=[
+            {"name": "Wasser", "quantity": 2, "unit_price_cents": 1299, "deposit_cents": 330},
+            {"name": "Spezi", "quantity": 3, "unit_price_cents": 1599, "deposit_cents": 330},
+        ],
+    )
+
+    workbook = load_workbook(output_path, data_only=False)
+    sheet = workbook.active
+
+    assert sheet["E13"].value == "=(C13+D13)*A13"
+    assert sheet["E14"].value == "=(C14+D14)*A14"
+    assert sheet["E30"].value == "=(C30+D30)*A30"
+    assert sheet["F32"].value == "=SUM(E13:E30)"
+    assert sheet["A32"].value == "=SUM(A13:A30)"

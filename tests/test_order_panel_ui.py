@@ -29,3 +29,21 @@ def test_order_panel_makes_excel_pdf_generation_flow_visible():
     assert "Excel:" in source
     assert "PDF:" in source
     assert "Bitte zuerst Auftrag speichern." in source
+
+
+def test_order_panel_supports_editing_existing_orders():
+    source = Path("src/getraenkeladen_tool/ui/order_panel.py").read_text(encoding="utf-8")
+
+    assert "self.order_mode_label" in source
+    assert "Auftrag bearbeiten" in source
+    assert "update_order(" in source
+    assert "def populate_order_form" in source
+    assert "self.order_lines_table.setRowCount(0)" in source
+    assert "Auftrag aktualisiert" in source
+
+
+def test_order_panel_keeps_product_ids_when_existing_orders_are_loaded():
+    source = Path("src/getraenkeladen_tool/ui/order_panel.py").read_text(encoding="utf-8")
+
+    assert "Qt.ItemDataRole.UserRole" in source
+    assert "line.product_id" in source

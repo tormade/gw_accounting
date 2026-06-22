@@ -38,6 +38,10 @@ def _build_document_workbook(
     ensure_parent_folder(output_path)
 
     workbook = load_workbook(TEMPLATE_PATH)
+    workbook.calculation.calcMode = "auto"
+    workbook.calculation.forceFullCalc = True
+    workbook.calculation.fullCalcOnLoad = True
+    workbook.calculation.calcOnSave = True
     sheet = workbook.active
 
     sheet["A8"] = document_title
@@ -52,6 +56,7 @@ def _build_document_workbook(
         sheet.cell(row=row, column=2, value=None)
         sheet.cell(row=row, column=3, value=None)
         sheet.cell(row=row, column=4, value=None)
+        sheet.cell(row=row, column=5, value=f"=(C{row}+D{row})*A{row}")
 
     for row, item in enumerate(line_items, start=6):
         target_row = FIRST_ITEM_ROW + row - 6
@@ -62,5 +67,9 @@ def _build_document_workbook(
         sheet.cell(row=target_row, column=2, value=item["name"])
         sheet.cell(row=target_row, column=3, value=deposit)
         sheet.cell(row=target_row, column=4, value=unit_price)
+        sheet.cell(row=target_row, column=5, value=f"=(C{target_row}+D{target_row})*A{target_row}")
+
+    sheet["A32"] = f"=SUM(A{FIRST_ITEM_ROW}:A{MAX_ITEM_ROW})"
+    sheet["F32"] = f"=SUM(E{FIRST_ITEM_ROW}:E{MAX_ITEM_ROW})"
 
     workbook.save(output_path)
