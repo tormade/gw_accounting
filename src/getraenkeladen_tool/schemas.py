@@ -35,6 +35,12 @@ class DocumentLineItem(BaseModel):
     deposit_cents: int = Field(ge=0, default=0)
 
 
+class DepositReturnCreate(BaseModel):
+    name: str = Field(min_length=1)
+    quantity: int = Field(gt=0)
+    deposit_cents: int = Field(ge=0)
+
+
 class DocumentCreate(BaseModel):
     customer_id: int = Field(gt=0)
     document_type: str = Field(min_length=1)
@@ -42,6 +48,7 @@ class DocumentCreate(BaseModel):
     delivery_date: str | None = None
     delivery_slot: str | None = None
     line_items: list[DocumentLineItem] = Field(min_length=1)
+    deposit_returns: list[DepositReturnCreate] = Field(default_factory=list)
     order_id: int | None = Field(default=None, gt=0)
 
 
@@ -61,3 +68,4 @@ class OrderCreate(BaseModel):
     tour_area: str | None = None
     status: str = "geplant"
     lines: list[OrderLineCreate] = Field(min_length=1)
+    deposit_returns: list[DepositReturnCreate] = Field(default_factory=list)

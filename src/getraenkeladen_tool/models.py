@@ -107,6 +107,10 @@ class Order(Base):
 
     customer: Mapped[Customer] = relationship()
     lines: Mapped[list["OrderLine"]] = relationship(cascade="all, delete-orphan", order_by="OrderLine.id")
+    deposit_returns: Mapped[list["OrderDepositReturn"]] = relationship(
+        cascade="all, delete-orphan",
+        order_by="OrderDepositReturn.id",
+    )
 
 
 class OrderLine(Base):
@@ -121,3 +125,13 @@ class OrderLine(Base):
     deposit_cents: Mapped[int] = mapped_column(Integer(), default=0)
 
     product: Mapped[Product | None] = relationship()
+
+
+class OrderDepositReturn(Base):
+    __tablename__ = "order_deposit_returns"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    order_id: Mapped[int] = mapped_column(ForeignKey("orders.id"))
+    name: Mapped[str] = mapped_column(String(200))
+    quantity: Mapped[int] = mapped_column(Integer())
+    deposit_cents: Mapped[int] = mapped_column(Integer())

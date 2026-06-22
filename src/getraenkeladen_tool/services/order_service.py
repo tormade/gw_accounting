@@ -3,8 +3,8 @@ from pathlib import Path
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-from ..models import Customer, Document, Order, OrderLine, Product
-from ..schemas import DocumentCreate, DocumentLineItem, OrderCreate
+from ..models import Customer, Document, Order, OrderDepositReturn, OrderLine, Product
+from ..schemas import DepositReturnCreate, DocumentCreate, DocumentLineItem, OrderCreate
 from .document_service import create_document
 
 
@@ -39,6 +39,7 @@ def create_order(session: Session, payload: OrderCreate) -> Order:
                 deposit_cents=line.deposit_cents,
             )
         )
+    _append_deposit_returns(order, payload.deposit_returns)
 
     session.add(order)
     session.commit()
@@ -60,6 +61,7 @@ def update_order(session: Session, order_id: int, payload: OrderCreate) -> Order
     if order.status == "geplant" or payload.status != "geplant":
         order.status = payload.status
     order.lines.clear()
+    order.deposit_returns.clear()
 
     for line in payload.lines:
         product = session.get(Product, line.product_id)
@@ -78,6 +80,7 @@ def update_order(session: Session, order_id: int, payload: OrderCreate) -> Order
                 deposit_cents=line.deposit_cents,
             )
         )
+    _append_deposit_returns(order, payload.deposit_returns)
 
     session.commit()
     return get_order(session, order.id)
@@ -86,7 +89,7 @@ def update_order(session: Session, order_id: int, payload: OrderCreate) -> Order
 def get_order(session: Session, order_id: int) -> Order:
     order = session.scalar(
         select(Order)
-        .options(selectinload(Order.lines), selectinload(Order.customer))
+        .options(selectinload(Order.lines), selectinload(Order.deposit_returns), selectinload(Order.customer))
         .where(Order.id == order_id)
     )
     if order is None:
@@ -98,7 +101,7 @@ def list_active_orders(session: Session) -> list[Order]:
     return list(
         session.scalars(
             select(Order)
-            .options(selectinload(Order.lines), selectinload(Order.customer))
+            .options(selectinload(Order.lines), selectinload(Order.deposit_returns), selectinload(Order.customer))
             .where(Order.status != "archiviert")
             .order_by(Order.delivery_date, Order.delivery_slot, Order.order_number)
         )
@@ -136,6 +139,7 @@ def create_order_delivery_order(session: Session, order_id: int, delivery_order_
             delivery_date=order.delivery_date,
             delivery_slot=order.delivery_slot,
             line_items=_document_line_items(order),
+            deposit_returns=_document_deposit_returns(order),
         ),
     )
     if order.status != "fakturiert":
@@ -162,6 +166,7 @@ def create_order_invoice(
             delivery_date=order.delivery_date,
             delivery_slot=order.delivery_slot,
             line_items=_document_line_items(order),
+            deposit_returns=_document_deposit_returns(order),
         ),
         datev_upload_dir=datev_upload_dir,
     )
@@ -181,3 +186,25 @@ def _document_line_items(order: Order) -> list[DocumentLineItem]:
         )
         for line in order.lines
     ]
+
+
+def _document_deposit_returns(order: Order) -> list[DepositReturnCreate]:
+    return [
+        DepositReturnCreate(
+            name=deposit_return.name,
+            quantity=deposit_return.quantity,
+            deposit_cents=deposit_return.deposit_cents,
+        )
+        for deposit_return in order.deposit_returns
+    ]
+
+
+def _append_deposit_returns(order: Order, deposit_returns: list[DepositReturnCreate]) -> None:
+    for deposit_return in deposit_returns:
+        order.deposit_returns.append(
+            OrderDepositReturn(
+                name=deposit_return.name,
+                quantity=deposit_return.quantity,
+                deposit_cents=deposit_return.deposit_cents,
+            )
+        )

@@ -57,3 +57,26 @@ def test_order_panel_shows_running_order_total():
     assert "itemChanged.connect(self.update_order_total)" in source
     assert "def update_order_total" in source
     assert "Auftragssumme" in source
+
+
+def test_order_panel_exposes_deposit_returns_new_order_and_open_file_actions():
+    source = Path("src/getraenkeladen_tool/ui/order_panel.py").read_text(encoding="utf-8")
+
+    assert '"newOrderButton": "Neuer Auftrag"' in source
+    assert '"addDepositReturnButton": "Pfand zurueck hinzufuegen"' in source
+    assert '"openLastExcelButton": "Excel oeffnen"' in source
+    assert '"openLastPdfButton": "PDF oeffnen"' in source
+    assert "self.deposit_returns_table" in source
+    assert "def reset_order_form" in source
+    assert "def open_last_excel_file" in source
+    assert "def open_last_pdf_file" in source
+
+
+def test_order_panel_warns_before_changing_documented_orders():
+    source = Path("src/getraenkeladen_tool/ui/order_panel.py").read_text(encoding="utf-8")
+
+    assert "self.current_order_status" in source
+    assert "def confirm_documented_order_change" in source
+    assert "Belege neu erstellen" in source
+    assert 'self.current_order_status = "lieferauftrag_erstellt"' in source
+    assert 'self.current_order_status = "fakturiert"' in source

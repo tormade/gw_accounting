@@ -1,7 +1,9 @@
 from pathlib import Path
 
-from getraenkeladen_tool.models import Document
-from getraenkeladen_tool.schemas import CustomerCreate, OrderCreate, OrderLineCreate, ProductCreate
+from getraenkeladen_tool.models import Document, OpenItem
+from openpyxl import load_workbook
+
+from getraenkeladen_tool.schemas import CustomerCreate, DepositReturnCreate, OrderCreate, OrderLineCreate, ProductCreate
 from getraenkeladen_tool.services.customer_service import create_customer
 from getraenkeladen_tool.services.order_service import (
     archive_order,
@@ -72,6 +74,30 @@ def test_create_order_allows_price_override(session, tmp_path: Path):
     assert order.lines[0].unit_price_cents == 1799
 
 
+def test_create_order_tracks_deposit_returns(session, tmp_path: Path):
+    customer = create_customer(session, CustomerCreate(name="Verein", folder_path=str(tmp_path / "Verein")))
+    product = create_product(session, ProductCreate(name="Wasser", unit="Kiste", standard_price_cents=1030))
+
+    order = create_order(
+        session,
+        OrderCreate(
+            order_number="AUF-1010",
+            customer_id=customer.id,
+            order_date="2026-06-21",
+            delivery_date="2026-06-22",
+            lines=[OrderLineCreate(product_id=product.id, quantity=1, deposit_cents=480)],
+            deposit_returns=[DepositReturnCreate(name="Leergut Kiste 4,80", quantity=2, deposit_cents=480)],
+        ),
+    )
+
+    loaded = get_order(session, order.id)
+
+    assert len(loaded.deposit_returns) == 1
+    assert loaded.deposit_returns[0].name == "Leergut Kiste 4,80"
+    assert loaded.deposit_returns[0].quantity == 2
+    assert loaded.deposit_returns[0].deposit_cents == 480
+
+
 def test_update_order_replaces_header_and_lines(session, tmp_path: Path):
     customer = create_customer(session, CustomerCreate(name="Hotel Blau", folder_path=str(tmp_path / "Hotel Blau")))
     water = create_product(session, ProductCreate(name="Wasser", unit="Kiste", standard_price_cents=1299))
@@ -98,6 +124,7 @@ def test_update_order_replaces_header_and_lines(session, tmp_path: Path):
             delivery_date="2026-06-24",
             delivery_slot="nachmittag",
             lines=[OrderLineCreate(product_id=spezi.id, quantity=5, unit_price_cents=1499, deposit_cents=330)],
+            deposit_returns=[DepositReturnCreate(name="Leergut Kiste 3,30", quantity=1, deposit_cents=330)],
         ),
     )
 
@@ -110,6 +137,8 @@ def test_update_order_replaces_header_and_lines(session, tmp_path: Path):
     assert updated.lines[0].quantity == 5
     assert updated.lines[0].unit_price_cents == 1499
     assert updated.lines[0].deposit_cents == 330
+    assert len(updated.deposit_returns) == 1
+    assert updated.deposit_returns[0].name == "Leergut Kiste 3,30"
 
 
 def test_update_order_keeps_existing_document_status_by_default(session, tmp_path: Path):
@@ -235,6 +264,7 @@ def test_create_order_invoice_generates_only_invoice_and_open_item(session, tmp_
             order_date="2026-06-21",
             delivery_date="2026-06-22",
             lines=[OrderLineCreate(product_id=product.id, quantity=3, deposit_cents=330)],
+            deposit_returns=[DepositReturnCreate(name="Leergut Kiste 3,30", quantity=1, deposit_cents=330)],
         ),
     )
 
@@ -247,7 +277,12 @@ def test_create_order_invoice_generates_only_invoice_and_open_item(session, tmp_
     assert Path(document.pdf_path).exists()
     assert document.datev_export_path is not None
     assert session.query(Document).count() == 1
+    assert session.query(OpenItem).one().amount_cents == 5457
     assert get_order(session, order.id).status == "fakturiert"
+
+    excel_sheet = load_workbook(document.excel_path, data_only=True).active
+    assert excel_sheet["F40"].value == -3.3
+    assert excel_sheet["F43"].value == 54.57
 
 
 def test_list_active_orders_excludes_archived_orders(session, tmp_path: Path):

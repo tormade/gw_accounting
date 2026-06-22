@@ -3,7 +3,7 @@ from pathlib import Path
 from openpyxl import load_workbook
 
 from getraenkeladen_tool.models import OpenItem
-from getraenkeladen_tool.schemas import CustomerCreate, DocumentCreate, DocumentLineItem
+from getraenkeladen_tool.schemas import CustomerCreate, DepositReturnCreate, DocumentCreate, DocumentLineItem
 from getraenkeladen_tool.services.customer_service import create_customer
 from getraenkeladen_tool.services.document_service import create_document, latest_invoice_number
 
@@ -92,6 +92,34 @@ def test_create_invoice_supports_multiple_line_items(session, tmp_path: Path):
 
     open_item = session.query(OpenItem).one()
     assert open_item.amount_cents == 8745
+
+
+def test_create_invoice_reduces_open_item_by_deposit_returns(session, tmp_path: Path):
+    customer = create_customer(
+        session,
+        CustomerCreate(
+            name="Pfandkunde",
+            folder_path=str(tmp_path / "Kunden" / "Pfandkunde"),
+            payment_method="bar",
+        ),
+    )
+
+    document = create_document(
+        session,
+        DocumentCreate(
+            customer_id=customer.id,
+            document_type="Rechnung",
+            document_number="RG-1002-P",
+            delivery_date="2026-06-21",
+            line_items=[DocumentLineItem(name="Wasser", quantity=1, unit_price_cents=1030, deposit_cents=480)],
+            deposit_returns=[DepositReturnCreate(name="Leergut Kiste 4,80", quantity=1, deposit_cents=480)],
+        ),
+    )
+
+    assert session.query(OpenItem).one().amount_cents == 1030
+    sheet = load_workbook(document.excel_path, data_only=True).active
+    assert sheet["F40"].value == -4.8
+    assert sheet["F43"].value == 10.3
 
 
 def test_create_invoice_rejects_duplicate_invoice_number(session, tmp_path: Path):

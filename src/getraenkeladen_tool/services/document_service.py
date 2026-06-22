@@ -31,14 +31,29 @@ def create_document(session: Session, payload: DocumentCreate, datev_upload_dir:
         document_date=document_date,
     )
     line_items = [item.model_dump() for item in payload.line_items]
+    deposit_returns = [item.model_dump() for item in payload.deposit_returns]
 
     if document_type == "Rechnung":
-        build_invoice_workbook(paths.excel_path, customer.name, document_number, line_items, document_date=document_date)
+        build_invoice_workbook(
+            paths.excel_path,
+            customer.name,
+            document_number,
+            line_items,
+            document_date=document_date,
+            deposit_returns=deposit_returns,
+        )
     elif document_type in {"Lieferauftrag", "Lieferschein"}:
-        build_delivery_note_workbook(paths.excel_path, customer.name, document_number, line_items, document_date=document_date)
+        build_delivery_note_workbook(
+            paths.excel_path,
+            customer.name,
+            document_number,
+            line_items,
+            document_date=document_date,
+            deposit_returns=deposit_returns,
+        )
     else:
         raise ValueError("Belegtyp muss Rechnung oder Lieferauftrag sein.")
-    build_document_pdf(paths.pdf_path, document_type, customer.name, document_number, line_items)
+    build_document_pdf(paths.pdf_path, document_type, customer.name, document_number, line_items, deposit_returns=deposit_returns)
 
     datev_export_path = None
     if document_type == "Rechnung" and datev_upload_dir is not None:
@@ -62,6 +77,9 @@ def create_document(session: Session, payload: DocumentCreate, datev_upload_dir:
         amount_cents = sum(
             (item.unit_price_cents + item.deposit_cents) * item.quantity
             for item in payload.line_items
+        ) - sum(
+            item.deposit_cents * item.quantity
+            for item in payload.deposit_returns
         )
         session.add(
             OpenItem(

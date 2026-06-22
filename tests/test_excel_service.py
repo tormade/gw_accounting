@@ -115,3 +115,32 @@ def test_build_invoice_workbook_stores_cached_totals_for_preview_and_data_only_r
     assert sheet["F41"].value == 68.91
     assert sheet["F42"].value == 13.09
     assert sheet["F43"].value == 82
+
+
+def test_build_invoice_workbook_writes_deposit_returns_into_return_block(tmp_path: Path):
+    output_path = tmp_path / "Kunden" / "Cafe Nord" / "RG-1004.xlsx"
+
+    build_invoice_workbook(
+        output_path=output_path,
+        customer_name="Cafe Nord",
+        document_number="RG-1004",
+        document_date="2026-06-22",
+        line_items=[{"name": "Wasser", "quantity": 1, "unit_price_cents": 1030, "deposit_cents": 480}],
+        deposit_returns=[{"name": "Leergut Kiste 4,80", "quantity": 1, "deposit_cents": 480}],
+    )
+
+    formula_workbook = load_workbook(output_path, data_only=False)
+    formula_sheet = formula_workbook.active
+    assert formula_sheet["A34"].value == 1
+    assert formula_sheet["B34"].value == "Leergut Kiste 4,80"
+    assert formula_sheet["C34"].value == -4.8
+    assert formula_sheet["E34"].value == "=(C34+D34)*A34"
+    assert formula_sheet["F40"].value == "=SUM(E34:E39)"
+    assert formula_sheet["F43"].value == "=F32+F40"
+
+    value_workbook = load_workbook(output_path, data_only=True)
+    value_sheet = value_workbook.active
+    assert value_sheet["E34"].value == -4.8
+    assert value_sheet["F32"].value == 15.1
+    assert value_sheet["F40"].value == -4.8
+    assert value_sheet["F43"].value == 10.3

@@ -69,15 +69,20 @@ def test_order_tab_exposes_guided_order_actions():
 
     assert ORDER_PANEL_ACTIONS == {
         "orderHelpButton": "?",
+        "newOrderButton": "Neuer Auftrag",
         "refreshOrderDataButton": "Stammdaten laden",
         "suggestOrderNumberButton": "Auftragsnummer vorschlagen",
         "suggestDeliveryNoteNumberButton": "Lieferscheinnummer vorschlagen",
         "suggestInvoiceNumberButton": "Rechnungsnummer vorschlagen",
         "addOrderLineButton": "Position hinzufuegen",
         "removeOrderLineButton": "Position entfernen",
+        "addDepositReturnButton": "Pfand zurueck hinzufuegen",
+        "removeDepositReturnButton": "Pfand zurueck entfernen",
         "saveOrderButton": "Auftrag speichern",
         "createDeliveryOrderButton": "LS Excel/PDF erstellen",
         "createInvoiceButton": "Rechnung Excel/PDF erstellen",
+        "openLastExcelButton": "Excel oeffnen",
+        "openLastPdfButton": "PDF oeffnen",
         "refreshOrdersButton": "Auftragsliste laden",
     }
     assert ORDER_PANEL_SECTIONS == (

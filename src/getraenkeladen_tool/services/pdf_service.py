@@ -13,6 +13,7 @@ def build_document_pdf(
     customer_name: str,
     document_number: str,
     line_items: list[dict],
+    deposit_returns: list[dict] | None = None,
 ) -> None:
     ensure_parent_folder(output_path)
     letterhead = _load_letterhead()
@@ -37,6 +38,15 @@ def build_document_pdf(
             f"{item['quantity']} x {item['name']} | Preis {unit_price:.2f} EUR | "
             f"Pfand {deposit:.2f} EUR | Summe {line_total_cents / 100:.2f} EUR"
         )
+    if deposit_returns:
+        lines.extend(["", "Pfandrueckgabe:"])
+        for deposit_return in deposit_returns:
+            line_total_cents = deposit_return["deposit_cents"] * deposit_return["quantity"]
+            document_total_cents -= line_total_cents
+            lines.append(
+                f"{deposit_return['quantity']} x {deposit_return['name']} | "
+                f"Gutschrift {line_total_cents / 100:.2f} EUR"
+            )
     lines.extend(["", f"Gesamt: {document_total_cents / 100:.2f} EUR"])
 
     _write_simple_pdf(output_path, lines)

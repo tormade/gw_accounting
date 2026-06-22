@@ -12,6 +12,8 @@ from .file_service import ensure_parent_folder
 TEMPLATE_PATH = Path(__file__).resolve().parents[3] / "templates" / "vorlage_liefern_bar.xlsx"
 FIRST_ITEM_ROW = 13
 MAX_ITEM_ROW = 30
+FIRST_RETURN_ROW = 34
+MAX_RETURN_ROW = 39
 
 
 def build_invoice_workbook(
@@ -20,8 +22,17 @@ def build_invoice_workbook(
     document_number: str,
     line_items: list[dict],
     document_date: str | None = None,
+    deposit_returns: list[dict] | None = None,
 ) -> None:
-    _build_document_workbook(output_path, "Rechnung", customer_name, document_number, line_items, document_date)
+    _build_document_workbook(
+        output_path,
+        "Rechnung",
+        customer_name,
+        document_number,
+        line_items,
+        document_date,
+        deposit_returns or [],
+    )
 
 
 def build_delivery_note_workbook(
@@ -30,8 +41,17 @@ def build_delivery_note_workbook(
     document_number: str,
     line_items: list[dict],
     document_date: str | None = None,
+    deposit_returns: list[dict] | None = None,
 ) -> None:
-    _build_document_workbook(output_path, "Lieferauftrag", customer_name, document_number, line_items, document_date)
+    _build_document_workbook(
+        output_path,
+        "Lieferauftrag",
+        customer_name,
+        document_number,
+        line_items,
+        document_date,
+        deposit_returns or [],
+    )
 
 
 def _build_document_workbook(
@@ -41,6 +61,7 @@ def _build_document_workbook(
     document_number: str,
     line_items: list[dict],
     document_date: str | None,
+    deposit_returns: list[dict],
 ) -> None:
     ensure_parent_folder(output_path)
 
@@ -58,9 +79,19 @@ def _build_document_workbook(
 
     if len(line_items) > MAX_ITEM_ROW - FIRST_ITEM_ROW + 1:
         raise ValueError("Die Winklmeier-Vorlage erlaubt maximal 18 Positionszeilen.")
+    if len(deposit_returns) > MAX_RETURN_ROW - FIRST_RETURN_ROW + 1:
+        raise ValueError("Die Winklmeier-Vorlage erlaubt maximal 6 Pfandrueckgabe-Zeilen.")
 
     cached_formula_values = {}
     for row in range(FIRST_ITEM_ROW, MAX_ITEM_ROW + 1):
+        sheet.cell(row=row, column=1, value=None)
+        sheet.cell(row=row, column=2, value=None)
+        sheet.cell(row=row, column=3, value=None)
+        sheet.cell(row=row, column=4, value=None)
+        sheet.cell(row=row, column=5, value=f"=(C{row}+D{row})*A{row}")
+        cached_formula_values[f"E{row}"] = 0
+
+    for row in range(FIRST_RETURN_ROW, MAX_RETURN_ROW + 1):
         sheet.cell(row=row, column=1, value=None)
         sheet.cell(row=row, column=2, value=None)
         sheet.cell(row=row, column=3, value=None)
@@ -85,14 +116,27 @@ def _build_document_workbook(
         sheet.cell(row=target_row, column=5, value=f"=(C{target_row}+D{target_row})*A{target_row}")
         cached_formula_values[f"E{target_row}"] = _cents_to_euro(line_total_cents)
 
+    pfand_return_total_cents = 0
+    for index, deposit_return in enumerate(deposit_returns):
+        target_row = FIRST_RETURN_ROW + index
+        quantity = deposit_return["quantity"]
+        deposit_cents = deposit_return["deposit_cents"]
+        line_total_cents = -deposit_cents * quantity
+        pfand_return_total_cents += line_total_cents
+        sheet.cell(row=target_row, column=1, value=quantity)
+        sheet.cell(row=target_row, column=2, value=deposit_return["name"])
+        sheet.cell(row=target_row, column=3, value=-deposit_cents / 100)
+        sheet.cell(row=target_row, column=4, value=None)
+        sheet.cell(row=target_row, column=5, value=f"=(C{target_row}+D{target_row})*A{target_row}")
+        cached_formula_values[f"E{target_row}"] = _cents_to_euro(line_total_cents)
+
     sheet["A32"] = f"=SUM(A{FIRST_ITEM_ROW}:A{MAX_ITEM_ROW})"
     sheet["F32"] = f"=SUM(E{FIRST_ITEM_ROW}:E{MAX_ITEM_ROW})"
-    sheet["F40"] = "=SUM(E34:E39)"
+    sheet["F40"] = f"=SUM(E{FIRST_RETURN_ROW}:E{MAX_RETURN_ROW})"
     sheet["F41"] = "=ROUND(F43/1.19,2)"
     sheet["F42"] = "=F43-F41"
     sheet["F43"] = "=F32+F40"
 
-    pfand_return_total_cents = 0
     gross_total_cents = delivery_total_cents + pfand_return_total_cents
     net_total_cents = round(gross_total_cents / 1.19)
     tax_total_cents = gross_total_cents - net_total_cents
