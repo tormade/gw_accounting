@@ -27,6 +27,15 @@ def test_pyside_dependency_is_pinned_below_known_bad_cocoa_plugin_version():
     assert "PySide6>=6.10,<6.11" in project["project"]["dependencies"]
 
 
+def test_project_supports_python_311_for_stable_macos_qt_startup():
+    project = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))
+    readme = Path("README.md").read_text(encoding="utf-8")
+
+    assert project["project"]["requires-python"] == ">=3.11"
+    assert "brew install python@3.11" in readme
+    assert "/opt/homebrew/bin/python3.11 -m venv .venv" in readme
+
+
 def test_package_discovery_uses_src_layout():
     project = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))
 

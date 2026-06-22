@@ -1,15 +1,15 @@
 # Getraenkeladen Tool
 
-Local Windows desktop app for a beverage store, built with Python 3.12 and PySide6.
+Local Windows desktop app for a beverage store, built with Python 3.11+ and PySide6.
 
 ## Development
 
-On macOS, use Homebrew Python 3.12 for the virtual environment. The bundled
-Codex Python runtime can make Qt unable to find the native `cocoa` plugin.
+On macOS, use Homebrew Python 3.11 for the virtual environment. Python 3.12 can
+make Qt unable to find the native `cocoa` plugin on this Mac setup.
 
 ```bash
-brew install python@3.12
-/opt/homebrew/bin/python3.12 -m venv .venv
+brew install python@3.11
+/opt/homebrew/bin/python3.11 -m venv .venv
 source .venv/bin/activate
 python -m pip install -e ".[dev]"
 ```
