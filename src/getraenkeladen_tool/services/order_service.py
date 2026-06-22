@@ -142,7 +142,7 @@ def create_order_delivery_order(
         DocumentCreate(
             customer_id=order.customer_id,
             order_id=order.id,
-            document_type="Lieferauftrag",
+            document_type="Lieferschein",
             document_number=delivery_order_number,
             delivery_date=order.delivery_date,
             delivery_slot=order.delivery_slot,

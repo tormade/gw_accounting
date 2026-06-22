@@ -211,7 +211,7 @@ def test_create_order_documents_generates_delivery_note_and_invoice_from_same_or
         datev_upload_dir=tmp_path / "DATEV",
     )
 
-    assert [document.document_type for document in documents] == ["Lieferauftrag", "Rechnung"]
+    assert [document.document_type for document in documents] == ["Lieferschein", "Rechnung"]
     assert [document.order_id for document in documents] == [order.id, order.id]
     assert Path(documents[0].excel_path).exists()
     assert Path(documents[1].pdf_path).exists()
@@ -241,7 +241,7 @@ def test_create_order_delivery_order_generates_only_ls_document(session, tmp_pat
 
     document = create_order_delivery_order(session, order.id, "LS-3101")
 
-    assert document.document_type == "Lieferauftrag"
+    assert document.document_type == "Lieferschein"
     assert document.document_number == "LS-3101"
     assert document.order_id == order.id
     assert Path(document.excel_path).exists()

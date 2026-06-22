@@ -32,6 +32,9 @@ def _add_missing_columns(engine) -> None:
                 connection.execute(text("ALTER TABLE documents ADD COLUMN datev_export_path VARCHAR(500)"))
             if "order_id" not in document_columns:
                 connection.execute(text("ALTER TABLE documents ADD COLUMN order_id INTEGER"))
+            connection.execute(
+                text("UPDATE documents SET document_type = 'Lieferschein' WHERE document_type = 'Lieferauftrag'")
+            )
         if "customers" in table_names:
             customer_columns = {column["name"] for column in inspector.get_columns("customers")}
             if "is_active" not in customer_columns:

@@ -17,7 +17,13 @@ class NumberSuggestions:
 def suggest_next_numbers(session: Session) -> NumberSuggestions:
     return NumberSuggestions(
         order_number=next_order_number(session),
-        delivery_note_number=next_document_number(session, document_type="Lieferschein", prefix="LS", start=3001),
+        delivery_note_number=next_document_number(
+            session,
+            document_type="Lieferschein",
+            prefix="LS",
+            start=3001,
+            aliases=("Lieferauftrag",),
+        ),
         invoice_number=next_document_number(session, document_type="Rechnung", prefix="RG", start=3001),
     )
 
@@ -27,9 +33,16 @@ def next_order_number(session: Session) -> str:
     return next_number_for_prefix(existing_numbers, prefix="AUF", start=1001)
 
 
-def next_document_number(session: Session, document_type: str, prefix: str, start: int) -> str:
+def next_document_number(
+    session: Session,
+    document_type: str,
+    prefix: str,
+    start: int,
+    aliases: tuple[str, ...] = (),
+) -> str:
+    document_types = (document_type, *aliases)
     existing_numbers = session.scalars(
-        select(Document.document_number).where(Document.document_type == document_type)
+        select(Document.document_number).where(Document.document_type.in_(document_types))
     ).all()
     return next_number_for_prefix(existing_numbers, prefix=prefix, start=start)
 

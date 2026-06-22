@@ -62,5 +62,20 @@ def test_suggest_next_numbers_uses_database_orders_and_documents(session, tmp_pa
     )
 
 
+def test_suggest_next_numbers_counts_legacy_delivery_order_documents(session, tmp_path: Path):
+    customer = create_customer(session, CustomerCreate(name="Cafe Alt", folder_path=str(tmp_path / "Cafe Alt")))
+    create_document(
+        session,
+        DocumentCreate(
+            customer_id=customer.id,
+            document_type="Lieferauftrag",
+            document_number="LS-4999",
+            line_items=[DocumentLineItem(name="Wasser", quantity=1, unit_price_cents=1299)],
+        ),
+    )
+
+    assert suggest_next_numbers(session).delivery_note_number == "LS-5000"
+
+
 def test_next_document_number_returns_default_for_document_type_without_existing_documents(session):
     assert next_document_number(session, document_type="Rechnung", prefix="RG", start=3001) == "RG-3001"

@@ -39,6 +39,38 @@ def test_bootstrap_database_adds_missing_document_columns(tmp_path: Path):
     assert "order_id" in columns
 
 
+def test_bootstrap_database_normalizes_legacy_delivery_order_document_type(tmp_path: Path):
+    config = AppConfig(base_dir=tmp_path)
+    config.database_path.parent.mkdir(parents=True, exist_ok=True)
+    connection = sqlite3.connect(config.database_path)
+    connection.execute(
+        "CREATE TABLE documents ("
+        "id INTEGER PRIMARY KEY, "
+        "customer_id INTEGER NOT NULL, "
+        "document_type VARCHAR(30) NOT NULL, "
+        "document_number VARCHAR(50) NOT NULL, "
+        "excel_path VARCHAR(500) NOT NULL, "
+        "pdf_path VARCHAR(500) NOT NULL, "
+        "delivery_date VARCHAR(20), "
+        "delivery_slot VARCHAR(30)"
+        ")"
+    )
+    connection.execute(
+        "INSERT INTO documents "
+        "(customer_id, document_type, document_number, excel_path, pdf_path) "
+        "VALUES (1, 'Lieferauftrag', 'LS-3999', 'legacy.xlsx', 'legacy.pdf')"
+    )
+    connection.commit()
+    connection.close()
+
+    bootstrap_database(config)
+
+    connection = sqlite3.connect(config.database_path)
+    document_type = connection.execute("SELECT document_type FROM documents WHERE document_number = 'LS-3999'").fetchone()[0]
+    connection.close()
+    assert document_type == "Lieferschein"
+
+
 def test_bootstrap_database_adds_customer_active_column(tmp_path: Path):
     config = AppConfig(base_dir=tmp_path)
     config.database_path.parent.mkdir(parents=True, exist_ok=True)

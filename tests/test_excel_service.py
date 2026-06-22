@@ -53,7 +53,7 @@ def test_build_delivery_order_workbook_writes_customer_excel_file(tmp_path: Path
 
     workbook = load_workbook(output_path)
     sheet = workbook.active
-    assert sheet["A8"].value == "Lieferauftrag"
+    assert sheet["A8"].value == "Lieferschein"
     assert sheet["F8"].value == "LS-2001"
     assert sheet["C5"].value.date() == date(2026, 6, 22)
     assert sheet["A13"].value == 4

@@ -45,7 +45,7 @@ def build_delivery_note_workbook(
 ) -> None:
     _build_document_workbook(
         output_path,
-        "Lieferauftrag",
+        "Lieferschein",
         customer_name,
         document_number,
         line_items,
