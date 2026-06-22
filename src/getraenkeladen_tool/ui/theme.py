@@ -5,18 +5,18 @@ QMainWindow {
 }
 
 QWidget#brandHeader {
-    background: #111111;
-    border-bottom: 0;
+    background: #fffaf0;
+    border-bottom: 1px solid #e4d7bd;
 }
 
 QLabel#brandLogo {
-    color: #ffffff;
+    color: #25351f;
     font-size: 22px;
     font-weight: 800;
 }
 
 QLabel#brandClaim {
-    color: #f4efe4;
+    color: #7b5f2a;
     font-size: 16px;
     font-style: italic;
 }
@@ -26,9 +26,9 @@ QWidget#appShell {
 }
 
 QListWidget#sidebarNavigation {
-    background: #151515;
-    border: 0;
-    color: #e8e2d8;
+    background: #f8f0dc;
+    border-right: 1px solid #e4d7bd;
+    color: #334029;
     font-size: 15px;
     font-weight: 800;
     padding: 14px 10px;
@@ -42,13 +42,13 @@ QListWidget#sidebarNavigation::item {
 }
 
 QListWidget#sidebarNavigation::item:selected {
-    background: #b91c1c;
+    background: #2f6f3e;
     color: #ffffff;
 }
 
 QListWidget#sidebarNavigation::item:hover {
-    background: #2a2a2a;
-    color: #ffffff;
+    background: #efe2c2;
+    color: #25351f;
 }
 
 QLabel#headline {
@@ -80,11 +80,16 @@ QLabel#stepText {
 }
 
 QWidget#sectionBox,
+QWidget#workspaceCard,
 QWidget#documentHeaderCard {
     background: #ffffff;
     border: 1px solid #dedbd2;
     border-radius: 16px;
     padding: 16px;
+}
+
+QWidget#workspaceCard {
+    border-color: #ddd1b6;
 }
 
 QWidget#pageHeader {
@@ -96,6 +101,20 @@ QWidget#pageToolbar {
     border: 1px solid #dedbd2;
     border-radius: 12px;
     padding: 10px;
+}
+
+QWidget#filterBar {
+    background: #fbf7ec;
+    border: 1px solid #e4d7bd;
+    border-radius: 12px;
+    padding: 10px;
+}
+
+QWidget#totalBar {
+    background: #f1f7ed;
+    border: 1px solid #bfd7b5;
+    border-radius: 12px;
+    padding: 10px 12px;
 }
 
 QWidget#actionCard {
@@ -121,14 +140,14 @@ QLabel#actionCardSubtitle {
 }
 
 QPushButton#actionCardButton {
-    background: #111111;
+    background: #2f6f3e;
     border: 0;
     color: #ffffff;
     font-weight: 900;
 }
 
 QPushButton#actionCardButton:hover {
-    background: #333333;
+    background: #255a32;
 }
 
 QSplitter#workspaceSplitter::handle {
@@ -141,7 +160,7 @@ QWidget#documentHeaderCard {
 }
 
 QLabel#sectionTitle {
-    color: #111111;
+    color: #25351f;
     font-size: 15px;
     font-weight: 800;
 }
@@ -166,7 +185,7 @@ QLabel#metricValue {
 }
 
 QLabel#metricLabel {
-    color: #111111;
+    color: #25351f;
     font-size: 15px;
     font-weight: 800;
 }
@@ -187,6 +206,18 @@ QSpinBox,
 QDateEdit {
     min-height: 30px;
     font-size: 14px;
+    background: #fffefa;
+    border: 1px solid #cfc5ad;
+    border-radius: 8px;
+    padding: 7px 9px;
+}
+
+QLineEdit:focus,
+QComboBox:focus,
+QSpinBox:focus,
+QDateEdit:focus {
+    border: 2px solid #2f6f3e;
+    background: #ffffff;
 }
 
 QTableWidget {
@@ -197,6 +228,11 @@ QTableWidget {
     border: 1px solid #dedbd2;
     border-radius: 10px;
     alternate-background-color: #fbfaf7;
+}
+
+QTableWidget::item:selected {
+    background: #e1efd8;
+    color: #1f301a;
 }
 
 QHeaderView::section {
@@ -267,14 +303,14 @@ QPushButton#helpButton:hover {
 
 QPushButton#addOrderLineButton,
 QPushButton#saveOrderButton {
-    background: #111111;
+    background: #2f6f3e;
     border: 0;
     color: #ffffff;
 }
 
 QPushButton#addOrderLineButton:hover,
 QPushButton#saveOrderButton:hover {
-    background: #333333;
+    background: #255a32;
 }
 
 QPushButton#createOrderDocumentsButton {

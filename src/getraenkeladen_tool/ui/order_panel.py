@@ -32,7 +32,7 @@ from ..services.order_service import (
 from ..services.product_service import list_active_products
 from .date_input import DateInput, to_display_date
 from .deposit_return_presets import DEPOSIT_RETURN_PRESETS
-from .layouts import PageHeader, ResponsiveSplitter, configure_form_layout
+from .layouts import FilterBar, PageHeader, ResponsiveSplitter, WorkspaceCard, configure_form_layout
 from .searchable_select import SearchableSelect
 
 
@@ -98,13 +98,16 @@ class OrderPanel(QWidget):
         self.order_mode_label = QLabel("Neuer Auftrag")
         self.order_mode_label.setObjectName("stepTitle")
         self.customer_select = SearchableSelect("Kunde suchen, z. B. Cafe oder Hotel")
+        self.customer_select.setMinimumWidth(420)
         self.order_customer_filter = SearchableSelect("Alle Kunden anzeigen")
         self.order_customer_filter.result_list.setMaximumHeight(56)
+        self.order_customer_filter.setMinimumWidth(280)
         self.order_customer_filter.setMaximumWidth(340)
         self.customer_summary = QLabel("Noch kein Kunde ausgewaehlt.")
         self.customer_summary.setObjectName("sectionSubtitle")
         self.customer_summary.setWordWrap(True)
         self.product_select = SearchableSelect("Produkt suchen, z. B. Spezi oder Wasser")
+        self.product_select.setMinimumWidth(420)
         self.order_number = QLineEdit()
         self.order_number.setPlaceholderText("z. B. AUF-1001")
         self.delivery_date = DateInput(date.today().isoformat())
@@ -228,7 +231,13 @@ class OrderPanel(QWidget):
         line_box, line_layout = self._section("Belegpositionen", "Alle hinzugefuegten Artikel dieses Auftrags.")
         line_layout.addWidget(self.order_lines_table)
         line_layout.addWidget(self.deposit_returns_table)
-        line_layout.addWidget(self.order_total_label)
+        total_bar = QWidget()
+        total_bar.setObjectName("totalBar")
+        total_layout = QHBoxLayout(total_bar)
+        total_layout.setContentsMargins(0, 0, 0, 0)
+        total_layout.addStretch()
+        total_layout.addWidget(self.order_total_label)
+        line_layout.addWidget(total_bar)
         order_entry_splitter.addWidget(line_box)
         order_entry_splitter.setStretchFactor(0, 1)
         order_entry_splitter.setStretchFactor(1, 3)
@@ -242,13 +251,13 @@ class OrderPanel(QWidget):
             ORDER_PANEL_SECTIONS[2],
             "Vorhandenen Auftrag doppelt anklicken oder per Rechtsklick weiterbearbeiten.",
         )
-        filter_toolbar = QHBoxLayout()
+        filter_toolbar = FilterBar()
         filter_label = QLabel(ORDER_PANEL_ACTIONS["customerFilterLabel"])
         filter_label.setObjectName("sectionSubtitle")
-        filter_toolbar.addWidget(filter_label)
-        filter_toolbar.addWidget(self.order_customer_filter)
-        filter_toolbar.addStretch()
-        orders_layout.addLayout(filter_toolbar)
+        filter_toolbar.layout.addWidget(filter_label)
+        filter_toolbar.layout.addWidget(self.order_customer_filter)
+        filter_toolbar.layout.addStretch()
+        orders_layout.addWidget(filter_toolbar)
         orders_actions = QHBoxLayout()
         orders_actions.addWidget(self.refresh_orders_button)
         orders_actions.addWidget(self.copy_order_button)
@@ -340,20 +349,8 @@ class OrderPanel(QWidget):
         return box
 
     def _section(self, title: str, subtitle: str) -> tuple[QWidget, QVBoxLayout]:
-        box = QWidget()
-        box.setObjectName("sectionBox")
-        layout = QVBoxLayout(box)
-        layout.setSpacing(10)
-
-        title_label = QLabel(title)
-        title_label.setObjectName("sectionTitle")
-        layout.addWidget(title_label)
-
-        subtitle_label = QLabel(subtitle)
-        subtitle_label.setObjectName("sectionSubtitle")
-        subtitle_label.setWordWrap(True)
-        layout.addWidget(subtitle_label)
-        return box, layout
+        box = WorkspaceCard(title, subtitle)
+        return box, box.layout
 
     def show_help(self) -> None:
         QMessageBox.information(self, "Hilfe: Auftrag erfassen", ORDER_HELP_TEXT)

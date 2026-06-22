@@ -22,7 +22,7 @@ from ..services.numbering_service import suggest_next_numbers
 from ..services.order_service import create_order_delivery_order, create_order_invoice, get_order, list_active_orders
 from .date_input import to_display_date
 from .deposit_return_presets import DEPOSIT_RETURN_PRESETS
-from .layouts import PageHeader, ResponsiveSplitter, configure_form_layout
+from .layouts import FilterBar, PageHeader, ResponsiveSplitter, WorkspaceCard, configure_form_layout
 from .searchable_select import SearchableSelect
 
 
@@ -51,6 +51,7 @@ class DocumentWorkflowPanel(QWidget):
 
         self.customer_filter = SearchableSelect("Alle Kunden anzeigen")
         self.customer_filter.result_list.setMaximumHeight(56)
+        self.customer_filter.setMinimumWidth(280)
         self.customer_filter.setMaximumWidth(340)
         self.orders_table = QTableWidget(0, len(DOCUMENT_ORDER_COLUMNS))
         self.orders_table.setHorizontalHeaderLabels(DOCUMENT_ORDER_COLUMNS)
@@ -100,13 +101,13 @@ class DocumentWorkflowPanel(QWidget):
         layout.addWidget(body, 1)
 
         order_box, order_layout = self._section("1. Auftrag auswaehlen", "Liste filtern und Auftrag doppelt anklicken.")
-        filter_toolbar = QHBoxLayout()
+        filter_toolbar = FilterBar()
         filter_label = QLabel("Auftraege filtern nach Kunde")
         filter_label.setObjectName("sectionSubtitle")
-        filter_toolbar.addWidget(filter_label)
-        filter_toolbar.addWidget(self.customer_filter)
-        filter_toolbar.addStretch()
-        order_layout.addLayout(filter_toolbar)
+        filter_toolbar.layout.addWidget(filter_label)
+        filter_toolbar.layout.addWidget(self.customer_filter)
+        filter_toolbar.layout.addStretch()
+        order_layout.addWidget(filter_toolbar)
         order_layout.addWidget(self.orders_table)
         refresh_row = QHBoxLayout()
         self.refresh_button = QPushButton("Auftraege laden")
@@ -150,7 +151,13 @@ class DocumentWorkflowPanel(QWidget):
         return_action_row.addStretch()
         document_layout.addLayout(return_action_row)
         document_layout.addWidget(self.returns_table)
-        document_layout.addWidget(self.total_label)
+        total_bar = QWidget()
+        total_bar.setObjectName("totalBar")
+        total_layout = QHBoxLayout(total_bar)
+        total_layout.setContentsMargins(0, 0, 0, 0)
+        total_layout.addStretch()
+        total_layout.addWidget(self.total_label)
+        document_layout.addWidget(total_bar)
         action_row = QHBoxLayout()
         self.create_button = QPushButton(self.create_button_text)
         self.open_excel_button = QPushButton("Excel oeffnen")
@@ -191,18 +198,8 @@ class DocumentWorkflowPanel(QWidget):
         return QPushButton(DOCUMENT_WORKFLOW_ACTIONS[object_name])
 
     def _section(self, title: str, subtitle: str) -> tuple[QWidget, QVBoxLayout]:
-        box = QWidget()
-        box.setObjectName("sectionBox")
-        layout = QVBoxLayout(box)
-        layout.setSpacing(10)
-        title_label = QLabel(title)
-        title_label.setObjectName("sectionTitle")
-        layout.addWidget(title_label)
-        subtitle_label = QLabel(subtitle)
-        subtitle_label.setObjectName("sectionSubtitle")
-        subtitle_label.setWordWrap(True)
-        layout.addWidget(subtitle_label)
-        return box, layout
+        box = WorkspaceCard(title, subtitle)
+        return box, box.layout
 
     def refresh_master_data(self) -> None:
         if self.session_factory is None:

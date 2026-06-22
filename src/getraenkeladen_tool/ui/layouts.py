@@ -94,6 +94,33 @@ class PageToolbar(QWidget):
         self.layout.insertWidget(max(0, self.layout.count() - 1), button)
 
 
+class WorkspaceCard(QWidget):
+    def __init__(self, title: str, subtitle: str = "") -> None:
+        super().__init__()
+        self.setObjectName("workspaceCard")
+        self.layout = QVBoxLayout(self)
+        self.layout.setSpacing(12)
+
+        title_label = QLabel(title)
+        title_label.setObjectName("sectionTitle")
+        self.layout.addWidget(title_label)
+
+        if subtitle:
+            subtitle_label = QLabel(subtitle)
+            subtitle_label.setObjectName("sectionSubtitle")
+            subtitle_label.setWordWrap(True)
+            self.layout.addWidget(subtitle_label)
+
+
+class FilterBar(QWidget):
+    def __init__(self) -> None:
+        super().__init__()
+        self.setObjectName("filterBar")
+        self.layout = QHBoxLayout(self)
+        self.layout.setContentsMargins(0, 0, 0, 0)
+        self.layout.setSpacing(10)
+
+
 def configure_form_layout(form: QFormLayout) -> None:
     form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow)
     form.setRowWrapPolicy(QFormLayout.RowWrapPolicy.DontWrapRows)

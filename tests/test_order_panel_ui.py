@@ -154,12 +154,12 @@ def test_order_and_document_filters_are_compact_top_toolbars():
 
     assert "self.order_customer_filter.result_list.setMaximumHeight(56)" in order_source
     assert "self.order_customer_filter.setMaximumWidth(340)" in order_source
-    assert "filter_toolbar = QHBoxLayout()" in order_source
-    assert "orders_layout.addLayout(filter_toolbar)" in order_source
+    assert "filter_toolbar = FilterBar()" in order_source
+    assert "orders_layout.addWidget(filter_toolbar)" in order_source
     assert "self.customer_filter.result_list.setMaximumHeight(56)" in document_source
     assert "self.customer_filter.setMaximumWidth(340)" in document_source
-    assert "filter_toolbar = QHBoxLayout()" in document_source
-    assert "order_layout.addLayout(filter_toolbar)" in document_source
+    assert "filter_toolbar = FilterBar()" in document_source
+    assert "order_layout.addWidget(filter_toolbar)" in document_source
 
 
 def test_order_context_menu_offers_copy_delivery_note_and_invoice_actions():
