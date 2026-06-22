@@ -88,7 +88,7 @@ def test_set_next_number_changes_future_suggestion_when_it_is_higher_than_existi
     assert suggest_next_numbers(session).invoice_number == "RG-4100"
 
 
-def test_number_suggestion_never_goes_below_existing_documents(session, tmp_path: Path):
+def test_number_suggestion_can_go_below_higher_existing_documents_when_number_is_free(session, tmp_path: Path):
     customer = create_customer(session, CustomerCreate(name="Cafe Nummer", folder_path=str(tmp_path / "Cafe Nummer")))
     create_document(
         session,
@@ -101,4 +101,36 @@ def test_number_suggestion_never_goes_below_existing_documents(session, tmp_path
     )
     set_next_number(session, sequence_key="invoice", prefix="RG", value="RG-3001")
 
-    assert suggest_next_numbers(session).invoice_number == "RG-4101"
+    assert suggest_next_numbers(session).invoice_number == "RG-3001"
+
+
+def test_manual_next_number_can_reset_to_free_lower_number(session, tmp_path: Path):
+    customer = create_customer(session, CustomerCreate(name="Cafe Reset", folder_path=str(tmp_path / "Cafe Reset")))
+    create_document(
+        session,
+        DocumentCreate(
+            customer_id=customer.id,
+            document_type="Rechnung",
+            document_number="RG-4100",
+            line_items=[DocumentLineItem(name="Wasser", quantity=1, unit_price_cents=1299)],
+        ),
+    )
+    set_next_number(session, sequence_key="invoice", prefix="RG", value="RG-3001")
+
+    assert suggest_next_numbers(session).invoice_number == "RG-3001"
+
+
+def test_manual_next_number_skips_used_numbers_when_counting_forward(session, tmp_path: Path):
+    customer = create_customer(session, CustomerCreate(name="Cafe Kollision", folder_path=str(tmp_path / "Cafe Kollision")))
+    create_document(
+        session,
+        DocumentCreate(
+            customer_id=customer.id,
+            document_type="Rechnung",
+            document_number="RG-3001",
+            line_items=[DocumentLineItem(name="Wasser", quantity=1, unit_price_cents=1299)],
+        ),
+    )
+    set_next_number(session, sequence_key="invoice", prefix="RG", value="RG-3001")
+
+    assert suggest_next_numbers(session).invoice_number == "RG-3002"

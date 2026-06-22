@@ -28,7 +28,7 @@ SETTINGS_PANEL_ACTIONS = {
 SETTINGS_PANEL_SECTIONS = ("Nummernkreise bearbeiten", "Stammdaten aus Excel importieren")
 SETTINGS_HELP_TEXT = (
     "Einstellungen: Hier legen Sie fest, welche Nummer als naechstes vorgeschlagen wird.\n\n"
-    "Die App verhindert dabei, dass eine Nummer unter bereits vorhandene Belege zurueckfaellt."
+    "Die App speichert Ihren Startwert und ueberspringt beim Fortzaehlen bereits belegte Nummern."
 )
 
 

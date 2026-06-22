@@ -132,13 +132,30 @@ def _next_number_with_manual_floor(
     prefix: str,
     start: int,
 ) -> str:
-    automatic_next = next_number_for_prefix(existing_numbers, prefix=prefix, start=start)
-    automatic_value = int(automatic_next.split("-")[1])
     sequence = session.scalar(
         select(NumberSequence).where(NumberSequence.sequence_key == sequence_key).limit(1)
     )
-    manual_value = sequence.next_number if sequence is not None else start
-    return f"{prefix}-{max(automatic_value, manual_value)}"
+    if sequence is None:
+        return next_number_for_prefix(existing_numbers, prefix=prefix, start=start)
+    return next_available_number_from(existing_numbers, prefix=prefix, start=sequence.next_number)
+
+
+def next_available_number_from(existing_numbers: list[str], prefix: str, start: int) -> str:
+    used_numbers = _used_number_values(existing_numbers, prefix)
+    candidate = start
+    while candidate in used_numbers:
+        candidate += 1
+    return f"{prefix}-{candidate}"
+
+
+def _used_number_values(existing_numbers: list[str], prefix: str) -> set[int]:
+    pattern = re.compile(rf"^{re.escape(prefix)}-(\d+)$")
+    used_numbers = set()
+    for number in existing_numbers:
+        match = pattern.match(number.strip())
+        if match is not None:
+            used_numbers.add(int(match.group(1)))
+    return used_numbers
 
 
 def _sequence_key_for_prefix(prefix: str) -> str:
