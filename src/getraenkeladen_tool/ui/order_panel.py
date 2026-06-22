@@ -32,7 +32,7 @@ from ..services.order_service import (
 from ..services.product_service import list_active_products
 from .date_input import DateInput, to_display_date
 from .deposit_return_presets import DEPOSIT_RETURN_PRESETS
-from .layouts import ContentSurface, FilterBar, PageHeader, ResponsiveSplitter, WorkspaceCard, configure_form_layout
+from .layouts import ContentSurface, PageHeader, ResponsiveSplitter, WorkspaceCard, configure_form_layout
 from .searchable_select import SearchableSelect
 
 
@@ -48,7 +48,6 @@ ORDER_PANEL_ACTIONS = {
     "removeDepositReturnButton": "Pfand zurueck entfernen",
     "saveOrderButton": "Auftrag speichern",
     "refreshOrdersButton": "Auftragsliste laden",
-    "customerFilterLabel": "Auftraege filtern nach Kunde",
     "createDeliveryNoteFromOrderButton": "Lieferschein erstellen",
     "createInvoiceFromOrderButton": "Rechnung erstellen",
 }
@@ -99,10 +98,6 @@ class OrderPanel(QWidget):
         self.order_mode_label.setObjectName("stepTitle")
         self.customer_select = SearchableSelect("Kunde suchen, z. B. Cafe oder Hotel")
         self.customer_select.setMinimumWidth(420)
-        self.order_customer_filter = SearchableSelect("Alle Kunden anzeigen")
-        self.order_customer_filter.result_list.setMaximumHeight(56)
-        self.order_customer_filter.setMinimumWidth(280)
-        self.order_customer_filter.setMaximumWidth(340)
         self.customer_summary = QLabel("Noch kein Kunde ausgewaehlt.")
         self.customer_summary.setObjectName("sectionSubtitle")
         self.customer_summary.setWordWrap(True)
@@ -139,6 +134,9 @@ class OrderPanel(QWidget):
         self.orders_table.setHorizontalHeaderLabels(ORDER_COLUMNS)
         self.orders_table.setMinimumHeight(360)
         self.orders_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        self.order_table_search = QLineEdit()
+        self.order_table_search.setObjectName("tableSearchField")
+        self.order_table_search.setPlaceholderText("In der Auftragsliste suchen, z. B. Kunde, Nummer oder Datum")
         self.status_label = QLabel("Schritt 1: Stammdaten laden, dann Kunde und Produkte auswaehlen.")
         self.status_label.setObjectName("muted")
 
@@ -253,13 +251,6 @@ class OrderPanel(QWidget):
             ORDER_PANEL_SECTIONS[2],
             "Vorhandenen Auftrag doppelt anklicken oder per Rechtsklick weiterbearbeiten.",
         )
-        filter_toolbar = FilterBar()
-        filter_label = QLabel(ORDER_PANEL_ACTIONS["customerFilterLabel"])
-        filter_label.setObjectName("sectionSubtitle")
-        filter_toolbar.layout.addWidget(filter_label)
-        filter_toolbar.layout.addWidget(self.order_customer_filter)
-        filter_toolbar.layout.addStretch()
-        orders_layout.addWidget(filter_toolbar)
         orders_actions = QHBoxLayout()
         orders_actions.addWidget(self.refresh_orders_button)
         orders_actions.addWidget(self.copy_order_button)
@@ -267,6 +258,7 @@ class OrderPanel(QWidget):
         orders_actions.addWidget(self.create_invoice_button)
         orders_actions.addStretch()
         orders_layout.addLayout(orders_actions)
+        orders_layout.addWidget(self.order_table_search)
         orders_layout.addWidget(self.orders_table)
         manage_orders_layout.addWidget(orders_box, 1)
 
@@ -292,7 +284,7 @@ class OrderPanel(QWidget):
         self.deposit_returns_table.itemChanged.connect(self.update_order_total)
         self.deposit_return_select.currentIndexChanged.connect(self.apply_selected_deposit_return)
         self.customer_select.selection_changed.connect(self.apply_selected_customer)
-        self.order_customer_filter.selection_changed.connect(self.refresh_orders)
+        self.order_table_search.textChanged.connect(self.apply_order_table_search)
         self.product_select.selection_changed.connect(self.apply_selected_product)
         self.orders_table.itemDoubleClicked.connect(lambda _item: self.load_selected_order_id())
         self.orders_table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
@@ -420,7 +412,6 @@ class OrderPanel(QWidget):
                 for customer in customers
             ]
         )
-        self.order_customer_filter.set_items([("Alle Kunden", None, "Keine Einschraenkung")] + customer_items)
         self.product_select.set_items(
             [
                 (
@@ -549,7 +540,7 @@ class OrderPanel(QWidget):
             self.current_order_id = order.id
             self.current_order_status = order.status
             self.order_mode_label.setText(f"Auftrag bearbeiten: {order.order_number}")
-            self.show_orders(list_active_orders(session, customer_id=self.order_customer_filter.current_value()))
+            self.show_orders(list_active_orders(session))
         finally:
             session.close()
 
@@ -557,10 +548,9 @@ class OrderPanel(QWidget):
         if self.session_factory is None:
             self.status_label.setText("Keine Datenbankverbindung vorhanden.")
             return
-        customer_id = self.order_customer_filter.current_value()
         session = self.session_factory()
         try:
-            self.show_orders(list_active_orders(session, customer_id=customer_id))
+            self.show_orders(list_active_orders(session))
         finally:
             session.close()
 
@@ -578,7 +568,22 @@ class OrderPanel(QWidget):
             )
             for column, value in enumerate(values):
                 self.orders_table.setItem(row, column, QTableWidgetItem(value))
+        self.apply_order_table_search()
         self.status_label.setText(f"{len(orders)} Auftraege geladen.")
+
+    def apply_order_table_search(self) -> None:
+        query = self.order_table_search.text().strip().lower()
+        for row in range(self.orders_table.rowCount()):
+            self.orders_table.setRowHidden(row, not self._row_matches_query(self.orders_table, row, query))
+
+    def _row_matches_query(self, table: QTableWidget, row: int, query: str) -> bool:
+        if not query:
+            return True
+        for column in range(table.columnCount()):
+            item = table.item(row, column)
+            if item is not None and query in item.text().lower():
+                return True
+        return False
 
     def load_selected_order_id(self) -> None:
         row = self.orders_table.currentRow()
@@ -667,7 +672,7 @@ class OrderPanel(QWidget):
         try:
             order = archive_order(session, self.current_order_id)
             self.current_order_id = None
-            self.show_orders(list_active_orders(session, customer_id=self.order_customer_filter.current_value()))
+            self.show_orders(list_active_orders(session))
             self.status_label.setText(f"Auftrag archiviert: {order.order_number}")
         finally:
             session.close()

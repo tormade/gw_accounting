@@ -121,15 +121,6 @@ class WorkspaceCard(QWidget):
             self.layout.addWidget(subtitle_label)
 
 
-class FilterBar(QWidget):
-    def __init__(self) -> None:
-        super().__init__()
-        self.setObjectName("filterBar")
-        self.layout = QHBoxLayout(self)
-        self.layout.setContentsMargins(0, 0, 0, 0)
-        self.layout.setSpacing(10)
-
-
 def configure_form_layout(form: QFormLayout) -> None:
     form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow)
     form.setRowWrapPolicy(QFormLayout.RowWrapPolicy.DontWrapRows)

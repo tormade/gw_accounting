@@ -102,16 +102,11 @@ QWidget#actionCard:hover {
     border-color: #c6d9cf;
 }
 
-QWidget#pageToolbar,
-QWidget#filterBar {
+QWidget#pageToolbar {
     background: #ffffff;
     border: 1px solid #e1ddd3;
     border-radius: 14px;
     padding: 10px;
-}
-
-QWidget#filterBar {
-    background: #fbfaf6;
 }
 
 QWidget#totalBar {
@@ -197,6 +192,20 @@ QLineEdit:focus,
 QComboBox:focus,
 QSpinBox:focus,
 QDateEdit:focus {
+    background: #ffffff;
+    border: 2px solid #116149;
+}
+
+QLineEdit#tableSearchField {
+    background: #fbfaf6;
+    border: 1px solid #e1ddd3;
+    border-radius: 12px;
+    color: #123326;
+    min-height: 34px;
+    padding: 8px 12px;
+}
+
+QLineEdit#tableSearchField:focus {
     background: #ffffff;
     border: 2px solid #116149;
 }

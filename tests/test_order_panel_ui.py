@@ -105,13 +105,13 @@ def test_order_panel_filters_orders_by_customer_and_can_copy_existing_order():
     source = Path("src/getraenkeladen_tool/ui/order_panel.py").read_text(encoding="utf-8")
 
     assert '"copyOrderButton": "Aus Auftrag kopieren"' in source
-    assert '"customerFilterLabel": "Auftraege filtern nach Kunde"' in source
-    assert "self.order_customer_filter = SearchableSelect" in source
-    assert "self.order_customer_filter.selection_changed.connect(self.refresh_orders)" in source
+    assert "self.order_table_search = QLineEdit()" in source
+    assert "self.order_table_search.textChanged.connect(self.apply_order_table_search)" in source
+    assert "def apply_order_table_search" in source
     assert "def copy_selected_order_as_new" in source
     assert "self.current_order_id = None" in source
     assert "Kopie aus Auftrag" in source
-    assert "list_active_orders(session, customer_id=customer_id)" in source
+    assert "list_active_orders(session)" in source
     assert "self.order_workspace_tabs.setCurrentIndex(0)" in source
 
 
@@ -148,18 +148,19 @@ def test_order_panel_forms_expand_to_available_width_instead_of_floating_centere
     assert "setLabelAlignment(Qt.AlignmentFlag.AlignLeft)" in layout_source
 
 
-def test_order_and_document_filters_are_compact_top_toolbars():
+def test_order_and_document_use_table_search_instead_of_customer_filter_dropdowns():
     order_source = Path("src/getraenkeladen_tool/ui/order_panel.py").read_text(encoding="utf-8")
     document_source = Path("src/getraenkeladen_tool/ui/document_workflow_panel.py").read_text(encoding="utf-8")
 
-    assert "self.order_customer_filter.result_list.setMaximumHeight(56)" in order_source
-    assert "self.order_customer_filter.setMaximumWidth(340)" in order_source
-    assert "filter_toolbar = FilterBar()" in order_source
-    assert "orders_layout.addWidget(filter_toolbar)" in order_source
-    assert "self.customer_filter.result_list.setMaximumHeight(56)" in document_source
-    assert "self.customer_filter.setMaximumWidth(340)" in document_source
-    assert "filter_toolbar = FilterBar()" in document_source
-    assert "order_layout.addWidget(filter_toolbar)" in document_source
+    assert "FilterBar" not in order_source
+    assert "self.order_customer_filter" not in order_source
+    assert "customerFilterLabel" not in order_source
+    assert "setObjectName(\"tableSearchField\")" in order_source
+    assert "FilterBar" not in document_source
+    assert "self.customer_filter" not in document_source
+    assert "setObjectName(\"tableSearchField\")" in document_source
+    assert "def _row_matches_query" in order_source
+    assert "def _row_matches_query" in document_source
 
 
 def test_order_context_menu_offers_copy_delivery_note_and_invoice_actions():

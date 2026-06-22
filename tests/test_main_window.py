@@ -70,7 +70,7 @@ def test_theme_uses_light_website_inspired_navigation_instead_of_black_bars():
 
 def test_forms_and_tables_have_clean_work_area_treatment():
     assert "QWidget#contentSurface" in APP_STYLESHEET
-    assert "QWidget#filterBar" in APP_STYLESHEET
+    assert "QLineEdit#tableSearchField" in APP_STYLESHEET
     assert "QWidget#totalBar" in APP_STYLESHEET
     assert "QLineEdit:focus" in APP_STYLESHEET
     assert "QTableWidget::item:selected" in APP_STYLESHEET
@@ -97,9 +97,7 @@ def test_shared_layout_widgets_are_available():
     assert 'setObjectName("pageToolbar")' in source
     assert 'setObjectName("contentSurface")' in source
     assert "class WorkspaceCard" in source
-    assert "class FilterBar" in source
     assert 'setObjectName("workspaceCard")' in source
-    assert 'setObjectName("filterBar")' in source
 
 
 def test_order_and_document_workspaces_use_named_layout_regions():
@@ -110,11 +108,11 @@ def test_order_and_document_workspaces_use_named_layout_regions():
 
     assert "ContentSurface" in order_source
     assert "WorkspaceCard" in order_source
-    assert "FilterBar" in order_source
+    assert "tableSearchField" in order_source
     assert 'setObjectName("totalBar")' in order_source
     assert "ContentSurface" in document_source
     assert "WorkspaceCard" in document_source
-    assert "FilterBar" in document_source
+    assert "tableSearchField" in document_source
     assert 'setObjectName("totalBar")' in document_source
 
 
@@ -154,7 +152,6 @@ def test_order_form_gives_selection_fields_room_to_grow():
 
     assert "self.customer_select.setMinimumWidth(420)" in source
     assert "self.product_select.setMinimumWidth(420)" in source
-    assert "self.order_customer_filter.setMinimumWidth(280)" in source
 
 
 
@@ -205,7 +202,6 @@ def test_order_tab_exposes_guided_order_actions():
         "removeDepositReturnButton": "Pfand zurueck entfernen",
         "saveOrderButton": "Auftrag speichern",
         "refreshOrdersButton": "Auftragsliste laden",
-        "customerFilterLabel": "Auftraege filtern nach Kunde",
         "createDeliveryNoteFromOrderButton": "Lieferschein erstellen",
         "createInvoiceFromOrderButton": "Rechnung erstellen",
     }
