@@ -14,7 +14,15 @@ from PySide6.QtWidgets import (
 )
 
 from ..services.master_data_import_service import import_master_data_from_folder
-from ..services.numbering_service import check_number_conflict, list_number_sequence_statuses, release_number, set_next_number
+from ..services.numbering_service import (
+    check_number_conflict,
+    list_number_sequence_statuses,
+    load_number_sequences_from_workbook,
+    release_number,
+    reset_number_sequences_to_defaults,
+    set_next_number,
+    write_number_sequences_to_workbook,
+)
 from .layouts import ContentSurface, PageHeader, WorkspaceCard, configure_form_layout
 
 
@@ -24,6 +32,7 @@ SETTINGS_PANEL_ACTIONS = {
     "saveNumberSequencesButton": "Nummernkreise speichern",
     "checkNumberSequencesButton": "Eingetragene Nummern pruefen",
     "releaseBlockedNumberButton": "Blockierte Nummer freigeben",
+    "resetNumberSequencesButton": "Nummernkreise zuruecksetzen",
     "chooseInputFolderButton": "Input-Ordner waehlen",
     "importMasterDataButton": "Stammdaten importieren",
 }
@@ -93,10 +102,12 @@ class SettingsPanel(QWidget):
         self.save_number_sequences_button = self._button("saveNumberSequencesButton")
         self.check_number_sequences_button = self._button("checkNumberSequencesButton")
         self.release_blocked_number_button = self._button("releaseBlockedNumberButton")
+        self.reset_number_sequences_button = self._button("resetNumberSequencesButton")
         action_row.addWidget(self.refresh_number_sequences_button)
         action_row.addWidget(self.save_number_sequences_button)
         action_row.addWidget(self.check_number_sequences_button)
         action_row.addWidget(self.release_blocked_number_button)
+        action_row.addWidget(self.reset_number_sequences_button)
         action_row.addStretch()
         box_layout.addLayout(action_row)
         layout.addWidget(box)
@@ -124,6 +135,7 @@ class SettingsPanel(QWidget):
         self.save_number_sequences_button.clicked.connect(self.save_number_sequences)
         self.check_number_sequences_button.clicked.connect(self.check_number_sequences)
         self.release_blocked_number_button.clicked.connect(self.release_blocked_number)
+        self.reset_number_sequences_button.clicked.connect(self.reset_number_sequences)
         self.import_master_data_button.clicked.connect(self.import_master_data)
         self.refresh_number_sequences()
 
@@ -151,6 +163,7 @@ class SettingsPanel(QWidget):
             return
         session = self.session_factory()
         try:
+            workbook_path = load_number_sequences_from_workbook(session)
             statuses = list_number_sequence_statuses(session)
         finally:
             session.close()
@@ -159,7 +172,9 @@ class SettingsPanel(QWidget):
             label.setText(status.label)
             self.sequence_inputs[status.sequence_key].setText(status.next_number)
             self.sequence_prefixes[status.sequence_key] = status.prefix
-        self.status_label.setText("Nummernkreise geladen. Mit Pruefen sehen Sie, ob eine Nummer blockiert ist.")
+        self.status_label.setText(
+            f"Nummernkreise aus Excel geladen: {workbook_path}. Mit Pruefen sehen Sie, ob eine Nummer blockiert ist."
+        )
 
     def save_number_sequences(self) -> None:
         if self.session_factory is None:
@@ -175,13 +190,16 @@ class SettingsPanel(QWidget):
                     value=input_field.text(),
                 )
             conflict = self._first_sequence_conflict(session)
+            workbook_path = write_number_sequences_to_workbook(session)
         except ValueError as error:
             self.status_label.setText(str(error))
             return
         finally:
             session.close()
         if conflict is None:
-            self.status_label.setText("Nummernkreise erfolgreich gespeichert. Alle eingetragenen Nummern sind frei.")
+            self.status_label.setText(
+                f"Nummernkreise erfolgreich gespeichert: {workbook_path}. Alle eingetragenen Nummern sind frei."
+            )
         else:
             self.status_label.setText(self._conflict_text(conflict))
 
@@ -219,6 +237,25 @@ class SettingsPanel(QWidget):
         finally:
             session.close()
         self.status_label.setText(f"Nummer intern freigegeben: {conflict.number}. Sie kann nun wieder verwendet werden.")
+
+    def reset_number_sequences(self) -> None:
+        if self.session_factory is None:
+            self.status_label.setText("Keine Datenbankverbindung vorhanden.")
+            return
+        session = self.session_factory()
+        try:
+            reset_number_sequences_to_defaults(session)
+            workbook_path = write_number_sequences_to_workbook(session)
+            statuses = list_number_sequence_statuses(session)
+            conflict = self._first_sequence_conflict(session)
+        finally:
+            session.close()
+        for status in statuses:
+            self.sequence_inputs[status.sequence_key].setText(status.next_number)
+        if conflict is None:
+            self.status_label.setText(f"Nummernkreise auf Standardwerte zurueckgesetzt: {workbook_path}.")
+        else:
+            self.status_label.setText("Nummernkreise zurueckgesetzt. " + self._conflict_text(conflict))
 
     def _first_sequence_conflict(self, session):
         for sequence_key, input_field in self.sequence_inputs.items():

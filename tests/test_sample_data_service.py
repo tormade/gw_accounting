@@ -18,7 +18,7 @@ def test_seed_demo_workflow_creates_reusable_customer_product_document_data(sess
 
     assert result.created_customers == 4
     assert result.created_products == 4
-    assert result.created_orders == 2
+    assert result.created_orders == 40
     assert result.created_documents == 4
     assert [customer.name for customer in customers] == [
         "Archivkunde Beispiel",
@@ -29,7 +29,9 @@ def test_seed_demo_workflow_creates_reusable_customer_product_document_data(sess
     assert [product.name for product in products] == ["Apfelschorle 12x1,0", "Helles 20x0,5", "Wasser 12x0,7"]
     assert [delivery.document_number for delivery in deliveries] == ["LS-3001", "LS-3002"]
     assert [item.document_number for item in open_items] == ["RG-3001", "RG-3002"]
-    assert [order.order_number for order in orders] == ["AUF-1001", "AUF-1002"]
+    assert len(orders) == 40
+    assert "AUF-1001" in [order.order_number for order in orders]
+    assert "AUF-1040" in [order.order_number for order in orders]
 
 
 def test_seed_demo_workflow_is_idempotent(session, tmp_path: Path):
@@ -43,6 +45,7 @@ def test_seed_demo_workflow_is_idempotent(session, tmp_path: Path):
     assert len(list_customers(session)) == 4
     assert len(list_active_products(session)) == 3
     assert len(list_open_items(session)) == 2
+    assert len(list_active_orders(session)) == 40
 
 
 def test_seed_demo_workflow_creates_archived_examples_for_restore_flow(session, tmp_path: Path):

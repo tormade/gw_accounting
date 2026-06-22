@@ -1,6 +1,8 @@
 from dataclasses import dataclass
+from pathlib import Path
 import re
 
+from openpyxl import Workbook, load_workbook
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 from sqlalchemy.orm import Session
@@ -38,6 +40,9 @@ SEQUENCE_DEFINITIONS = {
     "delivery_note": {"label": "Lieferschein", "prefix": "LS", "start": 3001},
     "invoice": {"label": "Rechnung", "prefix": "RG", "start": 3001},
 }
+NUMBER_SEQUENCE_WORKBOOK = "Nummernkreise.xlsx"
+NUMBER_SEQUENCE_SHEET = "Nummernkreise"
+NUMBER_SEQUENCE_HEADERS = ("Bereich", "Schluessel", "Praefix", "Naechste Nummer", "Hinweis")
 
 
 def suggest_next_numbers(session: Session) -> NumberSuggestions:
@@ -132,6 +137,77 @@ def set_next_number(session: Session, sequence_key: str, prefix: str, value: str
     session.commit()
     session.refresh(sequence)
     return sequence
+
+
+def reset_number_sequences_to_defaults(session: Session) -> list[NumberSequence]:
+    sequences = []
+    for sequence_key, definition in SEQUENCE_DEFINITIONS.items():
+        sequences.append(
+            set_next_number(
+                session,
+                sequence_key=sequence_key,
+                prefix=str(definition["prefix"]),
+                value=f"{definition['prefix']}-{definition['start']}",
+            )
+        )
+    return sequences
+
+
+def number_sequence_workbook_path(session: Session) -> Path:
+    database = getattr(session.bind.url, "database", None)
+    if database in (None, "", ":memory:"):
+        return Path.cwd() / NUMBER_SEQUENCE_WORKBOOK
+    database_path = Path(database)
+    return database_path.parent.parent / NUMBER_SEQUENCE_WORKBOOK
+
+
+def ensure_number_sequence_workbook(session: Session, workbook_path: Path | None = None) -> Path:
+    path = workbook_path or number_sequence_workbook_path(session)
+    if not path.exists():
+        write_number_sequences_to_workbook(session, path)
+    return path
+
+
+def load_number_sequences_from_workbook(session: Session, workbook_path: Path | None = None) -> Path:
+    path = ensure_number_sequence_workbook(session, workbook_path)
+    workbook = load_workbook(path)
+    if NUMBER_SEQUENCE_SHEET not in workbook.sheetnames:
+        raise ValueError(f"Die Datei {path.name} braucht ein Blatt '{NUMBER_SEQUENCE_SHEET}'.")
+    sheet = workbook[NUMBER_SEQUENCE_SHEET]
+    headers = [sheet.cell(row=1, column=column).value for column in range(1, len(NUMBER_SEQUENCE_HEADERS) + 1)]
+    if tuple(headers) != NUMBER_SEQUENCE_HEADERS:
+        raise ValueError("Nummernkreise.xlsx hat nicht die erwarteten Spalten.")
+    for row in range(2, sheet.max_row + 1):
+        sequence_key = str(sheet.cell(row=row, column=2).value or "").strip()
+        prefix = str(sheet.cell(row=row, column=3).value or "").strip()
+        next_number = str(sheet.cell(row=row, column=4).value or "").strip()
+        if sequence_key in SEQUENCE_DEFINITIONS and prefix and next_number:
+            set_next_number(session, sequence_key=sequence_key, prefix=prefix, value=next_number)
+    return path
+
+
+def write_number_sequences_to_workbook(session: Session, workbook_path: Path | None = None) -> Path:
+    path = workbook_path or number_sequence_workbook_path(session)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.title = NUMBER_SEQUENCE_SHEET
+    sheet.append(NUMBER_SEQUENCE_HEADERS)
+    statuses = list_number_sequence_statuses(session)
+    for status in statuses:
+        sheet.append(
+            [
+                status.label,
+                status.sequence_key,
+                status.prefix,
+                status.next_number,
+                "Diese Nummer kann in Excel geaendert werden. Danach Einstellungen in der App neu laden.",
+            ]
+        )
+    for column_width, column in ((18, "A"), (18, "B"), (10, "C"), (18, "D"), (78, "E")):
+        sheet.column_dimensions[column].width = column_width
+    workbook.save(path)
+    return path
 
 
 def check_number_conflict(session: Session, sequence_key: str, value: str) -> NumberConflict | None:

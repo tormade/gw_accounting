@@ -313,6 +313,7 @@ def test_settings_tab_exposes_number_sequence_actions_without_product_units():
         "saveNumberSequencesButton": "Nummernkreise speichern",
         "checkNumberSequencesButton": "Eingetragene Nummern pruefen",
         "releaseBlockedNumberButton": "Blockierte Nummer freigeben",
+        "resetNumberSequencesButton": "Nummernkreise zuruecksetzen",
         "chooseInputFolderButton": "Input-Ordner waehlen",
         "importMasterDataButton": "Stammdaten importieren",
     }

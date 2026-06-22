@@ -7,15 +7,19 @@ from getraenkeladen_tool.models import OpenItem
 from getraenkeladen_tool.services.numbering_service import (
     NumberSuggestions,
     check_number_conflict,
+    load_number_sequences_from_workbook,
     list_number_sequence_statuses,
     next_document_number,
     next_number_for_prefix,
     release_number,
+    reset_number_sequences_to_defaults,
     set_next_number,
     suggest_next_numbers,
+    write_number_sequences_to_workbook,
 )
 from getraenkeladen_tool.services.order_service import create_order
 from getraenkeladen_tool.services.product_service import create_product
+from openpyxl import load_workbook
 
 
 def test_next_number_for_prefix_uses_default_when_no_numbers_exist():
@@ -218,3 +222,32 @@ def test_archived_orders_do_not_block_order_number_sequence(session, tmp_path: P
     set_next_number(session, sequence_key="order", prefix="AUF", value="AUF-1001")
 
     assert suggest_next_numbers(session).order_number == "AUF-1001"
+
+
+def test_reset_number_sequences_to_defaults_restores_all_start_values(session):
+    set_next_number(session, sequence_key="order", prefix="AUF", value="AUF-2222")
+    set_next_number(session, sequence_key="delivery_note", prefix="LS", value="LS-4444")
+    set_next_number(session, sequence_key="invoice", prefix="RG", value="RG-5555")
+
+    reset_number_sequences_to_defaults(session)
+
+    statuses = {status.sequence_key: status for status in list_number_sequence_statuses(session)}
+    assert statuses["order"].next_number == "AUF-1001"
+    assert statuses["delivery_note"].next_number == "LS-3001"
+    assert statuses["invoice"].next_number == "RG-3001"
+
+
+def test_number_sequence_workbook_is_leading_source_after_excel_edit(session, tmp_path: Path):
+    workbook_path = tmp_path / "Nummernkreise.xlsx"
+    set_next_number(session, sequence_key="invoice", prefix="RG", value="RG-5555")
+    write_number_sequences_to_workbook(session, workbook_path)
+    workbook = load_workbook(workbook_path)
+    sheet = workbook["Nummernkreise"]
+    for row in range(2, sheet.max_row + 1):
+        if sheet.cell(row=row, column=2).value == "invoice":
+            sheet.cell(row=row, column=4).value = "RG-3333"
+    workbook.save(workbook_path)
+
+    load_number_sequences_from_workbook(session, workbook_path)
+
+    assert list_number_sequence_statuses(session)[2].next_number == "RG-3333"

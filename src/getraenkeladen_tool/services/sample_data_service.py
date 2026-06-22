@@ -198,35 +198,41 @@ def _seed_documents(session: Session, target_date: str) -> int:
 
 
 def _seed_orders(session: Session, target_date: str) -> int:
-    cafe_nord = _customer_by_name(session, "Cafe Nord")
-    gasthof_sued = _customer_by_name(session, "Gasthof Sued")
-    water = _product_by_name(session, "Wasser 12x0,7")
-    apfelschorle = _product_by_name(session, "Apfelschorle 12x1,0")
-    created = 0
+    customers = [
+        _customer_by_name(session, "Cafe Nord"),
+        _customer_by_name(session, "Gasthof Sued"),
+        _customer_by_name(session, "Hotel Blau"),
+    ]
+    products = [
+        _product_by_name(session, "Wasser 12x0,7"),
+        _product_by_name(session, "Apfelschorle 12x1,0"),
+        _product_by_name(session, "Helles 20x0,5"),
+    ]
+    customers = [customer for customer in customers if customer is not None]
+    products = [product for product in products if product is not None]
+    if not customers or not products:
+        return 0
 
-    if cafe_nord is not None and water is not None and not _order_exists(session, "AUF-1001"):
+    created = 0
+    for index in range(40):
+        order_number = f"AUF-{1001 + index}"
+        if _order_exists(session, order_number):
+            continue
+        customer = customers[index % len(customers)]
+        first_product = products[index % len(products)]
+        second_product = products[(index + 1) % len(products)]
         create_order(
             session,
             OrderCreate(
-                order_number="AUF-1001",
-                customer_id=cafe_nord.id,
+                order_number=order_number,
+                customer_id=customer.id,
                 order_date=target_date,
                 delivery_date=target_date,
-                delivery_slot="nachmittag",
-                lines=[OrderLineCreate(product_id=water.id, quantity=6, deposit_cents=330)],
-            ),
-        )
-        created += 1
-    if gasthof_sued is not None and apfelschorle is not None and not _order_exists(session, "AUF-1002"):
-        create_order(
-            session,
-            OrderCreate(
-                order_number="AUF-1002",
-                customer_id=gasthof_sued.id,
-                order_date=target_date,
-                delivery_date=target_date,
-                delivery_slot="vormittag",
-                lines=[OrderLineCreate(product_id=apfelschorle.id, quantity=4, deposit_cents=330)],
+                delivery_slot="vormittag" if index % 2 == 0 else "nachmittag",
+                lines=[
+                    OrderLineCreate(product_id=first_product.id, quantity=2 + (index % 8), deposit_cents=330),
+                    OrderLineCreate(product_id=second_product.id, quantity=1 + (index % 5), deposit_cents=330),
+                ],
             ),
         )
         created += 1
@@ -254,4 +260,12 @@ def _document_exists(session: Session, document_number: str) -> bool:
 
 
 def _order_exists(session: Session, order_number: str) -> bool:
-    return session.scalar(select(Order).where(Order.order_number == order_number)) is not None
+    return (
+        session.scalar(
+            select(Order)
+            .where(Order.order_number == order_number)
+            .where(Order.status != "archiviert")
+            .where(Order.number_released == False)  # noqa: E712
+        )
+        is not None
+    )
