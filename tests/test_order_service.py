@@ -510,3 +510,23 @@ def test_archive_order_hides_order_from_active_list(session, tmp_path: Path):
 
     assert archived.status == "archiviert"
     assert list_active_orders(session) == []
+
+
+def test_create_order_rejects_duplicate_active_order_number(session, tmp_path: Path):
+    customer = create_customer(session, CustomerCreate(name="Doppel Auftrag", folder_path=str(tmp_path / "Doppel Auftrag")))
+    product = create_product(session, ProductCreate(name="Wasser", unit="Menge", standard_price_cents=1299))
+    payload = OrderCreate(
+        order_number="AUF-7001",
+        customer_id=customer.id,
+        order_date="2026-06-21",
+        delivery_date="2026-06-22",
+        lines=[OrderLineCreate(product_id=product.id, quantity=1)],
+    )
+    create_order(session, payload)
+
+    try:
+        create_order(session, payload)
+    except ValueError as error:
+        assert "Auftragsnummer ist bereits vorhanden" in str(error)
+    else:
+        raise AssertionError("Duplicate active order number was accepted")

@@ -67,6 +67,7 @@ def list_daily_deliveries(session: Session, target_date: str) -> list[Document]:
             select(Document)
             .where(Document.delivery_date == target_date)
             .where(Document.document_type == "Lieferschein")
+            .where(Document.number_released == False)  # noqa: E712
             .order_by(Document.delivery_slot, Document.document_number)
         )
     )

@@ -3,10 +3,14 @@ from pathlib import Path
 from getraenkeladen_tool.schemas import CustomerCreate, DocumentCreate, DocumentLineItem, OrderCreate, OrderLineCreate, ProductCreate
 from getraenkeladen_tool.services.customer_service import create_customer
 from getraenkeladen_tool.services.document_service import create_document
+from getraenkeladen_tool.models import OpenItem
 from getraenkeladen_tool.services.numbering_service import (
     NumberSuggestions,
+    check_number_conflict,
+    list_number_sequence_statuses,
     next_document_number,
     next_number_for_prefix,
+    release_number,
     set_next_number,
     suggest_next_numbers,
 )
@@ -134,3 +138,83 @@ def test_manual_next_number_skips_used_numbers_when_counting_forward(session, tm
     set_next_number(session, sequence_key="invoice", prefix="RG", value="RG-3001")
 
     assert suggest_next_numbers(session).invoice_number == "RG-3002"
+
+
+def test_number_sequence_status_shows_saved_start_value_even_when_blocked(session, tmp_path: Path):
+    customer = create_customer(session, CustomerCreate(name="Cafe Anzeige", folder_path=str(tmp_path / "Cafe Anzeige")))
+    create_document(
+        session,
+        DocumentCreate(
+            customer_id=customer.id,
+            document_type="Rechnung",
+            document_number="RG-3001",
+            line_items=[DocumentLineItem(name="Wasser", quantity=1, unit_price_cents=1299)],
+        ),
+    )
+    set_next_number(session, sequence_key="invoice", prefix="RG", value="RG-3001")
+
+    statuses = {status.sequence_key: status for status in list_number_sequence_statuses(session)}
+
+    assert statuses["invoice"].next_number == "RG-3001"
+    assert suggest_next_numbers(session).invoice_number == "RG-3002"
+
+
+def test_check_number_conflict_finds_blocking_invoice_document(session, tmp_path: Path):
+    customer = create_customer(session, CustomerCreate(name="Cafe Konflikt", folder_path=str(tmp_path / "Cafe Konflikt")))
+    create_document(
+        session,
+        DocumentCreate(
+            customer_id=customer.id,
+            document_type="Rechnung",
+            document_number="RG-3001",
+            delivery_date="2026-06-22",
+            line_items=[DocumentLineItem(name="Wasser", quantity=1, unit_price_cents=1299)],
+        ),
+    )
+
+    conflict = check_number_conflict(session, sequence_key="invoice", value="RG-3001")
+
+    assert conflict is not None
+    assert conflict.number == "RG-3001"
+    assert conflict.kind == "Rechnung"
+    assert conflict.customer_name == "Cafe Konflikt"
+
+
+def test_release_number_allows_invoice_sequence_to_reuse_released_number(session, tmp_path: Path):
+    customer = create_customer(session, CustomerCreate(name="Cafe Freigabe", folder_path=str(tmp_path / "Cafe Freigabe")))
+    create_document(
+        session,
+        DocumentCreate(
+            customer_id=customer.id,
+            document_type="Rechnung",
+            document_number="RG-3001",
+            line_items=[DocumentLineItem(name="Wasser", quantity=1, unit_price_cents=1299)],
+        ),
+    )
+    set_next_number(session, sequence_key="invoice", prefix="RG", value="RG-3001")
+
+    release_number(session, sequence_key="invoice", value="RG-3001")
+
+    assert check_number_conflict(session, sequence_key="invoice", value="RG-3001") is None
+    assert suggest_next_numbers(session).invoice_number == "RG-3001"
+    assert session.query(OpenItem).one().status == "freigegeben"
+
+
+def test_archived_orders_do_not_block_order_number_sequence(session, tmp_path: Path):
+    customer = create_customer(session, CustomerCreate(name="Cafe Auftrag", folder_path=str(tmp_path / "Cafe Auftrag")))
+    product = create_product(session, ProductCreate(name="Wasser", unit="Menge", standard_price_cents=1299))
+    order = create_order(
+        session,
+        OrderCreate(
+            order_number="AUF-1001",
+            customer_id=customer.id,
+            order_date="2026-06-21",
+            delivery_date="2026-06-22",
+            lines=[OrderLineCreate(product_id=product.id, quantity=1)],
+        ),
+    )
+    order.status = "archiviert"
+    session.commit()
+    set_next_number(session, sequence_key="order", prefix="AUF", value="AUF-1001")
+
+    assert suggest_next_numbers(session).order_number == "AUF-1001"

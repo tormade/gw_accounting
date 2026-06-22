@@ -2,9 +2,10 @@ from dataclasses import dataclass
 import re
 
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 from sqlalchemy.orm import Session
 
-from ..models import Document, NumberSequence, Order
+from ..models import Document, NumberSequence, OpenItem, Order
 
 
 @dataclass(frozen=True)
@@ -20,6 +21,16 @@ class NumberSequenceStatus:
     label: str
     prefix: str
     next_number: str
+
+
+@dataclass(frozen=True)
+class NumberConflict:
+    sequence_key: str
+    number: str
+    kind: str
+    customer_name: str
+    date: str
+    detail: str
 
 
 SEQUENCE_DEFINITIONS = {
@@ -44,7 +55,11 @@ def suggest_next_numbers(session: Session) -> NumberSuggestions:
 
 
 def next_order_number(session: Session) -> str:
-    existing_numbers = session.scalars(select(Order.order_number)).all()
+    existing_numbers = session.scalars(
+        select(Order.order_number)
+        .where(Order.status != "archiviert")
+        .where(Order.number_released == False)  # noqa: E712
+    ).all()
     return _next_number_with_manual_floor(
         session,
         sequence_key="order",
@@ -64,6 +79,7 @@ def next_document_number(
     document_types = (document_type, *aliases)
     existing_numbers = session.scalars(
         select(Document.document_number).where(Document.document_type.in_(document_types))
+        .where(Document.number_released == False)  # noqa: E712
     ).all()
     sequence_key = _sequence_key_for_prefix(prefix)
     return _next_number_with_manual_floor(
@@ -82,23 +98,27 @@ def list_number_sequence_statuses(session: Session) -> list[NumberSequenceStatus
         "delivery_note": suggestions.delivery_note_number,
         "invoice": suggestions.invoice_number,
     }
-    return [
-        NumberSequenceStatus(
-            sequence_key=sequence_key,
-            label=str(definition["label"]),
-            prefix=str(definition["prefix"]),
-            next_number=next_numbers[sequence_key],
+    statuses = []
+    for sequence_key, definition in SEQUENCE_DEFINITIONS.items():
+        prefix = str(definition["prefix"])
+        sequence = session.scalar(
+            select(NumberSequence).where(NumberSequence.sequence_key == sequence_key).limit(1)
         )
-        for sequence_key, definition in SEQUENCE_DEFINITIONS.items()
-    ]
+        next_number = f"{prefix}-{sequence.next_number}" if sequence is not None else next_numbers[sequence_key]
+        statuses.append(
+            NumberSequenceStatus(
+                sequence_key=sequence_key,
+                label=str(definition["label"]),
+                prefix=prefix,
+                next_number=next_number,
+            )
+        )
+    return statuses
 
 
 def set_next_number(session: Session, sequence_key: str, prefix: str, value: str) -> NumberSequence:
-    clean_value = value.strip().upper()
-    pattern = re.compile(rf"^{re.escape(prefix)}-(\d+)$")
-    match = pattern.match(clean_value)
-    if match is None:
-        raise ValueError(f"Nummer muss dem Format {prefix}-1234 entsprechen.")
+    clean_value = _normalize_sequence_value(value, prefix)
+    match = re.match(rf"^{re.escape(prefix)}-(\d+)$", clean_value)
     next_number = int(match.group(1))
     sequence = session.scalar(
         select(NumberSequence).where(NumberSequence.sequence_key == sequence_key).limit(1)
@@ -112,6 +132,82 @@ def set_next_number(session: Session, sequence_key: str, prefix: str, value: str
     session.commit()
     session.refresh(sequence)
     return sequence
+
+
+def check_number_conflict(session: Session, sequence_key: str, value: str) -> NumberConflict | None:
+    definition = SEQUENCE_DEFINITIONS[sequence_key]
+    prefix = str(definition["prefix"])
+    clean_value = _normalize_sequence_value(value, prefix)
+    if sequence_key == "order":
+        order = session.scalar(
+            select(Order)
+            .options(selectinload(Order.customer))
+            .where(Order.order_number == clean_value)
+            .where(Order.status != "archiviert")
+            .where(Order.number_released == False)  # noqa: E712
+            .limit(1)
+        )
+        if order is None:
+            return None
+        return NumberConflict(
+            sequence_key=sequence_key,
+            number=clean_value,
+            kind="Auftrag",
+            customer_name=order.customer.name if order.customer is not None else "",
+            date=order.delivery_date,
+            detail=f"Auftrag {order.order_number}",
+        )
+
+    document_types = _document_types_for_sequence(sequence_key)
+    document = session.scalar(
+        select(Document)
+        .options(selectinload(Document.customer))
+        .where(Document.document_number == clean_value)
+        .where(Document.document_type.in_(document_types))
+        .where(Document.number_released == False)  # noqa: E712
+        .limit(1)
+    )
+    if document is None:
+        return None
+    return NumberConflict(
+        sequence_key=sequence_key,
+        number=clean_value,
+        kind=document.document_type,
+        customer_name=document.customer.name if document.customer is not None else "",
+        date=document.delivery_date or "",
+        detail=f"{document.document_type} {document.document_number}",
+    )
+
+
+def release_number(session: Session, sequence_key: str, value: str) -> NumberConflict | None:
+    conflict = check_number_conflict(session, sequence_key, value)
+    if conflict is None:
+        return None
+    if sequence_key == "order":
+        order = session.scalar(
+            select(Order)
+            .where(Order.order_number == conflict.number)
+            .where(Order.status != "archiviert")
+            .where(Order.number_released == False)  # noqa: E712
+            .limit(1)
+        )
+        if order is not None:
+            order.number_released = True
+    else:
+        document = session.scalar(
+            select(Document)
+            .where(Document.document_number == conflict.number)
+            .where(Document.document_type.in_(_document_types_for_sequence(sequence_key)))
+            .where(Document.number_released == False)  # noqa: E712
+            .limit(1)
+        )
+        if document is not None:
+            document.number_released = True
+            open_item = session.scalar(select(OpenItem).where(OpenItem.document_id == document.id).limit(1))
+            if open_item is not None and open_item.status == "offen":
+                open_item.status = "freigegeben"
+    session.commit()
+    return conflict
 
 
 def next_number_for_prefix(existing_numbers: list[str], prefix: str, start: int) -> str:
@@ -163,3 +259,20 @@ def _sequence_key_for_prefix(prefix: str) -> str:
         if definition["prefix"] == prefix:
             return sequence_key
     return prefix.lower()
+
+
+def _normalize_sequence_value(value: str, prefix: str) -> str:
+    clean_value = value.strip().upper()
+    pattern = re.compile(rf"^{re.escape(prefix)}-(\d+)$")
+    match = pattern.match(clean_value)
+    if match is None:
+        raise ValueError(f"Nummer muss dem Format {prefix}-1234 entsprechen.")
+    return clean_value
+
+
+def _document_types_for_sequence(sequence_key: str) -> tuple[str, ...]:
+    if sequence_key == "delivery_note":
+        return ("Lieferschein", "Lieferauftrag")
+    if sequence_key == "invoice":
+        return ("Rechnung",)
+    return ()

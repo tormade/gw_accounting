@@ -12,9 +12,12 @@ def create_order(session: Session, payload: OrderCreate) -> Order:
     customer = session.get(Customer, payload.customer_id)
     if customer is None:
         raise ValueError("Kunde wurde nicht gefunden.")
+    order_number = payload.order_number.strip()
+    if _blocking_order_number_exists(session, order_number):
+        raise ValueError("Auftragsnummer ist bereits vorhanden.")
 
     order = Order(
-        order_number=payload.order_number.strip(),
+        order_number=order_number,
         customer_id=payload.customer_id,
         order_date=payload.order_date,
         delivery_date=payload.delivery_date,
@@ -52,7 +55,10 @@ def update_order(session: Session, order_id: int, payload: OrderCreate) -> Order
         raise ValueError("Kunde wurde nicht gefunden.")
 
     order = get_order(session, order_id)
-    order.order_number = payload.order_number.strip()
+    order_number = payload.order_number.strip()
+    if _blocking_order_number_exists(session, order_number, exclude_order_id=order.id):
+        raise ValueError("Auftragsnummer ist bereits vorhanden.")
+    order.order_number = order_number
     order.customer_id = payload.customer_id
     order.order_date = payload.order_date
     order.delivery_date = payload.delivery_date
@@ -221,3 +227,16 @@ def _append_deposit_returns(order: Order, deposit_returns: list[DepositReturnCre
                 deposit_cents=deposit_return.deposit_cents,
             )
         )
+
+
+def _blocking_order_number_exists(session: Session, order_number: str, exclude_order_id: int | None = None) -> bool:
+    query = (
+        select(Order.id)
+        .where(Order.order_number == order_number)
+        .where(Order.status != "archiviert")
+        .where(Order.number_released == False)  # noqa: E712
+        .limit(1)
+    )
+    if exclude_order_id is not None:
+        query = query.where(Order.id != exclude_order_id)
+    return session.scalar(query) is not None

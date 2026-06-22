@@ -152,6 +152,7 @@ def _existing_document(session: Session, document_type: str, document_number: st
         select(Document)
         .where(Document.document_type == document_type)
         .where(Document.document_number == document_number)
+        .where(Document.number_released == False)  # noqa: E712
         .limit(1)
     )
 

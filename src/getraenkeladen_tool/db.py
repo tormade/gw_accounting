@@ -32,9 +32,15 @@ def _add_missing_columns(engine) -> None:
                 connection.execute(text("ALTER TABLE documents ADD COLUMN datev_export_path VARCHAR(500)"))
             if "order_id" not in document_columns:
                 connection.execute(text("ALTER TABLE documents ADD COLUMN order_id INTEGER"))
+            if "number_released" not in document_columns:
+                connection.execute(text("ALTER TABLE documents ADD COLUMN number_released BOOLEAN DEFAULT 0 NOT NULL"))
             connection.execute(
                 text("UPDATE documents SET document_type = 'Lieferschein' WHERE document_type = 'Lieferauftrag'")
             )
+        if "orders" in table_names:
+            order_columns = {column["name"] for column in inspector.get_columns("orders")}
+            if "number_released" not in order_columns:
+                connection.execute(text("ALTER TABLE orders ADD COLUMN number_released BOOLEAN DEFAULT 0 NOT NULL"))
         if "customers" in table_names:
             customer_columns = {column["name"] for column in inspector.get_columns("customers")}
             if "is_active" not in customer_columns:
