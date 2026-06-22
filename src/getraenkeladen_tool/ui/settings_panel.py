@@ -3,32 +3,32 @@ from pathlib import Path
 from PySide6.QtWidgets import (
     QFileDialog,
     QFormLayout,
+    QGridLayout,
     QHBoxLayout,
     QLabel,
     QLineEdit,
     QMessageBox,
     QPushButton,
-    QListWidget,
     QVBoxLayout,
     QWidget,
 )
 
 from ..services.master_data_import_service import import_master_data_from_folder
-from ..services.settings_service import add_product_unit, list_product_units
+from ..services.numbering_service import list_number_sequence_statuses, set_next_number
 from .layouts import ContentSurface, PageHeader, WorkspaceCard, configure_form_layout
 
 
 SETTINGS_PANEL_ACTIONS = {
     "settingsHelpButton": "?",
-    "refreshUnitsButton": "Einheiten laden",
-    "addUnitButton": "Einheit hinzufuegen",
+    "refreshNumberSequencesButton": "Nummernkreise laden",
+    "saveNumberSequencesButton": "Nummernkreise speichern",
     "chooseInputFolderButton": "Input-Ordner waehlen",
     "importMasterDataButton": "Stammdaten importieren",
 }
-SETTINGS_PANEL_SECTIONS = ("Produkteinheiten bearbeiten",)
+SETTINGS_PANEL_SECTIONS = ("Nummernkreise bearbeiten", "Stammdaten aus Excel importieren")
 SETTINGS_HELP_TEXT = (
-    "Einstellungen: Hier pflegen Sie Listenwerte, die an anderer Stelle als Auswahlfeld erscheinen.\n\n"
-    "Aktuell bearbeiten Sie die Produkteinheiten, zum Beispiel Kiste, Flasche, Fass oder Tray."
+    "Einstellungen: Hier legen Sie fest, welche Nummer als naechstes vorgeschlagen wird.\n\n"
+    "Die App verhindert dabei, dass eine Nummer unter bereits vorhandene Belege zurueckfaellt."
 )
 
 
@@ -37,14 +37,11 @@ class SettingsPanel(QWidget):
         super().__init__()
         self.session_factory = session_factory
 
-        self.unit_input = QLineEdit()
-        self.unit_input.setPlaceholderText("z. B. Tray")
+        self.sequence_inputs: dict[str, QLineEdit] = {}
+        self.sequence_prefixes: dict[str, str] = {}
         self.input_folder = QLineEdit(str(Path.cwd().parent / "Input"))
         self.input_folder.setPlaceholderText("Ordner mit Artikel Liste Preise.xlsx und Lieferkunden Liste.xlsx")
-        self.units_list = QListWidget()
-        self.status_label = QLabel(
-            "Diese Einheiten erscheinen im Feld Einheit bei Produkten, zum Beispiel Kiste oder Flasche."
-        )
+        self.status_label = QLabel("Nummernkreise laden oder anpassen.")
         self.status_label.setObjectName("muted")
 
         root_layout = QVBoxLayout(self)
@@ -58,33 +55,48 @@ class SettingsPanel(QWidget):
         layout.addWidget(
             PageHeader(
                 "Einstellungen",
-                "Listenwerte, die an anderer Stelle als Auswahlfeld verwendet werden.",
+                "Nummernkreise und Stammdatenimport.",
                 self.help_button,
             )
         )
 
         box = WorkspaceCard(
             SETTINGS_PANEL_SECTIONS[0],
-            "Hier bearbeiten Sie die Auswahlwerte fuer das Feld Einheit im Produkte-Reiter.",
+            "Hier sehen Sie die naechsten Vorschlaege fuer Auftrag, Lieferschein und Rechnung.",
         )
         box_layout = box.layout
-        form = QFormLayout()
-        configure_form_layout(form)
-        form.addRow("Neue Einheit", self.unit_input)
-        box_layout.addLayout(form)
+        sequence_grid = QGridLayout()
+        sequence_grid.setHorizontalSpacing(12)
+        sequence_grid.setVerticalSpacing(8)
+        sequence_grid.addWidget(QLabel("Bereich"), 0, 0)
+        sequence_grid.addWidget(QLabel("Naechste Nummer"), 0, 1)
+        for row, sequence_key in enumerate(("order", "delivery_note", "invoice"), start=1):
+            label = QLabel("")
+            label.setObjectName(f"{sequence_key}SequenceLabel")
+            number_input = QLineEdit()
+            number_input.setObjectName(f"{sequence_key}SequenceInput")
+            number_input.setPlaceholderText("z. B. RG-3001")
+            self.sequence_inputs[sequence_key] = number_input
+            sequence_grid.addWidget(label, row, 0)
+            sequence_grid.addWidget(number_input, row, 1)
+        self.sequence_labels = {
+            "order": sequence_grid.itemAtPosition(1, 0).widget(),
+            "delivery_note": sequence_grid.itemAtPosition(2, 0).widget(),
+            "invoice": sequence_grid.itemAtPosition(3, 0).widget(),
+        }
+        box_layout.addLayout(sequence_grid)
 
         action_row = QHBoxLayout()
-        self.refresh_units_button = self._button("refreshUnitsButton")
-        self.add_unit_button = self._button("addUnitButton")
-        action_row.addWidget(self.refresh_units_button)
-        action_row.addWidget(self.add_unit_button)
+        self.refresh_number_sequences_button = self._button("refreshNumberSequencesButton")
+        self.save_number_sequences_button = self._button("saveNumberSequencesButton")
+        action_row.addWidget(self.refresh_number_sequences_button)
+        action_row.addWidget(self.save_number_sequences_button)
         action_row.addStretch()
         box_layout.addLayout(action_row)
-        box_layout.addWidget(self.units_list)
         layout.addWidget(box)
 
         import_box = WorkspaceCard(
-            "Stammdaten aus Excel importieren",
+            SETTINGS_PANEL_SECTIONS[1],
             "Die Excel-Dateien werden nur gelesen. Aenderungen landen in der Datenbank und werden protokolliert.",
         )
         import_layout = import_box.layout
@@ -102,10 +114,10 @@ class SettingsPanel(QWidget):
         layout.addStretch()
 
         self.help_button.clicked.connect(self.show_help)
-        self.refresh_units_button.clicked.connect(self.refresh_units)
-        self.add_unit_button.clicked.connect(self.add_unit)
+        self.refresh_number_sequences_button.clicked.connect(self.refresh_number_sequences)
+        self.save_number_sequences_button.clicked.connect(self.save_number_sequences)
         self.import_master_data_button.clicked.connect(self.import_master_data)
-        self.refresh_units()
+        self.refresh_number_sequences()
 
     def _button(self, object_name: str) -> QPushButton:
         button = QPushButton(SETTINGS_PANEL_ACTIONS[object_name])
@@ -125,31 +137,44 @@ class SettingsPanel(QWidget):
     def show_help(self) -> None:
         QMessageBox.information(self, "Hilfe: Einstellungen", SETTINGS_HELP_TEXT)
 
-    def refresh_units(self) -> None:
+    def refresh_number_sequences(self) -> None:
         if self.session_factory is None:
             self.status_label.setText("Keine Datenbankverbindung vorhanden.")
             return
         session = self.session_factory()
         try:
-            units = list_product_units(session)
+            statuses = list_number_sequence_statuses(session)
         finally:
             session.close()
-        self.units_list.clear()
-        self.units_list.addItems(units)
-        self.status_label.setText(f"{len(units)} Einheiten geladen.")
+        for status in statuses:
+            label = self.sequence_labels[status.sequence_key]
+            label.setText(status.label)
+            self.sequence_inputs[status.sequence_key].setText(status.next_number)
+            self.sequence_prefixes[status.sequence_key] = status.prefix
+        self.status_label.setText("Nummernkreise geladen.")
 
-    def add_unit(self) -> None:
+    def save_number_sequences(self) -> None:
         if self.session_factory is None:
             self.status_label.setText("Keine Datenbankverbindung vorhanden.")
             return
         session = self.session_factory()
         try:
-            unit = add_product_unit(session, self.unit_input.text())
+            for sequence_key, input_field in self.sequence_inputs.items():
+                set_next_number(
+                    session,
+                    sequence_key=sequence_key,
+                    prefix=self.sequence_prefixes[sequence_key],
+                    value=input_field.text(),
+                )
+            statuses = list_number_sequence_statuses(session)
+        except ValueError as error:
+            self.status_label.setText(str(error))
+            return
         finally:
             session.close()
-        self.unit_input.clear()
-        self.refresh_units()
-        self.status_label.setText(f"Einheit gespeichert: {unit.value}")
+        for status in statuses:
+            self.sequence_inputs[status.sequence_key].setText(status.next_number)
+        self.status_label.setText("Nummernkreise erfolgreich gespeichert.")
 
     def choose_input_folder(self) -> None:
         folder = QFileDialog.getExistingDirectory(self, "Input-Ordner waehlen", self.input_folder.text())

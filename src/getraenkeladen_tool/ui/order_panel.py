@@ -533,10 +533,13 @@ class OrderPanel(QWidget):
             )
             if self.current_order_id is None:
                 order = create_order(session, payload)
-                self.status_label.setText("Auftrag gespeichert. Lieferschein oder Rechnung im passenden Reiter erstellen.")
+                self.status_label.setText(
+                    f"Erfolgreich gespeichert: Auftrag gespeichert: {order.order_number}. "
+                    "Lieferschein oder Rechnung im passenden Reiter erstellen."
+                )
             else:
                 order = update_order(session, self.current_order_id, payload)
-                self.status_label.setText("Auftrag aktualisiert.")
+                self.status_label.setText(f"Erfolgreich aktualisiert: Auftrag aktualisiert: {order.order_number}.")
             self.current_order_id = order.id
             self.current_order_status = order.status
             self.order_mode_label.setText(f"Auftrag bearbeiten: {order.order_number}")

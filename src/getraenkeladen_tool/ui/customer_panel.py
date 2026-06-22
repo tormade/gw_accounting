@@ -219,7 +219,7 @@ class CustomerPanel(QWidget):
                 customer = update_customer(session, self.current_customer_id, payload)
             self.current_customer_id = customer.id
             self.loaded_form_snapshot = self._snapshot_from_customer(customer)
-            self.status_label.setText(f"Kunde gespeichert: {customer.name}")
+            self.status_label.setText(f"Erfolgreich gespeichert: Kunde gespeichert: {customer.name}.")
             self.show_customers(list_customers(session))
         finally:
             session.close()

@@ -293,7 +293,7 @@ def test_product_tab_exposes_price_list_actions():
     }
     assert PRODUCT_PANEL_SECTIONS == ("1. Produkt erfassen", "2. Preisliste pruefen")
     assert PRODUCT_GUIDANCE_STEPS == (
-        "Artikel mit Einheit und Standardpreis pflegen.",
+        "Artikel mit Standardpreis pflegen.",
         "Vorhandene Artikel unten auswaehlen und zur Bearbeitung laden.",
         "Aenderungen koennen vor dem Speichern verworfen werden.",
     )
@@ -304,17 +304,26 @@ def test_product_tab_exposes_price_list_actions():
     }
 
 
-def test_settings_tab_exposes_dropdown_list_actions():
+def test_settings_tab_exposes_number_sequence_actions_without_product_units():
     from getraenkeladen_tool.ui.settings_panel import SETTINGS_PANEL_ACTIONS, SETTINGS_PANEL_SECTIONS
 
     assert SETTINGS_PANEL_ACTIONS == {
         "settingsHelpButton": "?",
-        "refreshUnitsButton": "Einheiten laden",
-        "addUnitButton": "Einheit hinzufuegen",
+        "refreshNumberSequencesButton": "Nummernkreise laden",
+        "saveNumberSequencesButton": "Nummernkreise speichern",
         "chooseInputFolderButton": "Input-Ordner waehlen",
         "importMasterDataButton": "Stammdaten importieren",
     }
-    assert SETTINGS_PANEL_SECTIONS == ("Produkteinheiten bearbeiten",)
+    assert SETTINGS_PANEL_SECTIONS == ("Nummernkreise bearbeiten", "Stammdaten aus Excel importieren")
+
+
+def test_product_panel_hides_unit_maintenance_from_user():
+    from pathlib import Path
+
+    source = Path("src/getraenkeladen_tool/ui/product_panel.py").read_text(encoding="utf-8")
+
+    assert 'form.addRow("Einheit", self.unit)' not in source
+    assert 'PRODUCT_COLUMNS = ("Produkt", "Artikelnummer", "Preis", "Pfand", "Status")' in source
 
 
 def test_dashboard_tab_exposes_daily_guidance():

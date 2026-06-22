@@ -7,6 +7,7 @@ from getraenkeladen_tool.services.numbering_service import (
     NumberSuggestions,
     next_document_number,
     next_number_for_prefix,
+    set_next_number,
     suggest_next_numbers,
 )
 from getraenkeladen_tool.services.order_service import create_order
@@ -79,3 +80,25 @@ def test_suggest_next_numbers_counts_legacy_delivery_order_documents(session, tm
 
 def test_next_document_number_returns_default_for_document_type_without_existing_documents(session):
     assert next_document_number(session, document_type="Rechnung", prefix="RG", start=3001) == "RG-3001"
+
+
+def test_set_next_number_changes_future_suggestion_when_it_is_higher_than_existing(session):
+    set_next_number(session, sequence_key="invoice", prefix="RG", value="RG-4100")
+
+    assert suggest_next_numbers(session).invoice_number == "RG-4100"
+
+
+def test_number_suggestion_never_goes_below_existing_documents(session, tmp_path: Path):
+    customer = create_customer(session, CustomerCreate(name="Cafe Nummer", folder_path=str(tmp_path / "Cafe Nummer")))
+    create_document(
+        session,
+        DocumentCreate(
+            customer_id=customer.id,
+            document_type="Rechnung",
+            document_number="RG-4100",
+            line_items=[DocumentLineItem(name="Wasser", quantity=1, unit_price_cents=1299)],
+        ),
+    )
+    set_next_number(session, sequence_key="invoice", prefix="RG", value="RG-3001")
+
+    assert suggest_next_numbers(session).invoice_number == "RG-4101"

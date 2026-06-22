@@ -1,6 +1,5 @@
 from PySide6.QtWidgets import (
     QCheckBox,
-    QComboBox,
     QFormLayout,
     QHeaderView,
     QHBoxLayout,
@@ -27,7 +26,6 @@ from ..services.product_service import (
     restore_product,
     update_product,
 )
-from ..services.settings_service import DEFAULT_PRODUCT_UNITS, list_product_units
 from .layouts import ContentSurface, PageHeader, ResponsiveSplitter, WorkspaceCard, configure_form_layout
 
 
@@ -48,10 +46,10 @@ PRODUCT_HELP_TEXT = (
     "Deaktivieren verhindert neue Nutzung, laesst alte Belege aber nachvollziehbar bestehen."
 )
 
-PRODUCT_COLUMNS = ("Produkt", "Einheit", "Artikelnummer", "Preis", "Pfand", "Status")
+PRODUCT_COLUMNS = ("Produkt", "Artikelnummer", "Preis", "Pfand", "Status")
 PRODUCT_PANEL_SECTIONS = ("1. Produkt erfassen", "2. Preisliste pruefen")
 PRODUCT_GUIDANCE_STEPS = (
-    "Artikel mit Einheit und Standardpreis pflegen.",
+    "Artikel mit Standardpreis pflegen.",
     "Vorhandene Artikel unten auswaehlen und zur Bearbeitung laden.",
     "Aenderungen koennen vor dem Speichern verworfen werden.",
 )
@@ -72,9 +70,6 @@ class ProductPanel(QWidget):
 
         self.product_name = QLineEdit()
         self.product_name.setPlaceholderText("z. B. Wasser 0,7")
-        self.unit = QComboBox()
-        self.unit.setEditable(True)
-        self.unit.addItems(DEFAULT_PRODUCT_UNITS)
         self.article_number = QLineEdit()
         self.price_eur = QLineEdit()
         self.price_eur.setPlaceholderText("z. B. 12,99")
@@ -103,12 +98,11 @@ class ProductPanel(QWidget):
 
         edit_box, edit_layout = self._section(
             PRODUCT_PANEL_SECTIONS[0],
-            "Produktname, Einheit und Preis sind die Basis fuer spaetere Auftraege.",
+            "Produktname, Artikelnummer, Preis und Pfand sind die Basis fuer spaetere Auftraege.",
         )
         form = QFormLayout()
         configure_form_layout(form)
         form.addRow("Produkt", self.product_name)
-        form.addRow("Einheit", self.unit)
         form.addRow("Artikelnummer", self.article_number)
         form.addRow("Preis EUR", self.price_eur)
         form.addRow("Pfand EUR", self.deposit_eur)
@@ -165,7 +159,6 @@ class ProductPanel(QWidget):
         self.products_table.itemDoubleClicked.connect(lambda _item: self.load_selected_product())
         self.products_table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.products_table.customContextMenuRequested.connect(self.show_product_context_menu)
-        self.refresh_units()
         self.refresh_products()
 
     def _button(self, object_name: str) -> QPushButton:
@@ -201,7 +194,7 @@ class ProductPanel(QWidget):
 
         payload = ProductCreate(
             name=self.product_name.text().strip(),
-            unit=self.unit.currentText().strip(),
+            unit="Menge",
             standard_price_cents=self._parse_euro_cents(self.price_eur.text()),
             default_deposit_cents=self._parse_euro_cents(self.deposit_eur.text()),
             article_number=self.article_number.text().strip() or None,
@@ -215,7 +208,7 @@ class ProductPanel(QWidget):
                 product = update_product(session, self.current_product_id, payload)
             self.current_product_id = product.id
             self.loaded_form_snapshot = self._snapshot_from_product(product)
-            self.status_label.setText(f"Produkt gespeichert: {product.name}")
+            self.status_label.setText(f"Erfolgreich gespeichert: Produkt gespeichert: {product.name}.")
             self.show_products(list_products(session))
         finally:
             session.close()
@@ -238,7 +231,6 @@ class ProductPanel(QWidget):
             self.product_ids_by_row[row] = product.id
             values = (
                 product.name,
-                product.unit,
                 product.article_number or "",
                 f"{product.standard_price_cents / 100:.2f} EUR".replace(".", ","),
                 f"{product.default_deposit_cents / 100:.2f} EUR".replace(".", ","),
@@ -262,7 +254,6 @@ class ProductPanel(QWidget):
                 return
             self.current_product_id = product.id
             self.product_name.setText(product.name)
-            self._set_unit_value(product.unit)
             self.article_number.setText(product.article_number or "")
             self.price_eur.setText(f"{product.standard_price_cents / 100:.2f}".replace(".", ","))
             self.deposit_eur.setText(f"{product.default_deposit_cents / 100:.2f}".replace(".", ","))
@@ -330,24 +321,9 @@ class ProductPanel(QWidget):
         row = self.products_table.currentRow()
         return self.product_ids_by_row.get(row)
 
-    def refresh_units(self) -> None:
-        units = list(DEFAULT_PRODUCT_UNITS)
-        if self.session_factory is not None:
-            session = self.session_factory()
-            try:
-                units = list_product_units(session)
-            finally:
-                session.close()
-        current = self.unit.currentText()
-        self.unit.clear()
-        self.unit.addItems(units)
-        if current:
-            self._set_unit_value(current)
-
     def new_product(self) -> None:
         self.current_product_id = None
         self.product_name.clear()
-        self._set_unit_value("Kiste")
         self.article_number.clear()
         self.price_eur.clear()
         self.deposit_eur.clear()
@@ -381,7 +357,6 @@ class ProductPanel(QWidget):
         return {
             "id": self.current_product_id,
             "name": self.product_name.text(),
-            "unit": self.unit.currentText(),
             "article_number": self.article_number.text(),
             "price_eur": self.price_eur.text(),
             "deposit_eur": self.deposit_eur.text(),
@@ -392,7 +367,6 @@ class ProductPanel(QWidget):
         return {
             "id": product.id,
             "name": product.name,
-            "unit": product.unit,
             "article_number": product.article_number or "",
             "price_eur": f"{product.standard_price_cents / 100:.2f}".replace(".", ","),
             "deposit_eur": f"{product.default_deposit_cents / 100:.2f}".replace(".", ","),
@@ -402,18 +376,10 @@ class ProductPanel(QWidget):
     def _apply_snapshot(self, snapshot: dict) -> None:
         self.current_product_id = snapshot["id"]
         self.product_name.setText(snapshot["name"])
-        self._set_unit_value(snapshot["unit"])
         self.article_number.setText(snapshot["article_number"])
         self.price_eur.setText(snapshot["price_eur"])
         self.deposit_eur.setText(snapshot["deposit_eur"])
         self.is_active.setChecked(snapshot["is_active"])
-
-    def _set_unit_value(self, value: str) -> None:
-        index = self.unit.findText(value)
-        if index < 0:
-            self.unit.addItem(value)
-            index = self.unit.findText(value)
-        self.unit.setCurrentIndex(index)
 
     def _parse_euro_cents(self, value: str) -> int:
         if not value.strip():

@@ -59,9 +59,9 @@ class MainWindow(QMainWindow):
             "Lieferscheine": (self.delivery_note_panel.refresh_master_data, self.delivery_note_panel.refresh_orders),
             "Rechnungen": (self.invoice_panel.refresh_master_data, self.invoice_panel.refresh_orders),
             "Kunden": (self.customer_panel.refresh_customers,),
-            "Produkte": (self.product_panel.refresh_units, self.product_panel.refresh_products),
+            "Produkte": (self.product_panel.refresh_products,),
             "Listen": (self.report_panel.refresh_all_lists,),
-            "Einstellungen": (self.settings_panel.refresh_units,),
+            "Einstellungen": (self.settings_panel.refresh_number_sequences,),
         }
 
         self.dashboard_panel.new_delivery_requested.connect(self.open_orders_tab)

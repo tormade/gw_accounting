@@ -299,7 +299,9 @@ class DocumentWorkflowPanel(QWidget):
             self.open_pdf_button.setEnabled(self.last_pdf_path.exists())
             asset_label = self._created_asset_label(assets)
             self.result_label.setText(self._created_asset_result(asset_label))
-            self.status_label.setText(f"{self.document_type}: {asset_label} erstellt.")
+            self.status_label.setText(
+                f"Erfolgreich erstellt: {self.document_type} {document.document_number} als {asset_label}."
+            )
         finally:
             session.close()
 
