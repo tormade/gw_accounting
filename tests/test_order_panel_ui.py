@@ -32,6 +32,19 @@ def test_document_workflow_panels_make_excel_pdf_generation_flow_visible():
     assert "PDF:" in source
 
 
+def test_document_workflow_allows_editing_lines_and_deposit_returns():
+    source = Path("src/getraenkeladen_tool/ui/document_workflow_panel.py").read_text(encoding="utf-8")
+
+    assert '"removeDocumentLineButton": "Position entfernen"' in source
+    assert '"addDocumentDepositReturnButton": "Pfand zurueck hinzufuegen"' in source
+    assert '"removeDocumentDepositReturnButton": "Pfand zurueck entfernen"' in source
+    assert "self.remove_line_button.clicked.connect(self.remove_selected_line)" in source
+    assert "self.add_return_button.clicked.connect(self.add_deposit_return)" in source
+    assert "self.remove_return_button.clicked.connect(self.remove_selected_deposit_return)" in source
+    assert "def add_deposit_return" in source
+    assert "def remove_selected_line" in source
+
+
 def test_order_panel_supports_editing_existing_orders():
     source = Path("src/getraenkeladen_tool/ui/order_panel.py").read_text(encoding="utf-8")
 
@@ -112,3 +125,14 @@ def test_order_panel_splits_creation_and_management_into_resize_friendly_workspa
     assert "setStretchFactor(0, 1)" in source
     assert "setStretchFactor(1, 3)" in source
     assert "setMaximumHeight(180)" not in source
+
+
+def test_order_panel_forms_expand_to_available_width_instead_of_floating_centered():
+    source = Path("src/getraenkeladen_tool/ui/order_panel.py").read_text(encoding="utf-8")
+    layout_source = Path("src/getraenkeladen_tool/ui/layouts.py").read_text(encoding="utf-8")
+
+    assert "configure_form_layout(customer_form)" in source
+    assert "configure_form_layout(position_form)" in source
+    assert "configure_form_layout(deposit_return_form)" in source
+    assert "setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow)" in layout_source
+    assert "setLabelAlignment(Qt.AlignmentFlag.AlignLeft)" in layout_source

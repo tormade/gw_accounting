@@ -20,9 +20,15 @@ from ..services.customer_service import list_active_customers
 from ..services.numbering_service import suggest_next_numbers
 from ..services.order_service import create_order_delivery_order, create_order_invoice, get_order, list_active_orders
 from .date_input import to_display_date
+from .layouts import PageHeader, ResponsiveSplitter, configure_form_layout
 from .searchable_select import SearchableSelect
 
 
+DOCUMENT_WORKFLOW_ACTIONS = {
+    "removeDocumentLineButton": "Position entfernen",
+    "addDocumentDepositReturnButton": "Pfand zurueck hinzufuegen",
+    "removeDocumentDepositReturnButton": "Pfand zurueck entfernen",
+}
 DOCUMENT_LINE_COLUMNS = ("Artikel", "Menge", "Preis EUR", "Pfand EUR", "Summe EUR")
 DOCUMENT_RETURN_COLUMNS = ("Pfandart", "Menge", "Pfand EUR", "Gutschrift EUR")
 DOCUMENT_ORDER_COLUMNS = ("Auftrag", "Kunde", "Lieferdatum", "Zeitfenster", "Status")
@@ -60,6 +66,12 @@ class DocumentWorkflowPanel(QWidget):
         self.returns_table.setHorizontalHeaderLabels(DOCUMENT_RETURN_COLUMNS)
         self.returns_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         self.returns_table.setMaximumHeight(150)
+        self.deposit_return_name = QLineEdit()
+        self.deposit_return_name.setPlaceholderText("z. B. Leergut Kiste 4,80")
+        self.deposit_return_quantity = QLineEdit()
+        self.deposit_return_quantity.setPlaceholderText("z. B. 1")
+        self.deposit_return_eur = QLineEdit()
+        self.deposit_return_eur.setPlaceholderText("z. B. 4,80")
         self.total_label = QLabel("Belegsumme: 0,00 EUR")
         self.total_label.setObjectName("stepTitle")
         self.status_label = QLabel("Auftrag auswaehlen, Positionen pruefen, dann Datei erstellen.")
@@ -72,19 +84,19 @@ class DocumentWorkflowPanel(QWidget):
         layout.setContentsMargins(32, 28, 32, 28)
         layout.setSpacing(14)
 
-        header = QLabel(self.document_type)
-        header.setObjectName("headline")
-        layout.addWidget(header)
-        subtitle = QLabel("Auftrag waehlen, Positionen bei Bedarf fuer diesen Beleg anpassen und Excel/PDF erzeugen.")
-        subtitle.setObjectName("muted")
-        layout.addWidget(subtitle)
+        layout.addWidget(
+            PageHeader(
+                self.document_type,
+                "Auftrag waehlen, Positionen bei Bedarf fuer diesen Beleg anpassen und Excel/PDF erzeugen.",
+            )
+        )
 
-        body = QHBoxLayout()
-        body.setSpacing(18)
-        layout.addLayout(body)
+        body = ResponsiveSplitter()
+        layout.addWidget(body, 1)
 
         order_box, order_layout = self._section("1. Auftrag auswaehlen", "Liste filtern und Auftrag doppelt anklicken.")
         filter_form = QFormLayout()
+        configure_form_layout(filter_form)
         filter_form.addRow("Auftraege filtern nach Kunde", self.customer_filter)
         order_layout.addLayout(filter_form)
         order_layout.addWidget(self.orders_table)
@@ -95,7 +107,7 @@ class DocumentWorkflowPanel(QWidget):
         refresh_row.addWidget(self.load_button)
         refresh_row.addStretch()
         order_layout.addLayout(refresh_row)
-        body.addWidget(order_box, 1)
+        body.addWidget(order_box)
 
         document_box, document_layout = self._section(
             "2. Beleg pruefen",
@@ -104,12 +116,31 @@ class DocumentWorkflowPanel(QWidget):
         document_layout.addWidget(self.order_summary)
         number_row = QHBoxLayout()
         number_form = QFormLayout()
+        configure_form_layout(number_form)
         number_form.addRow(self.number_label, self.document_number)
         number_row.addLayout(number_form)
         self.suggest_number_button = QPushButton("Nummer vorschlagen")
         number_row.addWidget(self.suggest_number_button)
         document_layout.addLayout(number_row)
         document_layout.addWidget(self.lines_table)
+        line_action_row = QHBoxLayout()
+        self.remove_line_button = QPushButton(DOCUMENT_WORKFLOW_ACTIONS["removeDocumentLineButton"])
+        line_action_row.addWidget(self.remove_line_button)
+        line_action_row.addStretch()
+        document_layout.addLayout(line_action_row)
+        return_form = QFormLayout()
+        configure_form_layout(return_form)
+        return_form.addRow("Pfandart", self.deposit_return_name)
+        return_form.addRow("Menge", self.deposit_return_quantity)
+        return_form.addRow("Pfand EUR", self.deposit_return_eur)
+        document_layout.addLayout(return_form)
+        return_action_row = QHBoxLayout()
+        self.add_return_button = QPushButton(DOCUMENT_WORKFLOW_ACTIONS["addDocumentDepositReturnButton"])
+        self.remove_return_button = QPushButton(DOCUMENT_WORKFLOW_ACTIONS["removeDocumentDepositReturnButton"])
+        return_action_row.addWidget(self.add_return_button)
+        return_action_row.addWidget(self.remove_return_button)
+        return_action_row.addStretch()
+        document_layout.addLayout(return_action_row)
         document_layout.addWidget(self.returns_table)
         document_layout.addWidget(self.total_label)
         action_row = QHBoxLayout()
@@ -124,12 +155,17 @@ class DocumentWorkflowPanel(QWidget):
         action_row.addStretch()
         document_layout.addLayout(action_row)
         document_layout.addWidget(self.result_label)
-        body.addWidget(document_box, 2)
+        body.addWidget(document_box)
+        body.setStretchFactor(0, 1)
+        body.setStretchFactor(1, 2)
         layout.addWidget(self.status_label)
 
         self.refresh_button.clicked.connect(self.refresh_orders)
         self.load_button.clicked.connect(self.load_selected_order)
         self.suggest_number_button.clicked.connect(self.suggest_document_number)
+        self.remove_line_button.clicked.connect(self.remove_selected_line)
+        self.add_return_button.clicked.connect(self.add_deposit_return)
+        self.remove_return_button.clicked.connect(self.remove_selected_deposit_return)
         self.create_button.clicked.connect(self.create_document)
         self.open_excel_button.clicked.connect(lambda: self._open_local_file(self.last_excel_path))
         self.open_pdf_button.clicked.connect(lambda: self._open_local_file(self.last_pdf_path))
@@ -140,6 +176,9 @@ class DocumentWorkflowPanel(QWidget):
         self.refresh_master_data()
         self.refresh_orders()
         self.suggest_document_number()
+
+    def _button(self, object_name: str) -> QPushButton:
+        return QPushButton(DOCUMENT_WORKFLOW_ACTIONS[object_name])
 
     def _section(self, title: str, subtitle: str) -> tuple[QWidget, QVBoxLayout]:
         box = QWidget()
@@ -286,6 +325,31 @@ class DocumentWorkflowPanel(QWidget):
             )
         return returns
 
+    def add_deposit_return(self) -> None:
+        name = self.deposit_return_name.text().strip()
+        if not name:
+            self.status_label.setText("Bitte eine Pfandart eintragen.")
+            return
+        quantity = self._parse_quantity(self.deposit_return_quantity.text())
+        deposit_cents = self._parse_euro_cents_or_zero(self.deposit_return_eur.text())
+        if quantity <= 0 or deposit_cents <= 0:
+            self.status_label.setText("Bitte Menge und Pfandwert groesser 0 eintragen.")
+            return
+        self._append_return(name, quantity, deposit_cents)
+        self.status_label.setText("Pfandrueckgabe fuer diesen Beleg hinzugefuegt.")
+
+    def remove_selected_line(self) -> None:
+        row = self.lines_table.currentRow()
+        if row >= 0:
+            self.lines_table.removeRow(row)
+            self.update_total()
+
+    def remove_selected_deposit_return(self) -> None:
+        row = self.returns_table.currentRow()
+        if row >= 0:
+            self.returns_table.removeRow(row)
+            self.update_total()
+
     def _append_line(self, product_name: str, quantity: int, unit_price_cents: int, deposit_cents: int) -> None:
         row = self.lines_table.rowCount()
         self.lines_table.blockSignals(True)
@@ -367,6 +431,12 @@ class DocumentWorkflowPanel(QWidget):
     def _parse_int(self, item: QTableWidgetItem | None) -> int:
         try:
             return int(item.text()) if item is not None else 0
+        except ValueError:
+            return 0
+
+    def _parse_quantity(self, value: str) -> int:
+        try:
+            return int(value.strip())
         except ValueError:
             return 0
 

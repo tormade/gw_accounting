@@ -31,7 +31,7 @@ from ..services.order_service import (
 )
 from ..services.product_service import list_active_products
 from .date_input import DateInput, to_display_date
-from .layouts import PageHeader, ResponsiveSplitter
+from .layouts import PageHeader, ResponsiveSplitter, configure_form_layout
 from .searchable_select import SearchableSelect
 
 
@@ -161,6 +161,7 @@ class OrderPanel(QWidget):
         )
         customer_layout.addWidget(self.order_mode_label)
         customer_form = QFormLayout()
+        configure_form_layout(customer_form)
         customer_form.addRow("Kunde", self.customer_select)
         customer_form.addRow("Auftragsnummer", self._number_row(self.order_number, self.suggest_order_number_button))
         customer_form.addRow("Lieferdatum", self.delivery_date)
@@ -183,6 +184,7 @@ class OrderPanel(QWidget):
             "Links Produkt erfassen, rechts die Positionen wie in einer Belegliste kontrollieren.",
         )
         position_form = QFormLayout()
+        configure_form_layout(position_form)
         position_form.addRow("Produkt", self.product_select)
         position_form.addRow("Menge", self.quantity)
         position_form.addRow("Preis EUR", self.unit_price_eur)
@@ -198,6 +200,7 @@ class OrderPanel(QWidget):
         return_title.setObjectName("sectionTitle")
         position_layout.addWidget(return_title)
         deposit_return_form = QFormLayout()
+        configure_form_layout(deposit_return_form)
         deposit_return_form.addRow("Pfandart", self.deposit_return_name)
         deposit_return_form.addRow("Menge", self.deposit_return_quantity)
         deposit_return_form.addRow("Pfand EUR", self.deposit_return_eur)

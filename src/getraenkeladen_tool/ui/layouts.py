@@ -1,5 +1,5 @@
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QSplitter, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QFormLayout, QHBoxLayout, QLabel, QPushButton, QSplitter, QVBoxLayout, QWidget
 
 
 class PageHeader(QWidget):
@@ -54,3 +54,10 @@ class ResponsiveSplitter(QSplitter):
         super().__init__(orientation)
         self.setObjectName("workspaceSplitter")
         self.setChildrenCollapsible(False)
+
+
+def configure_form_layout(form: QFormLayout) -> None:
+    form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow)
+    form.setRowWrapPolicy(QFormLayout.RowWrapPolicy.DontWrapRows)
+    form.setLabelAlignment(Qt.AlignmentFlag.AlignLeft)
+    form.setFormAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
