@@ -1,0 +1,88 @@
+from collections.abc import Iterable
+from dataclasses import dataclass
+
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtWidgets import QLineEdit, QListWidget, QListWidgetItem, QVBoxLayout, QWidget
+
+
+@dataclass(slots=True)
+class SearchableSelectItem:
+    label: str
+    value: object
+    detail: str = ""
+
+
+def filter_searchable_items(items: Iterable[SearchableSelectItem], search_text: str) -> list[SearchableSelectItem]:
+    normalized = search_text.strip().casefold()
+    if not normalized:
+        return list(items)
+    return [item for item in items if normalized in f"{item.label} {item.detail}".casefold()]
+
+
+class SearchableSelect(QWidget):
+    selection_changed = Signal()
+
+    def __init__(self, placeholder: str = "Suchen") -> None:
+        super().__init__()
+        self._items: list[SearchableSelectItem] = []
+        self._current_value = None
+        self.search_input = QLineEdit()
+        self.search_input.setPlaceholderText(placeholder)
+        self.result_list = QListWidget()
+        self.result_list.setMaximumHeight(130)
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(6)
+        layout.addWidget(self.search_input)
+        layout.addWidget(self.result_list)
+
+        self.search_input.textChanged.connect(self._filter_items)
+        self.result_list.itemClicked.connect(self._select_item)
+
+    def set_items(self, items: Iterable[tuple[str, object, str]]) -> None:
+        self._items = [SearchableSelectItem(label, value, detail) for label, value, detail in items]
+        self._current_value = None
+        self._filter_items(self.search_input.text())
+
+    def current_value(self):
+        return self._current_value
+
+    def set_search_text(self, text: str) -> None:
+        self.search_input.setText(text)
+
+    def visible_labels(self) -> list[str]:
+        return [
+            self.result_list.item(row).text()
+            for row in range(self.result_list.count())
+            if not self.result_list.item(row).isHidden()
+        ]
+
+    def select_value(self, value: object) -> None:
+        for row in range(self.result_list.count()):
+            item = self.result_list.item(row)
+            if item.data(Qt.ItemDataRole.UserRole) == value:
+                self.result_list.setCurrentRow(row)
+                self._select_item(item)
+                return
+        self._current_value = None
+        self.selection_changed.emit()
+
+    def _filter_items(self, text: str) -> None:
+        self.result_list.clear()
+        matches = filter_searchable_items(self._items, text)
+        for item in matches:
+            list_item = QListWidgetItem(item.label)
+            list_item.setToolTip(item.detail)
+            list_item.setData(Qt.ItemDataRole.UserRole, item.value)
+            self.result_list.addItem(list_item)
+
+        self._current_value = matches[0].value if len(matches) == 1 else None
+        self.selection_changed.emit()
+
+    def _select_item(self, item: QListWidgetItem) -> None:
+        self._current_value = item.data(Qt.ItemDataRole.UserRole)
+        self.search_input.blockSignals(True)
+        self.search_input.setText(item.text())
+        self.search_input.blockSignals(False)
+        self.selection_changed.emit()

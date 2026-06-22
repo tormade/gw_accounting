@@ -217,6 +217,18 @@ def test_dashboard_primary_action_opens_order_tab():
     assert 'MAIN_TABS.index("Auftraege")' in source
 
 
+def test_main_window_refreshes_tab_data_when_user_switches_tabs():
+    from pathlib import Path
+
+    source = Path("src/getraenkeladen_tool/ui/main_window.py").read_text(encoding="utf-8")
+
+    assert "currentChanged.connect(self.refresh_current_tab)" in source
+    assert "def refresh_current_tab" in source
+    assert "refresh_master_data" in source
+    assert "refresh_products" in source
+    assert "refresh_customers" in source
+
+
 def test_report_tab_exposes_reporting_actions():
     from getraenkeladen_tool.ui.report_panel import REPORT_PANEL_ACTIONS
 

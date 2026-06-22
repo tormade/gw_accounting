@@ -36,20 +36,44 @@ class MainWindow(QMainWindow):
         root_layout.addWidget(self._header())
 
         self.tabs = QTabWidget()
-        dashboard_panel = DashboardPanel(session_factory=session_factory)
-        dashboard_panel.new_delivery_requested.connect(self.open_orders_tab)
-        self.tabs.addTab(self._scrollable_tab(dashboard_panel), "Start")
-        self.tabs.addTab(self._scrollable_tab(CustomerPanel(session_factory=session_factory)), "Kunden")
-        self.tabs.addTab(self._scrollable_tab(ProductPanel(session_factory=session_factory)), "Produkte")
-        self.tabs.addTab(self._scrollable_tab(OrderPanel(session_factory=session_factory)), "Auftraege")
-        self.tabs.addTab(self._scrollable_tab(DocumentPanel(session_factory=session_factory)), "Belege")
-        self.tabs.addTab(self._scrollable_tab(ReportPanel(session_factory=session_factory)), "Listen")
-        self.tabs.addTab(self._scrollable_tab(SettingsPanel(session_factory=session_factory)), "Einstellungen")
+        self.dashboard_panel = DashboardPanel(session_factory=session_factory)
+        self.customer_panel = CustomerPanel(session_factory=session_factory)
+        self.product_panel = ProductPanel(session_factory=session_factory)
+        self.order_panel = OrderPanel(session_factory=session_factory)
+        self.document_panel = DocumentPanel(session_factory=session_factory)
+        self.report_panel = ReportPanel(session_factory=session_factory)
+        self.settings_panel = SettingsPanel(session_factory=session_factory)
+        self.refreshable_panels = {
+            "Start": (self.dashboard_panel.refresh_dashboard,),
+            "Kunden": (self.customer_panel.refresh_customers,),
+            "Produkte": (self.product_panel.refresh_units, self.product_panel.refresh_products),
+            "Auftraege": (self.order_panel.refresh_master_data, self.order_panel.refresh_orders),
+            "Belege": (self.document_panel.refresh_master_data,),
+            "Listen": (self.report_panel.refresh_all_lists,),
+            "Einstellungen": (self.settings_panel.refresh_units,),
+        }
+
+        self.dashboard_panel.new_delivery_requested.connect(self.open_orders_tab)
+        self.tabs.addTab(self._scrollable_tab(self.dashboard_panel), "Start")
+        self.tabs.addTab(self._scrollable_tab(self.customer_panel), "Kunden")
+        self.tabs.addTab(self._scrollable_tab(self.product_panel), "Produkte")
+        self.tabs.addTab(self._scrollable_tab(self.order_panel), "Auftraege")
+        self.tabs.addTab(self._scrollable_tab(self.document_panel), "Belege")
+        self.tabs.addTab(self._scrollable_tab(self.report_panel), "Listen")
+        self.tabs.addTab(self._scrollable_tab(self.settings_panel), "Einstellungen")
+        self.tabs.currentChanged.connect(self.refresh_current_tab)
         root_layout.addWidget(self.tabs)
         self.setCentralWidget(root)
 
     def open_orders_tab(self) -> None:
         self.tabs.setCurrentIndex(MAIN_TABS.index("Auftraege"))
+
+    def refresh_current_tab(self, index: int) -> None:
+        if index < 0:
+            return
+        tab_name = self.tabs.tabText(index)
+        for refresh in self.refreshable_panels.get(tab_name, ()):
+            refresh()
 
     def _scrollable_tab(self, panel: QWidget) -> QScrollArea:
         scroll_area = QScrollArea()

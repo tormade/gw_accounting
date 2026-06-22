@@ -4,6 +4,16 @@ Local Windows desktop app for a beverage store, built with Python 3.12 and PySid
 
 ## Development
 
+On macOS, use Homebrew Python 3.12 for the virtual environment. The bundled
+Codex Python runtime can make Qt unable to find the native `cocoa` plugin.
+
+```bash
+brew install python@3.12
+/opt/homebrew/bin/python3.12 -m venv .venv
+source .venv/bin/activate
+python -m pip install -e ".[dev]"
+```
+
 Install the app with development dependencies:
 
 ```bash

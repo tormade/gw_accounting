@@ -30,15 +30,16 @@ def test_create_app_returns_qapplication(monkeypatch):
     assert app.applicationName() == "Getraenkeladen Tool"
 
 
-def test_configure_qt_plugin_path_sets_existing_pyside_plugin_dir(monkeypatch):
+def test_configure_qt_plugin_path_sets_existing_pyside_plugin_root(monkeypatch):
     monkeypatch.delenv("QT_QPA_PLATFORM_PLUGIN_PATH", raising=False)
+    monkeypatch.delenv("QT_PLUGIN_PATH", raising=False)
 
     plugin_path = configure_qt_plugin_path()
 
     assert plugin_path is not None
     assert plugin_path.exists()
-    assert plugin_path.name == "platforms"
-    assert (plugin_path / "libqcocoa.dylib").exists()
+    assert plugin_path.name == "plugins"
+    assert (plugin_path / "platforms" / "libqcocoa.dylib").exists()
 
 
 def test_create_runtime_bootstraps_local_database(tmp_path):

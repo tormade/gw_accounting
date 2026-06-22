@@ -2,7 +2,7 @@ from dataclasses import dataclass
 import os
 from pathlib import Path
 
-from PySide6.QtCore import QTimer
+from PySide6.QtCore import QCoreApplication, QTimer
 from PySide6.QtCore import QLibraryInfo
 from PySide6.QtWidgets import QApplication
 
@@ -25,13 +25,16 @@ def create_runtime(base_dir: Path | None = None) -> AppRuntime:
 
 
 def configure_qt_plugin_path() -> Path | None:
-    configured_path = os.environ.get("QT_QPA_PLATFORM_PLUGIN_PATH")
+    os.environ.pop("QT_QPA_PLATFORM_PLUGIN_PATH", None)
+    configured_path = os.environ.get("QT_PLUGIN_PATH")
     if configured_path and Path(configured_path).exists():
+        QCoreApplication.addLibraryPath(str(Path(configured_path)))
         return Path(configured_path)
 
-    plugin_path = Path(QLibraryInfo.path(QLibraryInfo.LibraryPath.PluginsPath)) / "platforms"
-    if (plugin_path / "libqcocoa.dylib").exists():
-        os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = str(plugin_path)
+    plugin_path = Path(QLibraryInfo.path(QLibraryInfo.LibraryPath.PluginsPath))
+    if (plugin_path / "platforms" / "libqcocoa.dylib").exists():
+        os.environ["QT_PLUGIN_PATH"] = str(plugin_path)
+        QCoreApplication.addLibraryPath(str(plugin_path))
         return plugin_path
     return None
 

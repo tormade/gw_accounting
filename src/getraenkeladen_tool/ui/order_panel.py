@@ -24,6 +24,7 @@ from ..services.numbering_service import suggest_next_numbers
 from ..services.order_service import archive_order, create_order, create_order_documents, list_active_orders
 from ..services.product_service import list_active_products
 from .date_input import DateInput, to_display_date
+from .searchable_select import SearchableSelect
 
 
 ORDER_PANEL_ACTIONS = {
@@ -75,15 +76,11 @@ class OrderPanel(QWidget):
         self.order_ids_by_row = {}
         self.current_order_id = None
 
-        self.customer_search = QLineEdit()
-        self.customer_search.setPlaceholderText("Kunde suchen, z. B. Cafe oder Hotel")
-        self.customer_select = QComboBox()
-        self.customer_select.addItem("Bitte Kunden waehlen", None)
+        self.customer_select = SearchableSelect("Kunde suchen, z. B. Cafe oder Hotel")
         self.customer_summary = QLabel("Noch kein Kunde ausgewaehlt.")
         self.customer_summary.setObjectName("sectionSubtitle")
         self.customer_summary.setWordWrap(True)
-        self.product_select = QComboBox()
-        self.product_select.addItem("Bitte Produkt waehlen", None)
+        self.product_select = SearchableSelect("Produkt suchen, z. B. Spezi oder Wasser")
         self.order_number = QLineEdit()
         self.order_number.setPlaceholderText("z. B. AUF-1001")
         self.delivery_date = DateInput(date.today().isoformat())
@@ -141,7 +138,6 @@ class OrderPanel(QWidget):
             "Wie beim Rechnungsformular: oben stehen Kunde, Lieferdatum, Zeitfenster und Auftragsnummer.",
         )
         customer_form = QFormLayout()
-        customer_form.addRow("Kunde suchen", self.customer_search)
         customer_form.addRow("Kunde", self.customer_select)
         customer_form.addRow("Auftragsnummer", self._number_row(self.order_number, self.suggest_order_number_button))
         customer_form.addRow("Lieferdatum", self.delivery_date)
@@ -227,9 +223,8 @@ class OrderPanel(QWidget):
         self.save_order_button.clicked.connect(self.save_order)
         self.create_documents_button.clicked.connect(self.create_documents_from_order)
         self.refresh_orders_button.clicked.connect(self.refresh_orders)
-        self.customer_search.textChanged.connect(self.filter_customers)
-        self.customer_select.currentIndexChanged.connect(self.apply_selected_customer)
-        self.product_select.currentIndexChanged.connect(self.apply_selected_product)
+        self.customer_select.selection_changed.connect(self.apply_selected_customer)
+        self.product_select.selection_changed.connect(self.apply_selected_product)
         self.orders_table.itemDoubleClicked.connect(lambda _item: self.load_selected_order_id())
         self.orders_table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.orders_table.customContextMenuRequested.connect(self.show_order_context_menu)
@@ -329,48 +324,50 @@ class OrderPanel(QWidget):
         finally:
             session.close()
 
-        self.customer_select.blockSignals(True)
-        self.product_select.blockSignals(True)
-        self.customer_select.clear()
-        self.product_select.clear()
-        self.customer_select.addItem("Bitte Kunden waehlen", None)
-        self.product_select.addItem("Bitte Produkt waehlen", None)
         self.customers_by_id = {customer.id: customer for customer in customers}
         self.customer_rows = customers
         self.products_by_id = {product.id: product for product in products}
-        self._populate_customer_select(customers)
-        for product in products:
-            self.product_select.addItem(product.name, product.id)
-        self.customer_select.blockSignals(False)
-        self.product_select.blockSignals(False)
+        self.customer_select.set_items(
+            [
+                (
+                    customer.name,
+                    customer.id,
+                    " | ".join(
+                        value
+                        for value in (
+                            customer.address or "",
+                            customer.delivery_notes or "",
+                            customer.payment_method or "",
+                        )
+                        if value
+                    ),
+                )
+                for customer in customers
+            ]
+        )
+        self.product_select.set_items(
+            [
+                (
+                    product.name,
+                    product.id,
+                    " | ".join(
+                        value
+                        for value in (
+                            product.article_number or "",
+                            product.unit,
+                            f"{product.standard_price_cents / 100:.2f} EUR",
+                        )
+                        if value
+                    ),
+                )
+                for product in products
+            ]
+        )
         self.apply_selected_customer()
         self.status_label.setText(f"{len(customers)} Kunden und {len(products)} Produkte geladen.")
 
-    def filter_customers(self) -> None:
-        search_text = self.customer_search.text().strip().lower()
-        if not search_text:
-            filtered_customers = self.customer_rows
-        else:
-            filtered_customers = [
-                customer
-                for customer in self.customer_rows
-                if search_text in customer.name.lower()
-                or search_text in (customer.address or "").lower()
-                or search_text in (customer.delivery_notes or "").lower()
-            ]
-        self.customer_select.blockSignals(True)
-        self._populate_customer_select(filtered_customers)
-        self.customer_select.blockSignals(False)
-        self.apply_selected_customer()
-
-    def _populate_customer_select(self, customers: list) -> None:
-        self.customer_select.clear()
-        self.customer_select.addItem("Bitte Kunden waehlen", None)
-        for customer in customers:
-            self.customer_select.addItem(customer.name, customer.id)
-
     def apply_selected_customer(self) -> None:
-        customer_id = self.customer_select.currentData()
+        customer_id = self.customer_select.current_value()
         customer = self.customers_by_id.get(customer_id)
         if customer is None:
             self.customer_summary.setText("Noch kein Kunde ausgewaehlt.")
@@ -383,7 +380,7 @@ class OrderPanel(QWidget):
         self.customer_summary.setText(" | ".join(details))
 
     def apply_selected_product(self) -> None:
-        product_id = self.product_select.currentData()
+        product_id = self.product_select.current_value()
         if product_id is None:
             return
         product = self.products_by_id.get(product_id)
@@ -393,7 +390,7 @@ class OrderPanel(QWidget):
         self.deposit_eur.setText(f"{product.default_deposit_cents / 100:.2f}".replace(".", ","))
 
     def add_order_line(self) -> None:
-        product_id = self.product_select.currentData()
+        product_id = self.product_select.current_value()
         product = self.products_by_id.get(product_id)
         if product is None:
             self.status_label.setText("Bitte zuerst ein Produkt auswaehlen.")
@@ -419,7 +416,7 @@ class OrderPanel(QWidget):
         if self.session_factory is None:
             self.status_label.setText("Keine Datenbankverbindung vorhanden.")
             return
-        customer_id = self.customer_select.currentData()
+        customer_id = self.customer_select.current_value()
         if customer_id is None:
             self.status_label.setText("Bitte zuerst einen Kunden auswaehlen.")
             return
