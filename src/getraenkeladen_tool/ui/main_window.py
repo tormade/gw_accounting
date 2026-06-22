@@ -2,11 +2,12 @@ from pathlib import Path
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
-from PySide6.QtWidgets import QLabel, QMainWindow, QPushButton, QScrollArea, QTabWidget, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QHBoxLayout, QLabel, QMainWindow, QPushButton, QScrollArea, QStackedWidget, QVBoxLayout, QWidget
 
 from .customer_panel import CustomerPanel
 from .dashboard_panel import DashboardPanel
 from .document_workflow_panel import DeliveryNotePanel, InvoicePanel
+from .layouts import SidebarNavigation
 from .order_panel import OrderPanel
 from .product_panel import ProductPanel
 from .report_panel import ReportPanel
@@ -44,7 +45,6 @@ class MainWindow(QMainWindow):
         root_layout.setSpacing(0)
         root_layout.addWidget(self._header())
 
-        self.tabs = QTabWidget()
         self.dashboard_panel = DashboardPanel(session_factory=session_factory)
         self.order_panel = OrderPanel(session_factory=session_factory)
         self.delivery_note_panel = DeliveryNotePanel(session_factory=session_factory)
@@ -69,36 +69,47 @@ class MainWindow(QMainWindow):
         self.dashboard_panel.invoice_requested.connect(self.open_invoices_tab)
         self.order_panel.delivery_note_requested.connect(self.open_delivery_note_for_order)
         self.order_panel.invoice_requested.connect(self.open_invoice_for_order)
-        self.tabs.addTab(self._scrollable_tab(self.dashboard_panel), "Start")
-        self.tabs.addTab(self._scrollable_tab(self.order_panel), "Auftraege")
-        self.tabs.addTab(self._scrollable_tab(self.delivery_note_panel), "Lieferscheine")
-        self.tabs.addTab(self._scrollable_tab(self.invoice_panel), "Rechnungen")
-        self.tabs.addTab(self._scrollable_tab(self.customer_panel), "Kunden")
-        self.tabs.addTab(self._scrollable_tab(self.product_panel), "Produkte")
-        self.tabs.addTab(self._scrollable_tab(self.report_panel), "Listen")
-        self.tabs.addTab(self._scrollable_tab(self.settings_panel), "Einstellungen")
-        self.tabs.currentChanged.connect(self.refresh_current_tab)
-        root_layout.addWidget(self.tabs)
+
+        app_shell = QWidget()
+        app_shell.setObjectName("appShell")
+        shell_layout = QHBoxLayout(app_shell)
+        shell_layout.setContentsMargins(0, 0, 0, 0)
+        shell_layout.setSpacing(0)
+        self.navigation = SidebarNavigation(MAIN_TABS)
+        self.pages = QStackedWidget()
+        self.pages.addWidget(self._scrollable_tab(self.dashboard_panel))
+        self.pages.addWidget(self._scrollable_tab(self.order_panel))
+        self.pages.addWidget(self._scrollable_tab(self.delivery_note_panel))
+        self.pages.addWidget(self._scrollable_tab(self.invoice_panel))
+        self.pages.addWidget(self._scrollable_tab(self.customer_panel))
+        self.pages.addWidget(self._scrollable_tab(self.product_panel))
+        self.pages.addWidget(self._scrollable_tab(self.report_panel))
+        self.pages.addWidget(self._scrollable_tab(self.settings_panel))
+        self.navigation.currentRowChanged.connect(self.pages.setCurrentIndex)
+        self.navigation.currentRowChanged.connect(self.refresh_current_tab)
+        shell_layout.addWidget(self.navigation)
+        shell_layout.addWidget(self.pages, 1)
+        root_layout.addWidget(app_shell, 1)
         self.setCentralWidget(root)
 
     def open_orders_tab(self) -> None:
-        self.tabs.setCurrentIndex(MAIN_TABS.index("Auftraege"))
+        self.navigation.setCurrentRow(MAIN_TABS.index("Auftraege"))
 
     def open_invoices_tab(self) -> None:
-        self.tabs.setCurrentIndex(MAIN_TABS.index("Rechnungen"))
+        self.navigation.setCurrentRow(MAIN_TABS.index("Rechnungen"))
 
     def open_delivery_note_for_order(self, order_id: int) -> None:
-        self.tabs.setCurrentIndex(MAIN_TABS.index("Lieferscheine"))
+        self.navigation.setCurrentRow(MAIN_TABS.index("Lieferscheine"))
         self.delivery_note_panel.select_order(order_id)
 
     def open_invoice_for_order(self, order_id: int) -> None:
-        self.tabs.setCurrentIndex(MAIN_TABS.index("Rechnungen"))
+        self.navigation.setCurrentRow(MAIN_TABS.index("Rechnungen"))
         self.invoice_panel.select_order(order_id)
 
     def refresh_current_tab(self, index: int) -> None:
         if index < 0:
             return
-        tab_name = self.tabs.tabText(index)
+        tab_name = MAIN_TABS[index]
         for refresh in self.refreshable_panels.get(tab_name, ()):
             refresh()
 

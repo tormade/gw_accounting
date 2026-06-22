@@ -1,5 +1,17 @@
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QFormLayout, QHBoxLayout, QLabel, QPushButton, QSplitter, QVBoxLayout, QWidget
+from collections.abc import Iterable
+
+from PySide6.QtWidgets import (
+    QFormLayout,
+    QHBoxLayout,
+    QLabel,
+    QListWidget,
+    QListWidgetItem,
+    QPushButton,
+    QSplitter,
+    QVBoxLayout,
+    QWidget,
+)
 
 
 class PageHeader(QWidget):
@@ -54,6 +66,32 @@ class ResponsiveSplitter(QSplitter):
         super().__init__(orientation)
         self.setObjectName("workspaceSplitter")
         self.setChildrenCollapsible(False)
+
+
+class SidebarNavigation(QListWidget):
+    def __init__(self, labels: Iterable[str]) -> None:
+        super().__init__()
+        self.setObjectName("sidebarNavigation")
+        self.setFixedWidth(220)
+        self.setSpacing(4)
+        for label in labels:
+            item = QListWidgetItem(label)
+            item.setTextAlignment(Qt.AlignmentFlag.AlignVCenter)
+            self.addItem(item)
+        self.setCurrentRow(0)
+
+
+class PageToolbar(QWidget):
+    def __init__(self) -> None:
+        super().__init__()
+        self.setObjectName("pageToolbar")
+        self.layout = QHBoxLayout(self)
+        self.layout.setContentsMargins(0, 0, 0, 0)
+        self.layout.setSpacing(10)
+        self.layout.addStretch()
+
+    def add_action(self, button: QPushButton) -> None:
+        self.layout.insertWidget(max(0, self.layout.count() - 1), button)
 
 
 def configure_form_layout(form: QFormLayout) -> None:

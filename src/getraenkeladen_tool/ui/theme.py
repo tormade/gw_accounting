@@ -1,39 +1,53 @@
 APP_STYLESHEET = """
 QMainWindow {
-    background: #f5f5f2;
+    background: #f4f1ea;
     font-size: 14px;
 }
 
 QWidget#brandHeader {
-    background: #ffffff;
-    border-bottom: 3px solid #111111;
+    background: #111111;
+    border-bottom: 0;
 }
 
 QLabel#brandLogo {
-    color: #111111;
+    color: #ffffff;
     font-size: 22px;
     font-weight: 800;
 }
 
 QLabel#brandClaim {
-    color: #111111;
+    color: #f4efe4;
     font-size: 16px;
     font-style: italic;
 }
 
-QTabWidget::pane {
-    border: 1px solid #d8d6cf;
-    background: #ffffff;
+QWidget#appShell {
+    background: #f4f1ea;
 }
 
-QTabBar::tab {
-    background: #ece9e2;
-    color: #111111;
-    padding: 10px 18px;
+QListWidget#sidebarNavigation {
+    background: #151515;
+    border: 0;
+    color: #e8e2d8;
+    font-size: 15px;
+    font-weight: 800;
+    padding: 14px 10px;
 }
 
-QTabBar::tab:selected {
-    background: #111111;
+QListWidget#sidebarNavigation::item {
+    border-radius: 10px;
+    margin: 3px 0;
+    min-height: 38px;
+    padding: 8px 12px;
+}
+
+QListWidget#sidebarNavigation::item:selected {
+    background: #b91c1c;
+    color: #ffffff;
+}
+
+QListWidget#sidebarNavigation::item:hover {
+    background: #2a2a2a;
     color: #ffffff;
 }
 
@@ -69,12 +83,19 @@ QWidget#sectionBox,
 QWidget#documentHeaderCard {
     background: #ffffff;
     border: 1px solid #dedbd2;
-    border-radius: 14px;
+    border-radius: 16px;
     padding: 16px;
 }
 
 QWidget#pageHeader {
     background: transparent;
+}
+
+QWidget#pageToolbar {
+    background: #ffffff;
+    border: 1px solid #dedbd2;
+    border-radius: 12px;
+    padding: 10px;
 }
 
 QWidget#actionCard {
@@ -173,6 +194,9 @@ QTableWidget {
     gridline-color: #ddd8cc;
     selection-background-color: #fde68a;
     selection-color: #111111;
+    border: 1px solid #dedbd2;
+    border-radius: 10px;
+    alternate-background-color: #fbfaf7;
 }
 
 QHeaderView::section {

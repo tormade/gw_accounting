@@ -27,12 +27,25 @@ def test_main_window_wraps_large_tabs_in_scroll_areas():
 
     assert "QScrollArea" in source
     assert "setWidgetResizable(True)" in source
-    assert "self.tabs.addTab(self._scrollable_tab(" in source
+    assert "self.pages.addWidget(self._scrollable_tab(" in source
+
+
+def test_main_window_uses_sidebar_app_shell_instead_of_top_tabs():
+    from pathlib import Path
+
+    source = Path("src/getraenkeladen_tool/ui/main_window.py").read_text(encoding="utf-8")
+
+    assert "QStackedWidget" in source
+    assert "SidebarNavigation" in source
+    assert "self.navigation = SidebarNavigation(MAIN_TABS)" in source
+    assert "self.pages = QStackedWidget()" in source
+    assert "self.navigation.currentRowChanged.connect(self.pages.setCurrentIndex)" in source
+    assert "self.tabs = QTabWidget()" not in source
 
 
 def test_theme_uses_winklmeier_work_tool_direction():
     assert "#111111" in APP_STYLESHEET
-    assert "#f5f5f2" in APP_STYLESHEET
+    assert "#f4f1ea" in APP_STYLESHEET
     assert "#b91c1c" in APP_STYLESHEET
     assert "guidanceBox" in APP_STYLESHEET
     assert "sectionBox" in APP_STYLESHEET
@@ -42,6 +55,9 @@ def test_theme_uses_winklmeier_work_tool_direction():
     assert "pageHeader" in APP_STYLESHEET
     assert "actionCard" in APP_STYLESHEET
     assert "workspaceSplitter" in APP_STYLESHEET
+    assert "appShell" in APP_STYLESHEET
+    assert "sidebarNavigation" in APP_STYLESHEET
+    assert "pageToolbar" in APP_STYLESHEET
 
 
 def test_shared_layout_widgets_are_available():
@@ -52,9 +68,13 @@ def test_shared_layout_widgets_are_available():
     assert "class PageHeader" in source
     assert "class ActionCard" in source
     assert "class ResponsiveSplitter" in source
+    assert "class SidebarNavigation" in source
+    assert "class PageToolbar" in source
     assert 'setObjectName("pageHeader")' in source
     assert 'setObjectName("actionCard")' in source
     assert 'setObjectName("workspaceSplitter")' in source
+    assert 'setObjectName("sidebarNavigation")' in source
+    assert 'setObjectName("pageToolbar")' in source
 
 
 def test_date_fields_use_calendar_input():
@@ -297,7 +317,7 @@ def test_main_window_refreshes_tab_data_when_user_switches_tabs():
 
     source = Path("src/getraenkeladen_tool/ui/main_window.py").read_text(encoding="utf-8")
 
-    assert "currentChanged.connect(self.refresh_current_tab)" in source
+    assert "currentRowChanged.connect(self.refresh_current_tab)" in source
     assert "def refresh_current_tab" in source
     assert "refresh_master_data" in source
     assert "refresh_products" in source
