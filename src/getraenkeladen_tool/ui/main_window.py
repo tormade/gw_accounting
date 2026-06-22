@@ -6,13 +6,23 @@ from PySide6.QtWidgets import QLabel, QMainWindow, QPushButton, QScrollArea, QTa
 
 from .customer_panel import CustomerPanel
 from .dashboard_panel import DashboardPanel
+from .document_workflow_panel import DeliveryNotePanel, InvoicePanel
 from .order_panel import OrderPanel
 from .product_panel import ProductPanel
 from .report_panel import ReportPanel
 from .settings_panel import SettingsPanel
 
 
-MAIN_TABS = ("Start", "Kunden", "Produkte", "Auftraege", "Listen", "Einstellungen")
+MAIN_TABS = (
+    "Start",
+    "Auftraege",
+    "Lieferscheine",
+    "Rechnungen",
+    "Kunden",
+    "Produkte",
+    "Listen",
+    "Einstellungen",
+)
 MAIN_WINDOW_INITIAL_SIZE = (1180, 760)
 MAIN_WINDOW_MINIMUM_SIZE = (900, 560)
 BRAND_DIR = Path(__file__).resolve().parents[3] / "assets" / "brand"
@@ -36,25 +46,31 @@ class MainWindow(QMainWindow):
 
         self.tabs = QTabWidget()
         self.dashboard_panel = DashboardPanel(session_factory=session_factory)
+        self.order_panel = OrderPanel(session_factory=session_factory)
+        self.delivery_note_panel = DeliveryNotePanel(session_factory=session_factory)
+        self.invoice_panel = InvoicePanel(session_factory=session_factory)
         self.customer_panel = CustomerPanel(session_factory=session_factory)
         self.product_panel = ProductPanel(session_factory=session_factory)
-        self.order_panel = OrderPanel(session_factory=session_factory)
         self.report_panel = ReportPanel(session_factory=session_factory)
         self.settings_panel = SettingsPanel(session_factory=session_factory)
         self.refreshable_panels = {
             "Start": (self.dashboard_panel.refresh_dashboard,),
+            "Auftraege": (self.order_panel.refresh_master_data, self.order_panel.refresh_orders),
+            "Lieferscheine": (self.delivery_note_panel.refresh_master_data, self.delivery_note_panel.refresh_orders),
+            "Rechnungen": (self.invoice_panel.refresh_master_data, self.invoice_panel.refresh_orders),
             "Kunden": (self.customer_panel.refresh_customers,),
             "Produkte": (self.product_panel.refresh_units, self.product_panel.refresh_products),
-            "Auftraege": (self.order_panel.refresh_master_data, self.order_panel.refresh_orders),
             "Listen": (self.report_panel.refresh_all_lists,),
             "Einstellungen": (self.settings_panel.refresh_units,),
         }
 
         self.dashboard_panel.new_delivery_requested.connect(self.open_orders_tab)
         self.tabs.addTab(self._scrollable_tab(self.dashboard_panel), "Start")
+        self.tabs.addTab(self._scrollable_tab(self.order_panel), "Auftraege")
+        self.tabs.addTab(self._scrollable_tab(self.delivery_note_panel), "Lieferscheine")
+        self.tabs.addTab(self._scrollable_tab(self.invoice_panel), "Rechnungen")
         self.tabs.addTab(self._scrollable_tab(self.customer_panel), "Kunden")
         self.tabs.addTab(self._scrollable_tab(self.product_panel), "Produkte")
-        self.tabs.addTab(self._scrollable_tab(self.order_panel), "Auftraege")
         self.tabs.addTab(self._scrollable_tab(self.report_panel), "Listen")
         self.tabs.addTab(self._scrollable_tab(self.settings_panel), "Einstellungen")
         self.tabs.currentChanged.connect(self.refresh_current_tab)

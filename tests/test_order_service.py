@@ -3,7 +3,14 @@ from pathlib import Path
 from getraenkeladen_tool.models import Document, OpenItem
 from openpyxl import load_workbook
 
-from getraenkeladen_tool.schemas import CustomerCreate, DepositReturnCreate, OrderCreate, OrderLineCreate, ProductCreate
+from getraenkeladen_tool.schemas import (
+    CustomerCreate,
+    DepositReturnCreate,
+    DocumentLineItem,
+    OrderCreate,
+    OrderLineCreate,
+    ProductCreate,
+)
 from getraenkeladen_tool.services.customer_service import create_customer
 from getraenkeladen_tool.services.order_service import (
     archive_order,
@@ -285,6 +292,39 @@ def test_create_order_invoice_generates_only_invoice_and_open_item(session, tmp_
     assert excel_sheet["F43"].value == 54.57
 
 
+def test_create_invoice_can_use_adjusted_document_positions_without_changing_order(session, tmp_path: Path):
+    customer = create_customer(session, CustomerCreate(name="Gasthof Mitte", folder_path=str(tmp_path / "Gasthof Mitte")))
+    product = create_product(session, ProductCreate(name="Wasser", unit="Kiste", standard_price_cents=1299))
+    order = create_order(
+        session,
+        OrderCreate(
+            order_number="AUF-3301",
+            customer_id=customer.id,
+            order_date="2026-06-21",
+            delivery_date="2026-06-22",
+            lines=[OrderLineCreate(product_id=product.id, quantity=1, deposit_cents=330)],
+        ),
+    )
+
+    document = create_order_invoice(
+        session,
+        order.id,
+        "RG-3301",
+        line_items=[DocumentLineItem(name="Wasser angepasst", quantity=2, unit_price_cents=1000, deposit_cents=330)],
+        deposit_returns=[DepositReturnCreate(name="Leergut", quantity=1, deposit_cents=330)],
+        datev_upload_dir=tmp_path / "DATEV",
+    )
+
+    loaded_order = get_order(session, order.id)
+    excel_sheet = load_workbook(document.excel_path, data_only=True).active
+
+    assert loaded_order.lines[0].product_name == "Wasser"
+    assert loaded_order.lines[0].quantity == 1
+    assert excel_sheet["A13"].value == 2
+    assert excel_sheet["B13"].value == "Wasser angepasst"
+    assert excel_sheet["F43"].value == 23.3
+
+
 def test_list_active_orders_excludes_archived_orders(session, tmp_path: Path):
     customer = create_customer(session, CustomerCreate(name="Cafe Nord", folder_path=str(tmp_path / "Cafe Nord")))
     product = create_product(session, ProductCreate(name="Wasser", unit="Kiste", standard_price_cents=1299))
@@ -314,6 +354,36 @@ def test_list_active_orders_excludes_archived_orders(session, tmp_path: Path):
 
     assert orders == [active]
     assert archived not in orders
+
+
+def test_list_active_orders_can_filter_by_customer(session, tmp_path: Path):
+    north = create_customer(session, CustomerCreate(name="Cafe Nord", folder_path=str(tmp_path / "Cafe Nord")))
+    south = create_customer(session, CustomerCreate(name="Cafe Sued", folder_path=str(tmp_path / "Cafe Sued")))
+    product = create_product(session, ProductCreate(name="Wasser", unit="Kiste", standard_price_cents=1299))
+    north_order = create_order(
+        session,
+        OrderCreate(
+            order_number="AUF-4001",
+            customer_id=north.id,
+            order_date="2026-06-21",
+            delivery_date="2026-06-22",
+            lines=[OrderLineCreate(product_id=product.id, quantity=1)],
+        ),
+    )
+    create_order(
+        session,
+        OrderCreate(
+            order_number="AUF-4002",
+            customer_id=south.id,
+            order_date="2026-06-21",
+            delivery_date="2026-06-22",
+            lines=[OrderLineCreate(product_id=product.id, quantity=1)],
+        ),
+    )
+
+    orders = list_active_orders(session, customer_id=north.id)
+
+    assert orders == [north_order]
 
 
 def test_archive_order_hides_order_from_active_list(session, tmp_path: Path):

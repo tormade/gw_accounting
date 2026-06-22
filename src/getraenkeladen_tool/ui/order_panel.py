@@ -1,4 +1,3 @@
-from pathlib import Path
 from datetime import date
 
 from PySide6.QtWidgets import (
@@ -17,8 +16,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from PySide6.QtCore import Qt, QUrl
-from PySide6.QtGui import QDesktopServices
+from PySide6.QtCore import Qt
 
 from ..schemas import DepositReturnCreate, OrderCreate, OrderLineCreate
 from ..services.customer_service import list_active_customers
@@ -26,8 +24,6 @@ from ..services.numbering_service import suggest_next_numbers
 from ..services.order_service import (
     archive_order,
     create_order,
-    create_order_delivery_order,
-    create_order_invoice,
     get_order,
     list_active_orders,
     update_order,
@@ -40,20 +36,16 @@ from .searchable_select import SearchableSelect
 ORDER_PANEL_ACTIONS = {
     "orderHelpButton": "?",
     "newOrderButton": "Neuer Auftrag",
+    "copyOrderButton": "Aus Auftrag kopieren",
     "refreshOrderDataButton": "Stammdaten laden",
     "suggestOrderNumberButton": "Auftragsnummer vorschlagen",
-    "suggestDeliveryNoteNumberButton": "Lieferscheinnummer vorschlagen",
-    "suggestInvoiceNumberButton": "Rechnungsnummer vorschlagen",
     "addOrderLineButton": "Position hinzufuegen",
     "removeOrderLineButton": "Position entfernen",
     "addDepositReturnButton": "Pfand zurueck hinzufuegen",
     "removeDepositReturnButton": "Pfand zurueck entfernen",
     "saveOrderButton": "Auftrag speichern",
-    "createDeliveryOrderButton": "LS Excel/PDF erstellen",
-    "createInvoiceButton": "Rechnung Excel/PDF erstellen",
-    "openLastExcelButton": "Excel oeffnen",
-    "openLastPdfButton": "PDF oeffnen",
     "refreshOrdersButton": "Auftragsliste laden",
+    "customerFilterLabel": "Auftraege filtern nach Kunde",
 }
 
 ORDER_LINE_COLUMNS = ("Produkt", "Menge", "Preis EUR", "Pfand EUR", "Summe EUR")
@@ -62,23 +54,21 @@ ORDER_COLUMNS = ("Auftrag", "Kunde", "Lieferdatum", "Zeitfenster", "Status")
 ORDER_PANEL_SECTIONS = (
     "Kopfdaten",
     "Positionen",
-    "Excel/PDF aus Auftrag erstellen",
-    "Bestehende Auftraege",
+    "Auftraege verwalten",
 )
 ORDER_HELP_TEXT = (
     "Kopfdaten: Kunde, Lieferdatum, Zeitfenster und Auftragsnummer pruefen.\n\n"
     "Positionen: Produkt waehlen, Menge eintragen und Position hinzufuegen.\n\n"
-    "Belegabschluss: Erst speichern, danach entweder Lieferauftrag (LS) oder Rechnung gezielt erzeugen."
+    "Auftragsliste: Vorhandene Auftraege oeffnen, archivieren oder als Vorlage fuer einen neuen Auftrag kopieren."
 )
 ORDER_GUIDANCE_STEPS = (
     "Kunden suchen und Lieferdatum pruefen.",
     "Produkte hinzufuegen und Positionen kontrollieren.",
-    "Auftrag speichern, danach Lieferauftrag oder Rechnung gezielt erstellen.",
+    "Auftrag speichern oder einen vorhandenen Auftrag als Vorlage kopieren.",
 )
 ORDER_CONTEXT_ACTIONS = {
     "open": "Auftrag oeffnen",
-    "create_delivery_order": "LS Excel/PDF erstellen",
-    "create_invoice": "Rechnung Excel/PDF erstellen",
+    "copy": "Als neuen Auftrag kopieren",
     "archive": "Auftrag archivieren",
 }
 DATE_FIELD_WIDGETS = ("delivery_date",)
@@ -94,12 +84,11 @@ class OrderPanel(QWidget):
         self.order_ids_by_row = {}
         self.current_order_id = None
         self.current_order_status = "geplant"
-        self.last_excel_path: Path | None = None
-        self.last_pdf_path: Path | None = None
 
         self.order_mode_label = QLabel("Neuer Auftrag")
         self.order_mode_label.setObjectName("stepTitle")
         self.customer_select = SearchableSelect("Kunde suchen, z. B. Cafe oder Hotel")
+        self.order_customer_filter = SearchableSelect("Alle Kunden anzeigen")
         self.customer_summary = QLabel("Noch kein Kunde ausgewaehlt.")
         self.customer_summary.setObjectName("sectionSubtitle")
         self.customer_summary.setWordWrap(True)
@@ -109,10 +98,6 @@ class OrderPanel(QWidget):
         self.delivery_date = DateInput(date.today().isoformat())
         self.delivery_slot = QComboBox()
         self.delivery_slot.addItems(["", "vormittag", "nachmittag", "ganztags"])
-        self.delivery_note_number = QLineEdit()
-        self.delivery_note_number.setPlaceholderText("z. B. LS-1001")
-        self.invoice_number = QLineEdit()
-        self.invoice_number.setPlaceholderText("z. B. RG-1001")
         self.quantity = QSpinBox()
         self.quantity.setRange(1, 999)
         self.unit_price_eur = QLineEdit()
@@ -140,11 +125,6 @@ class OrderPanel(QWidget):
         self.orders_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         self.status_label = QLabel("Schritt 1: Stammdaten laden, dann Kunde und Produkte auswaehlen.")
         self.status_label.setObjectName("muted")
-        self.document_result_label = QLabel(
-            "Noch keine Datei erstellt. Erst Auftrag speichern, dann LS oder Rechnung als Excel/PDF erzeugen."
-        )
-        self.document_result_label.setObjectName("sectionSubtitle")
-        self.document_result_label.setWordWrap(True)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(32, 28, 32, 28)
@@ -167,21 +147,14 @@ class OrderPanel(QWidget):
 
         self.refresh_data_button = self._button("refreshOrderDataButton")
         self.suggest_order_number_button = self._button("suggestOrderNumberButton")
-        self.suggest_delivery_note_number_button = self._button("suggestDeliveryNoteNumberButton")
-        self.suggest_invoice_number_button = self._button("suggestInvoiceNumberButton")
         self.add_line_button = self._button("addOrderLineButton")
         self.remove_line_button = self._button("removeOrderLineButton")
         self.add_deposit_return_button = self._button("addDepositReturnButton")
         self.remove_deposit_return_button = self._button("removeDepositReturnButton")
         self.save_order_button = self._button("saveOrderButton")
-        self.create_delivery_order_button = self._button("createDeliveryOrderButton")
-        self.create_invoice_button = self._button("createInvoiceButton")
-        self.open_last_excel_button = self._button("openLastExcelButton")
-        self.open_last_pdf_button = self._button("openLastPdfButton")
-        self.open_last_excel_button.setEnabled(False)
-        self.open_last_pdf_button.setEnabled(False)
         self.refresh_orders_button = self._button("refreshOrdersButton")
         self.new_order_button = self._button("newOrderButton")
+        self.copy_order_button = self._button("copyOrderButton")
 
         customer_box, customer_layout = self._section(
             ORDER_PANEL_SECTIONS[0],
@@ -198,6 +171,7 @@ class OrderPanel(QWidget):
         customer_actions = QHBoxLayout()
         customer_actions.addWidget(self.new_order_button)
         customer_actions.addWidget(self.refresh_data_button)
+        customer_actions.addWidget(self.save_order_button)
         customer_actions.addStretch()
         customer_layout.addLayout(customer_actions)
         layout.addWidget(customer_box)
@@ -247,37 +221,16 @@ class OrderPanel(QWidget):
         bottom_row.setSpacing(18)
         layout.addLayout(bottom_row)
 
-        document_box, document_layout = self._section(
-            ORDER_PANEL_SECTIONS[2],
-            "Erst Auftrag speichern. Danach wird die Excel-Vorlage automatisch befuellt und als Excel/PDF abgelegt.",
-        )
-        document_form = QFormLayout()
-        document_form.addRow(
-            "LS-Nummer",
-            self._number_row(self.delivery_note_number, self.suggest_delivery_note_number_button),
-        )
-        document_form.addRow(
-            "Rechnungsnummer",
-            self._number_row(self.invoice_number, self.suggest_invoice_number_button),
-        )
-        document_layout.addLayout(document_form)
-        document_actions = QHBoxLayout()
-        document_actions.addWidget(self.save_order_button)
-        document_actions.addWidget(self.create_delivery_order_button)
-        document_actions.addWidget(self.create_invoice_button)
-        document_actions.addWidget(self.open_last_excel_button)
-        document_actions.addWidget(self.open_last_pdf_button)
-        document_actions.addStretch()
-        document_layout.addLayout(document_actions)
-        document_layout.addWidget(self.document_result_label)
-        bottom_row.addWidget(document_box, 1)
-
         orders_box, orders_layout = self._section(
-            ORDER_PANEL_SECTIONS[3],
+            ORDER_PANEL_SECTIONS[2],
             "Vorhandenen Auftrag doppelt anklicken oder per Rechtsklick weiterbearbeiten.",
         )
+        filter_form = QFormLayout()
+        filter_form.addRow(ORDER_PANEL_ACTIONS["customerFilterLabel"], self.order_customer_filter)
+        orders_layout.addLayout(filter_form)
         orders_actions = QHBoxLayout()
         orders_actions.addWidget(self.refresh_orders_button)
+        orders_actions.addWidget(self.copy_order_button)
         orders_actions.addStretch()
         orders_layout.addLayout(orders_actions)
         orders_layout.addWidget(self.orders_table)
@@ -288,22 +241,18 @@ class OrderPanel(QWidget):
         self.help_button.clicked.connect(self.show_help)
         self.refresh_data_button.clicked.connect(self.refresh_master_data)
         self.suggest_order_number_button.clicked.connect(self.suggest_order_number)
-        self.suggest_delivery_note_number_button.clicked.connect(self.suggest_delivery_note_number)
-        self.suggest_invoice_number_button.clicked.connect(self.suggest_invoice_number)
         self.new_order_button.clicked.connect(self.reset_order_form)
+        self.copy_order_button.clicked.connect(self.copy_selected_order_as_new)
         self.add_line_button.clicked.connect(self.add_order_line)
         self.remove_line_button.clicked.connect(self.remove_selected_order_line)
         self.add_deposit_return_button.clicked.connect(self.add_deposit_return)
         self.remove_deposit_return_button.clicked.connect(self.remove_selected_deposit_return)
         self.save_order_button.clicked.connect(self.save_order)
-        self.create_delivery_order_button.clicked.connect(self.create_delivery_order_from_order)
-        self.create_invoice_button.clicked.connect(self.create_invoice_from_order)
-        self.open_last_excel_button.clicked.connect(self.open_last_excel_file)
-        self.open_last_pdf_button.clicked.connect(self.open_last_pdf_file)
         self.refresh_orders_button.clicked.connect(self.refresh_orders)
         self.order_lines_table.itemChanged.connect(self.update_order_total)
         self.deposit_returns_table.itemChanged.connect(self.update_order_total)
         self.customer_select.selection_changed.connect(self.apply_selected_customer)
+        self.order_customer_filter.selection_changed.connect(self.refresh_orders)
         self.product_select.selection_changed.connect(self.apply_selected_product)
         self.orders_table.itemDoubleClicked.connect(lambda _item: self.load_selected_order_id())
         self.orders_table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
@@ -342,20 +291,6 @@ class OrderPanel(QWidget):
             return
         self.order_number.setText(suggestions.order_number)
         self.status_label.setText("Auftragsnummer vorgeschlagen. Sie kann manuell ueberschrieben werden.")
-
-    def suggest_delivery_note_number(self) -> None:
-        suggestions = self._number_suggestions()
-        if suggestions is None:
-            return
-        self.delivery_note_number.setText(suggestions.delivery_note_number)
-        self.status_label.setText("Lieferscheinnummer vorgeschlagen. Sie kann manuell ueberschrieben werden.")
-
-    def suggest_invoice_number(self) -> None:
-        suggestions = self._number_suggestions()
-        if suggestions is None:
-            return
-        self.invoice_number.setText(suggestions.invoice_number)
-        self.status_label.setText("Rechnungsnummer vorgeschlagen. Sie kann manuell ueberschrieben werden.")
 
     def _guidance_box(self) -> QWidget:
         box = QWidget()
@@ -396,8 +331,6 @@ class OrderPanel(QWidget):
     def reset_order_form(self) -> None:
         self.current_order_id = None
         self.current_order_status = "geplant"
-        self.last_excel_path = None
-        self.last_pdf_path = None
         self.order_mode_label.setText("Neuer Auftrag")
         self.order_number.clear()
         self.delivery_date.set_iso_date(date.today().isoformat())
@@ -407,11 +340,6 @@ class OrderPanel(QWidget):
         self.deposit_return_name.clear()
         self.deposit_return_quantity.setValue(1)
         self.deposit_return_eur.clear()
-        self.document_result_label.setText(
-            "Noch keine Datei erstellt. Erst Auftrag speichern, dann LS oder Rechnung als Excel/PDF erzeugen."
-        )
-        self.open_last_excel_button.setEnabled(False)
-        self.open_last_pdf_button.setEnabled(False)
         self.update_order_total()
         self.suggest_order_number()
         self.status_label.setText("Neuer Auftrag gestartet.")
@@ -446,7 +374,7 @@ class OrderPanel(QWidget):
         self.customer_rows = customers
         self.products_by_id = {product.id: product for product in products}
         self.customer_select.set_items(
-            [
+            customer_items := [
                 (
                     customer.name,
                     customer.id,
@@ -463,6 +391,7 @@ class OrderPanel(QWidget):
                 for customer in customers
             ]
         )
+        self.order_customer_filter.set_items([("Alle Kunden", None, "Keine Einschraenkung")] + customer_items)
         self.product_select.set_items(
             [
                 (
@@ -578,93 +507,25 @@ class OrderPanel(QWidget):
             )
             if self.current_order_id is None:
                 order = create_order(session, payload)
-                self.status_label.setText("Auftrag gespeichert. Jetzt Lieferauftrag oder Rechnung erstellen.")
+                self.status_label.setText("Auftrag gespeichert. Lieferschein oder Rechnung im passenden Reiter erstellen.")
             else:
                 order = update_order(session, self.current_order_id, payload)
-                self.status_label.setText("Auftrag aktualisiert. Excel/PDF bei Bedarf neu erstellen.")
+                self.status_label.setText("Auftrag aktualisiert.")
             self.current_order_id = order.id
             self.current_order_status = order.status
             self.order_mode_label.setText(f"Auftrag bearbeiten: {order.order_number}")
-            self.show_orders(list_active_orders(session))
+            self.show_orders(list_active_orders(session, customer_id=self.order_customer_filter.current_value()))
         finally:
             session.close()
-
-    def create_delivery_order_from_order(self) -> None:
-        if self.session_factory is None:
-            self.status_label.setText("Keine Datenbankverbindung vorhanden.")
-            return
-        if self.current_order_id is None:
-            self.load_selected_order_id()
-        if self.current_order_id is None:
-            self.status_label.setText("Bitte zuerst Auftrag speichern.")
-            return
-        session = self.session_factory()
-        try:
-            document = create_order_delivery_order(
-                session,
-                self.current_order_id,
-                self.delivery_note_number.text().strip(),
-            )
-            self.show_orders(list_active_orders(session))
-            self.current_order_status = "lieferauftrag_erstellt"
-            self._show_document_result("Lieferauftrag", document.excel_path, document.pdf_path)
-        finally:
-            session.close()
-
-    def create_invoice_from_order(self) -> None:
-        if self.session_factory is None:
-            self.status_label.setText("Keine Datenbankverbindung vorhanden.")
-            return
-        if self.current_order_id is None:
-            self.load_selected_order_id()
-        if self.current_order_id is None:
-            self.status_label.setText("Bitte zuerst Auftrag speichern.")
-            return
-        session = self.session_factory()
-        try:
-            document = create_order_invoice(
-                session,
-                self.current_order_id,
-                self.invoice_number.text().strip(),
-                datev_upload_dir=Path.cwd() / "outputs" / "datev_upload",
-            )
-            self.show_orders(list_active_orders(session))
-            self.current_order_status = "fakturiert"
-            self._show_document_result("Rechnung", document.excel_path, document.pdf_path)
-        finally:
-            session.close()
-
-    def _show_document_result(self, document_label: str, excel_path: str, pdf_path: str) -> None:
-        excel = Path(excel_path)
-        pdf = Path(pdf_path)
-        self.last_excel_path = excel
-        self.last_pdf_path = pdf
-        self.open_last_excel_button.setEnabled(True)
-        self.open_last_pdf_button.setEnabled(True)
-        self.status_label.setText(f"{document_label} erstellt. Excel und PDF liegen im Kundenordner.")
-        self.document_result_label.setText(
-            f"{document_label} erstellt.\nExcel: {excel}\nPDF: {pdf}"
-        )
-
-    def open_last_excel_file(self) -> None:
-        self._open_local_file(self.last_excel_path)
-
-    def open_last_pdf_file(self) -> None:
-        self._open_local_file(self.last_pdf_path)
-
-    def _open_local_file(self, path: Path | None) -> None:
-        if path is None or not path.exists():
-            self.status_label.setText("Noch keine Datei zum Oeffnen vorhanden.")
-            return
-        QDesktopServices.openUrl(QUrl.fromLocalFile(str(path)))
 
     def refresh_orders(self) -> None:
         if self.session_factory is None:
             self.status_label.setText("Keine Datenbankverbindung vorhanden.")
             return
+        customer_id = self.order_customer_filter.current_value()
         session = self.session_factory()
         try:
-            self.show_orders(list_active_orders(session))
+            self.show_orders(list_active_orders(session, customer_id=customer_id))
         finally:
             session.close()
 
@@ -721,6 +582,20 @@ class OrderPanel(QWidget):
                 deposit_return.deposit_cents,
             )
 
+    def copy_selected_order_as_new(self) -> None:
+        if self.current_order_id is None:
+            self.load_selected_order_id()
+        if self.current_order_id is None:
+            self.status_label.setText("Bitte zuerst einen Auftrag aus der Liste auswaehlen.")
+            return
+        original_number = self.order_number.text().strip()
+        self.current_order_id = None
+        self.current_order_status = "geplant"
+        self.order_mode_label.setText(f"Kopie aus Auftrag {original_number}")
+        self.delivery_date.set_iso_date(date.today().isoformat())
+        self.suggest_order_number()
+        self.status_label.setText("Auftrag kopiert. Bitte Datum pruefen und als neuen Auftrag speichern.")
+
     def archive_selected_order(self) -> None:
         if self.session_factory is None:
             self.status_label.setText("Keine Datenbankverbindung vorhanden.")
@@ -735,7 +610,7 @@ class OrderPanel(QWidget):
         try:
             order = archive_order(session, self.current_order_id)
             self.current_order_id = None
-            self.show_orders(list_active_orders(session))
+            self.show_orders(list_active_orders(session, customer_id=self.order_customer_filter.current_value()))
             self.status_label.setText(f"Auftrag archiviert: {order.order_number}")
         finally:
             session.close()
@@ -745,18 +620,14 @@ class OrderPanel(QWidget):
             return
         menu = QMenu(self)
         open_action = menu.addAction(ORDER_CONTEXT_ACTIONS["open"])
-        delivery_order_action = menu.addAction(ORDER_CONTEXT_ACTIONS["create_delivery_order"])
-        invoice_action = menu.addAction(ORDER_CONTEXT_ACTIONS["create_invoice"])
+        copy_action = menu.addAction(ORDER_CONTEXT_ACTIONS["copy"])
         archive_action = menu.addAction(ORDER_CONTEXT_ACTIONS["archive"])
         selected = menu.exec(self.orders_table.viewport().mapToGlobal(position))
         if selected == open_action:
             self.load_selected_order_id()
-        elif selected == delivery_order_action:
+        elif selected == copy_action:
             self.load_selected_order_id()
-            self.create_delivery_order_from_order()
-        elif selected == invoice_action:
-            self.load_selected_order_id()
-            self.create_invoice_from_order()
+            self.copy_selected_order_as_new()
         elif selected == archive_action:
             self.load_selected_order_id()
             self.archive_selected_order()

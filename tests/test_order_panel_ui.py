@@ -20,15 +20,16 @@ def test_order_panel_uses_searchable_customer_and_product_selects():
     assert "self.product_select.current_value()" in source
 
 
-def test_order_panel_makes_excel_pdf_generation_flow_visible():
-    source = Path("src/getraenkeladen_tool/ui/order_panel.py").read_text(encoding="utf-8")
+def test_document_workflow_panels_make_excel_pdf_generation_flow_visible():
+    source = Path("src/getraenkeladen_tool/ui/document_workflow_panel.py").read_text(encoding="utf-8")
 
-    assert "Excel/PDF aus Auftrag erstellen" in source
-    assert "Erst Auftrag speichern" in source
-    assert "self.document_result_label" in source
+    assert "class DeliveryNotePanel" in source
+    assert "class InvoicePanel" in source
+    assert "Lieferschein Excel/PDF erstellen" in source
+    assert "Rechnung Excel/PDF erstellen" in source
+    assert "Auftrag waehlen" in source
     assert "Excel:" in source
     assert "PDF:" in source
-    assert "Bitte zuerst Auftrag speichern." in source
 
 
 def test_order_panel_supports_editing_existing_orders():
@@ -59,17 +60,15 @@ def test_order_panel_shows_running_order_total():
     assert "Auftragssumme" in source
 
 
-def test_order_panel_exposes_deposit_returns_new_order_and_open_file_actions():
+def test_order_panel_exposes_deposit_returns_new_order_and_copy_actions():
     source = Path("src/getraenkeladen_tool/ui/order_panel.py").read_text(encoding="utf-8")
 
     assert '"newOrderButton": "Neuer Auftrag"' in source
+    assert '"copyOrderButton": "Aus Auftrag kopieren"' in source
     assert '"addDepositReturnButton": "Pfand zurueck hinzufuegen"' in source
-    assert '"openLastExcelButton": "Excel oeffnen"' in source
-    assert '"openLastPdfButton": "PDF oeffnen"' in source
     assert "self.deposit_returns_table" in source
     assert "def reset_order_form" in source
-    assert "def open_last_excel_file" in source
-    assert "def open_last_pdf_file" in source
+    assert "def copy_selected_order_as_new" in source
 
 
 def test_order_panel_warns_before_changing_documented_orders():
@@ -78,5 +77,25 @@ def test_order_panel_warns_before_changing_documented_orders():
     assert "self.current_order_status" in source
     assert "def confirm_documented_order_change" in source
     assert "Belege neu erstellen" in source
-    assert 'self.current_order_status = "lieferauftrag_erstellt"' in source
-    assert 'self.current_order_status = "fakturiert"' in source
+
+
+def test_order_panel_filters_orders_by_customer_and_can_copy_existing_order():
+    source = Path("src/getraenkeladen_tool/ui/order_panel.py").read_text(encoding="utf-8")
+
+    assert '"copyOrderButton": "Aus Auftrag kopieren"' in source
+    assert '"customerFilterLabel": "Auftraege filtern nach Kunde"' in source
+    assert "self.order_customer_filter = SearchableSelect" in source
+    assert "self.order_customer_filter.selection_changed.connect(self.refresh_orders)" in source
+    assert "def copy_selected_order_as_new" in source
+    assert "self.current_order_id = None" in source
+    assert "Kopie aus Auftrag" in source
+    assert "list_active_orders(session, customer_id=customer_id)" in source
+
+
+def test_order_panel_focuses_on_order_management_not_document_creation():
+    source = Path("src/getraenkeladen_tool/ui/order_panel.py").read_text(encoding="utf-8")
+
+    assert '"saveOrderButton": "Auftrag speichern"' in source
+    assert '"createDeliveryOrderButton"' not in source
+    assert '"createInvoiceButton"' not in source
+    assert "Excel/PDF aus Auftrag erstellen" not in source

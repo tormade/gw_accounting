@@ -3,7 +3,16 @@ from getraenkeladen_tool.ui.theme import APP_STYLESHEET
 
 
 def test_main_window_exposes_first_version_tabs():
-    assert MAIN_TABS == ("Start", "Kunden", "Produkte", "Auftraege", "Listen", "Einstellungen")
+    assert MAIN_TABS == (
+        "Start",
+        "Auftraege",
+        "Lieferscheine",
+        "Rechnungen",
+        "Kunden",
+        "Produkte",
+        "Listen",
+        "Einstellungen",
+    )
 
 
 def test_main_window_uses_resizable_screen_friendly_size():
@@ -70,40 +79,47 @@ def test_order_tab_exposes_guided_order_actions():
     assert ORDER_PANEL_ACTIONS == {
         "orderHelpButton": "?",
         "newOrderButton": "Neuer Auftrag",
+        "copyOrderButton": "Aus Auftrag kopieren",
         "refreshOrderDataButton": "Stammdaten laden",
         "suggestOrderNumberButton": "Auftragsnummer vorschlagen",
-        "suggestDeliveryNoteNumberButton": "Lieferscheinnummer vorschlagen",
-        "suggestInvoiceNumberButton": "Rechnungsnummer vorschlagen",
         "addOrderLineButton": "Position hinzufuegen",
         "removeOrderLineButton": "Position entfernen",
         "addDepositReturnButton": "Pfand zurueck hinzufuegen",
         "removeDepositReturnButton": "Pfand zurueck entfernen",
         "saveOrderButton": "Auftrag speichern",
-        "createDeliveryOrderButton": "LS Excel/PDF erstellen",
-        "createInvoiceButton": "Rechnung Excel/PDF erstellen",
-        "openLastExcelButton": "Excel oeffnen",
-        "openLastPdfButton": "PDF oeffnen",
         "refreshOrdersButton": "Auftragsliste laden",
+        "customerFilterLabel": "Auftraege filtern nach Kunde",
     }
     assert ORDER_PANEL_SECTIONS == (
         "Kopfdaten",
         "Positionen",
-        "Excel/PDF aus Auftrag erstellen",
-        "Bestehende Auftraege",
+        "Auftraege verwalten",
     )
     assert "Kopfdaten" in ORDER_HELP_TEXT
     assert "Positionen" in ORDER_HELP_TEXT
     assert ORDER_GUIDANCE_STEPS == (
         "Kunden suchen und Lieferdatum pruefen.",
         "Produkte hinzufuegen und Positionen kontrollieren.",
-        "Auftrag speichern, danach Lieferauftrag oder Rechnung gezielt erstellen.",
+        "Auftrag speichern oder einen vorhandenen Auftrag als Vorlage kopieren.",
     )
     assert ORDER_CONTEXT_ACTIONS == {
         "open": "Auftrag oeffnen",
-        "create_delivery_order": "LS Excel/PDF erstellen",
-        "create_invoice": "Rechnung Excel/PDF erstellen",
+        "copy": "Als neuen Auftrag kopieren",
         "archive": "Auftrag archivieren",
     }
+
+
+def test_main_window_has_dedicated_delivery_and_invoice_tabs():
+    from pathlib import Path
+
+    source = Path("src/getraenkeladen_tool/ui/main_window.py").read_text(encoding="utf-8")
+
+    assert "DeliveryNotePanel" in source
+    assert "InvoicePanel" in source
+    assert "self.delivery_note_panel" in source
+    assert "self.invoice_panel" in source
+    assert '"Lieferscheine"' in source
+    assert '"Rechnungen"' in source
 
 
 def test_customer_tab_exposes_master_data_actions():

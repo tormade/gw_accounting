@@ -97,15 +97,16 @@ def get_order(session: Session, order_id: int) -> Order:
     return order
 
 
-def list_active_orders(session: Session) -> list[Order]:
-    return list(
-        session.scalars(
-            select(Order)
-            .options(selectinload(Order.lines), selectinload(Order.deposit_returns), selectinload(Order.customer))
-            .where(Order.status != "archiviert")
-            .order_by(Order.delivery_date, Order.delivery_slot, Order.order_number)
-        )
+def list_active_orders(session: Session, customer_id: int | None = None) -> list[Order]:
+    query = (
+        select(Order)
+        .options(selectinload(Order.lines), selectinload(Order.deposit_returns), selectinload(Order.customer))
+        .where(Order.status != "archiviert")
+        .order_by(Order.delivery_date, Order.delivery_slot, Order.order_number)
     )
+    if customer_id is not None:
+        query = query.where(Order.customer_id == customer_id)
+    return list(session.scalars(query))
 
 
 def archive_order(session: Session, order_id: int) -> Order:
@@ -127,7 +128,13 @@ def create_order_documents(
     return [delivery_order, invoice]
 
 
-def create_order_delivery_order(session: Session, order_id: int, delivery_order_number: str) -> Document:
+def create_order_delivery_order(
+    session: Session,
+    order_id: int,
+    delivery_order_number: str,
+    line_items: list[DocumentLineItem] | None = None,
+    deposit_returns: list[DepositReturnCreate] | None = None,
+) -> Document:
     order = get_order(session, order_id)
     delivery_order = create_document(
         session,
@@ -138,8 +145,8 @@ def create_order_delivery_order(session: Session, order_id: int, delivery_order_
             document_number=delivery_order_number,
             delivery_date=order.delivery_date,
             delivery_slot=order.delivery_slot,
-            line_items=_document_line_items(order),
-            deposit_returns=_document_deposit_returns(order),
+            line_items=line_items if line_items is not None else _document_line_items(order),
+            deposit_returns=deposit_returns if deposit_returns is not None else _document_deposit_returns(order),
         ),
     )
     if order.status != "fakturiert":
@@ -153,6 +160,8 @@ def create_order_invoice(
     session: Session,
     order_id: int,
     invoice_number: str,
+    line_items: list[DocumentLineItem] | None = None,
+    deposit_returns: list[DepositReturnCreate] | None = None,
     datev_upload_dir: Path | None = None,
 ) -> Document:
     order = get_order(session, order_id)
@@ -165,8 +174,8 @@ def create_order_invoice(
             document_number=invoice_number,
             delivery_date=order.delivery_date,
             delivery_slot=order.delivery_slot,
-            line_items=_document_line_items(order),
-            deposit_returns=_document_deposit_returns(order),
+            line_items=line_items if line_items is not None else _document_line_items(order),
+            deposit_returns=deposit_returns if deposit_returns is not None else _document_deposit_returns(order),
         ),
         datev_upload_dir=datev_upload_dir,
     )
