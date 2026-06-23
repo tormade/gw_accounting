@@ -23,13 +23,18 @@ def test_list_customer_assortment_returns_last_quantities_and_current_product_pr
     frucade = next(row for row in rows if row.source_product_name == "Frucade Colamix 20x0,5")
     assert frucade.product_name == "Frucade Colamix 20x0,5"
     assert frucade.last_quantity == 3
+    assert frucade.excel_price_cents == 1048
     assert frucade.current_price_cents == 1190
     assert frucade.current_deposit_cents == 310
-    assert frucade.needs_review is False
+    assert frucade.price_differs_from_central is True
+    assert frucade.price_decision == "offen"
+    assert frucade.needs_review is True
 
     unresolved = next(row for row in rows if row.source_product_name == "Labert. ACE 20x0,5")
     assert unresolved.product_name is None
     assert unresolved.last_quantity == 0
+    assert unresolved.excel_price_cents == 1698
     assert unresolved.current_price_cents == 1698
     assert unresolved.current_deposit_cents == 310
+    assert unresolved.price_differs_from_central is False
     assert unresolved.needs_review is True

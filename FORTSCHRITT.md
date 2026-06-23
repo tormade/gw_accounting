@@ -20,11 +20,13 @@ Das Produktziel steht in `docs/zielbild.md`: ein schlankes lokales Windows-Buero
 - Robuster Ordnerlauf, der Ausreisser-Dateien meldet und ueberspringt.
 - Artikel-Matching gegen die zentrale Artikelliste mit bestaetigten Alias-Schreibweisen.
 - Kundensortiment-Datenmodell mit letzter Menge, alter Quelle und aktuellem zentralem Preis.
+- Preisabweichungen zwischen Kunden-Excel und zentralem Artikelstamm werden als offene Prueffaelle erkannt.
 
 ## In Arbeit
 
 - Pruefliste fuer Konflikte aus Lieferkundenliste und Kundenordnerdatei.
 - Integration des Kundensortiments in den Hauptscreen Kunde & Bestellung.
+- Warnfenster fuer Preisentscheidungen im Kundensortiment-Hauptweg verdrahten.
 
 ## Offen
 
@@ -39,4 +41,4 @@ Das Produktziel steht in `docs/zielbild.md`: ein schlankes lokales Windows-Buero
 
 ## Naechste Aufgabe
 
-Prueflisten-UI fuer offene Kunden-/Artikelkonflikte bauen und danach das Kundensortiment im Hauptscreen anzeigen.
+Prueflisten-UI fuer offene Kunden-/Artikel-/Preiskonflikte bauen und danach das Kundensortiment im Hauptscreen mit Preisentscheidung anzeigen.

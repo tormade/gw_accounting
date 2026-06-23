@@ -128,6 +128,7 @@ def test_onboarding_builds_customer_assortment_and_product_aliases(session):
     assert frucade.last_quantity == 3
     assert frucade.last_unit_price_cents == 1048
     assert frucade.last_deposit_cents == 310
+    assert frucade.price_decision == "offen"
     assert frucade.is_active is True
 
     alias = session.scalar(select(ProductAlias).where(ProductAlias.alias == "Frucade Colamix 20x0,5"))
@@ -145,6 +146,16 @@ def test_onboarding_builds_customer_assortment_and_product_aliases(session):
         )
     )
     assert any("Labert. ACE 20x0,5" in issue.folder_value for issue in product_issues if issue.folder_value)
+
+    price_issues = list(
+        session.scalars(
+            select(OnboardingIssue)
+            .where(OnboardingIssue.issue_type == "price_mismatch")
+            .order_by(OnboardingIssue.id)
+        )
+    )
+    assert any("Frucade Colamix 20x0,5" in issue.folder_value for issue in price_issues if issue.folder_value)
+    assert any("10,48" in issue.folder_value and "11,90" in issue.list_value for issue in price_issues)
 
 
 def test_folder_onboarding_reports_readable_customers_and_skips_outliers(session, tmp_path):

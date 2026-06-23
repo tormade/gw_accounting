@@ -232,6 +232,7 @@ def _sync_customer_assortment(
         item.last_quantity = line.quantity
         item.last_unit_price_cents = line.unit_price_cents
         item.last_deposit_cents = line.deposit_cents
+        item.price_decision = item.price_decision or "offen"
         item.sort_order = sort_order
         item.is_active = True
         item.source_file = snapshot.source_file
@@ -251,7 +252,42 @@ def _sync_customer_assortment(
             )
         else:
             _ensure_product_alias(session, product, line.name, snapshot.source_file)
+            if _prices_differ(product, line):
+                item.price_decision = "offen"
+                issues.append(
+                    OnboardingIssue(
+                        customer_name=customer.name,
+                        source_file=snapshot.source_file,
+                        issue_type="price_mismatch",
+                        field_name="price",
+                        list_value=(
+                            f"{product.name}: zentraler Preis {_format_cents(product.standard_price_cents)}, "
+                            f"Pfand {_format_cents(product.default_deposit_cents)}"
+                        ),
+                        folder_value=(
+                            f"{line.name}: Preis aus Excel {_format_cents(line.unit_price_cents)}, "
+                            f"Pfand {_format_cents(line.deposit_cents)}"
+                        ),
+                        message=(
+                            "Preisabweichung gefunden. Beim Erstellen einer Bestellung muss entschieden werden, "
+                            "ob der zentral gepflegte Preis oder der Preis aus der Excel-Datei genutzt wird."
+                        ),
+                        status="offen",
+                        created_at=datetime.now().isoformat(timespec="seconds"),
+                    )
+                )
     return issues
+
+
+def _prices_differ(product: Product, line: OnboardingLine) -> bool:
+    return (
+        product.standard_price_cents != line.unit_price_cents
+        or product.default_deposit_cents != line.deposit_cents
+    )
+
+
+def _format_cents(cents: int) -> str:
+    return f"{cents / 100:.2f} EUR".replace(".", ",")
 
 
 def _product_index(session: Session) -> dict[str, Product]:

@@ -373,6 +373,32 @@ class OrderPanel(QWidget):
         self.status_label.setText("Auftrag geaendert. Belege neu erstellen.")
         return True
 
+    def confirm_price_mismatch(
+        self,
+        product_name: str,
+        excel_price_cents: int,
+        central_price_cents: int,
+        excel_deposit_cents: int = 0,
+        central_deposit_cents: int = 0,
+    ) -> bool:
+        message = (
+            f"Beim Artikel {product_name} weicht der Preis aus der Excel-Datei vom zentral gepflegten Preis ab.\n\n"
+            f"Preis aus Excel: {self._format_euro_cents(excel_price_cents)}"
+            f" | Pfand: {self._format_euro_cents(excel_deposit_cents)}\n"
+            f"Zentral gepflegter Preis: {self._format_euro_cents(central_price_cents)}"
+            f" | Pfand: {self._format_euro_cents(central_deposit_cents)}\n\n"
+            "Ja = zentral gepflegten Preis uebernehmen.\n"
+            "Nein = Preis aus Excel fuer diesen Vorgang behalten."
+        )
+        answer = QMessageBox.question(
+            self,
+            "Preisabweichung gefunden",
+            message,
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.Yes,
+        )
+        return answer == QMessageBox.StandardButton.Yes
+
     def refresh_master_data(self) -> None:
         if self.session_factory is None:
             self.status_label.setText("Keine Datenbankverbindung vorhanden.")
@@ -453,11 +479,26 @@ class OrderPanel(QWidget):
         if product is None:
             self.status_label.setText("Bitte zuerst ein Produkt auswaehlen.")
             return
+        unit_price_cents = self._parse_euro_cents(self.unit_price_eur.text().strip())
+        deposit_cents = self._parse_euro_cents(self.deposit_eur.text().strip() or "0")
+        if unit_price_cents != product.standard_price_cents or deposit_cents != product.default_deposit_cents:
+            use_central_price = self.confirm_price_mismatch(
+                product.name,
+                unit_price_cents,
+                product.standard_price_cents,
+                deposit_cents,
+                product.default_deposit_cents,
+            )
+            if use_central_price:
+                unit_price_cents = product.standard_price_cents
+                deposit_cents = product.default_deposit_cents
+                self.unit_price_eur.setText(f"{unit_price_cents / 100:.2f}".replace(".", ","))
+                self.deposit_eur.setText(f"{deposit_cents / 100:.2f}".replace(".", ","))
         self._append_order_line_to_table(
             product.name,
             self.quantity.value(),
-            self._parse_euro_cents(self.unit_price_eur.text().strip()),
-            self._parse_euro_cents(self.deposit_eur.text().strip() or "0"),
+            unit_price_cents,
+            deposit_cents,
             product.id,
         )
         self.status_label.setText("Position hinzugefuegt. Weitere Positionen erfassen oder Auftrag speichern.")

@@ -90,6 +90,7 @@ class CustomerAssortmentItem(Base):
     last_quantity: Mapped[int] = mapped_column(Integer(), default=0)
     last_unit_price_cents: Mapped[int] = mapped_column(Integer(), default=0)
     last_deposit_cents: Mapped[int] = mapped_column(Integer(), default=0)
+    price_decision: Mapped[str] = mapped_column(String(30), default="offen")
     sort_order: Mapped[int] = mapped_column(Integer(), default=0)
     is_active: Mapped[bool] = mapped_column(Boolean(), default=True)
     source_file: Mapped[str | None] = mapped_column(String(500), nullable=True)

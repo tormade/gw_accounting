@@ -77,6 +77,10 @@ def _add_missing_columns(engine) -> None:
                 connection.execute(text("ALTER TABLE customer_assortment_items ADD COLUMN is_active BOOLEAN DEFAULT 1 NOT NULL"))
             if "source_file" not in assortment_columns:
                 connection.execute(text("ALTER TABLE customer_assortment_items ADD COLUMN source_file VARCHAR(500)"))
+            if "price_decision" not in assortment_columns:
+                connection.execute(
+                    text("ALTER TABLE customer_assortment_items ADD COLUMN price_decision VARCHAR(30) DEFAULT 'offen' NOT NULL")
+                )
 
 
 def _seed_defaults(engine) -> None:

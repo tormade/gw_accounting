@@ -159,6 +159,18 @@ def test_order_panel_warns_before_changing_documented_orders():
     assert "Belege neu erstellen" in source
 
 
+def test_order_panel_has_price_mismatch_confirmation_dialog():
+    source = Path("src/getraenkeladen_tool/ui/order_panel.py").read_text(encoding="utf-8")
+
+    assert "def confirm_price_mismatch" in source
+    assert "QMessageBox.question" in source
+    assert "Preisabweichung gefunden" in source
+    assert "Zentral gepflegter Preis" in source
+    assert "Preis aus Excel" in source
+    assert "use_central_price = self.confirm_price_mismatch" in source
+    assert "unit_price_cents = product.standard_price_cents" in source
+
+
 def test_order_panel_filters_orders_by_customer_and_can_copy_existing_order():
     source = Path("src/getraenkeladen_tool/ui/order_panel.py").read_text(encoding="utf-8")
 
