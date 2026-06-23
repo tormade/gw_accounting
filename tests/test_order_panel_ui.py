@@ -32,6 +32,10 @@ def test_document_workflow_panels_make_excel_pdf_generation_flow_visible():
     assert "self.create_excel_button.clicked.connect(self.create_excel_document)" in source
     assert "self.create_pdf_button.clicked.connect(self.create_pdf_document)" in source
     assert "self._created_asset_label(assets)" in source
+    assert "QMessageBox.information" in source
+    assert "QMessageBox.critical" in source
+    assert "QMessageBox.warning" in source
+    assert "Erstellung fehlgeschlagen" in source
     assert "Auftrag waehlen" in source
     assert "Excel:" in source
     assert "PDF:" in source

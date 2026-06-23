@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (
     QHeaderView,
     QLabel,
     QLineEdit,
+    QMessageBox,
     QPushButton,
     QTableWidget,
     QTableWidgetItem,
@@ -280,25 +281,47 @@ class DocumentWorkflowPanel(QWidget):
         self.create_document({"pdf"})
 
     def create_document(self, assets: set[str]) -> None:
+        asset_label = self._created_asset_label(assets)
         if self.current_order_id is None:
             self.load_selected_order()
-        if self.current_order_id is None or self.session_factory is None:
+        if self.current_order_id is None:
+            message = "Bitte zuerst einen Auftrag auswaehlen."
+            self.status_label.setText(message)
+            QMessageBox.warning(self, f"{self.document_type} erstellen", message)
+            return
+        if self.session_factory is None:
+            message = "Keine Datenbankverbindung vorhanden."
+            self.status_label.setText(message)
+            QMessageBox.critical(self, "Erstellung fehlgeschlagen", message)
             return
         session = self.session_factory()
         try:
             document = self._create_document_for_order(session, assets=assets)
-            self.refresh_orders()
-            self.last_excel_path = Path(document.excel_path)
-            self.last_pdf_path = Path(document.pdf_path)
-            self.open_excel_button.setEnabled(self.last_excel_path.exists())
-            self.open_pdf_button.setEnabled(self.last_pdf_path.exists())
-            asset_label = self._created_asset_label(assets)
-            self.result_label.setText(self._created_asset_result(asset_label))
-            self.status_label.setText(
-                f"Erfolgreich erstellt: {self.document_type} {document.document_number} als {asset_label}."
+        except Exception as error:
+            self.status_label.setText(f"Erstellung fehlgeschlagen: {error}")
+            QMessageBox.critical(
+                self,
+                "Erstellung fehlgeschlagen",
+                f"{self.document_type} konnte nicht als {asset_label} erstellt werden.\n\nGrund: {error}",
             )
+            return
         finally:
             session.close()
+        self.refresh_orders()
+        self.last_excel_path = Path(document.excel_path)
+        self.last_pdf_path = Path(document.pdf_path)
+        self.open_excel_button.setEnabled(self.last_excel_path.exists())
+        self.open_pdf_button.setEnabled(self.last_pdf_path.exists())
+        self.result_label.setText(self._created_asset_result(asset_label))
+        self.status_label.setText(
+            f"Erfolgreich erstellt: {self.document_type} {document.document_number} als {asset_label}."
+        )
+        QMessageBox.information(
+            self,
+            f"{self.document_type} erstellt",
+            f"{self.document_type} {document.document_number} wurde als {asset_label} erstellt.\n\n"
+            f"Datei: {self._created_asset_path(asset_label)}",
+        )
 
     def _created_asset_label(self, assets: set[str]) -> str:
         return "Excel" if assets == {"excel"} else "PDF"
@@ -307,6 +330,9 @@ class DocumentWorkflowPanel(QWidget):
         if asset_label == "Excel":
             return f"Excel erstellt:\nExcel: {self.last_excel_path}"
         return f"PDF erstellt:\nPDF: {self.last_pdf_path}"
+
+    def _created_asset_path(self, asset_label: str) -> Path | None:
+        return self.last_excel_path if asset_label == "Excel" else self.last_pdf_path
 
     def _create_document_for_order(self, session, assets: set[str]):
         raise NotImplementedError

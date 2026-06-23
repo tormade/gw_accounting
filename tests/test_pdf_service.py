@@ -77,6 +77,7 @@ def test_build_document_pdf_includes_delivery_fee_note_and_footer_text(tmp_path:
 
     pdf_text = output_path.read_bytes().decode("latin-1")
     assert "Lieferpauschale" in pdf_text
+    assert "entf. ab 6 Traeger" not in pdf_text
     assert "3,90 EUR" in pdf_text
     assert "44,64 EUR" in pdf_text
     assert "bis13Uhr und ab 15 Uhr" in pdf_text

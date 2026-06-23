@@ -226,7 +226,7 @@ def _line_rows(line_items: list[dict], deposit_returns: list[dict], delivery_fee
         )
     if delivery_fee_enabled:
         total_cents += 390
-        rows.append(["1", "Lieferpauschale (entf. ab 6 Traeger)", "", _format_euro(390), _format_euro(390)])
+        rows.append(["1", "Lieferpauschale", "", _format_euro(390), _format_euro(390)])
     if deposit_returns:
         rows.append(["", "Pfandrueckgabe:", "", "", ""])
         for deposit_return in deposit_returns:

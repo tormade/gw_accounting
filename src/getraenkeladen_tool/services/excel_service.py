@@ -138,7 +138,7 @@ def _build_document_workbook(
 
     delivery_fee_cents = DELIVERY_FEE_CENTS if delivery_fee_enabled else 0
     sheet["A31"] = 1 if delivery_fee_enabled else 0
-    sheet["B31"] = "Lieferpauschale (entf. ab 6 Traeger)"
+    sheet["B31"] = "Lieferpauschale"
     sheet["C31"] = None
     sheet["D31"] = _cents_to_euro(DELIVERY_FEE_CENTS)
     sheet["E31"] = "=(C31+D31)*A31"

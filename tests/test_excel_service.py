@@ -35,7 +35,7 @@ def test_build_invoice_workbook_writes_customer_excel_file(tmp_path: Path):
     assert sheet["D13"].value == 12.99
     assert sheet["E13"].value == "=(C13+D13)*A13"
     assert sheet["A31"].value == 0
-    assert sheet["B31"].value == "Lieferpauschale (entf. ab 6 Traeger)"
+    assert sheet["B31"].value == "Lieferpauschale"
     assert sheet["D31"].value == 3.9
     assert sheet["E31"].value == "=(C31+D31)*A31"
     assert sheet["F32"].value == "=SUM(E13:E31)"
@@ -99,7 +99,7 @@ def test_invoice_workbook_writes_footer_and_optional_delivery_fee(tmp_path: Path
 
     formula_sheet = load_workbook(output_path, data_only=False).active
     assert formula_sheet["A31"].value == 1
-    assert formula_sheet["B31"].value == "Lieferpauschale (entf. ab 6 Traeger)"
+    assert formula_sheet["B31"].value == "Lieferpauschale"
     assert formula_sheet["D31"].value == 3.9
     assert formula_sheet["A45"].value == "Rechnungsbetrag wird per Sepa Basis Lastschrift Mandat eingezogen."
     assert formula_sheet["B48"].value == "Vielen Dank fuer Ihren Einkauf"
