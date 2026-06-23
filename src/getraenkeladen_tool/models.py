@@ -53,6 +53,33 @@ class MasterDataChange(Base):
     created_at: Mapped[str] = mapped_column(String(30))
 
 
+class OnboardingIssue(Base):
+    __tablename__ = "onboarding_issues"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    customer_name: Mapped[str] = mapped_column(String(200))
+    source_file: Mapped[str] = mapped_column(String(500))
+    issue_type: Mapped[str] = mapped_column(String(80))
+    field_name: Mapped[str] = mapped_column(String(100))
+    list_value: Mapped[str | None] = mapped_column(Text(), nullable=True)
+    folder_value: Mapped[str | None] = mapped_column(Text(), nullable=True)
+    message: Mapped[str] = mapped_column(Text())
+    status: Mapped[str] = mapped_column(String(30), default="offen")
+    created_at: Mapped[str] = mapped_column(String(30))
+
+
+class ProductAlias(Base):
+    __tablename__ = "product_aliases"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    product_id: Mapped[int | None] = mapped_column(ForeignKey("products.id"), nullable=True)
+    alias: Mapped[str] = mapped_column(String(200))
+    source_file: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    status: Mapped[str] = mapped_column(String(30), default="offen")
+
+    product: Mapped["Product | None"] = relationship()
+
+
 class DropdownOption(Base):
     __tablename__ = "dropdown_options"
 

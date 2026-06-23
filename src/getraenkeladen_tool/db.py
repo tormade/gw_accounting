@@ -63,6 +63,10 @@ def _add_missing_columns(engine) -> None:
                 connection.execute(text("ALTER TABLE products ADD COLUMN source_file VARCHAR(500)"))
             if "source_row" not in product_columns:
                 connection.execute(text("ALTER TABLE products ADD COLUMN source_row INTEGER"))
+        if "onboarding_issues" in table_names:
+            issue_columns = {column["name"] for column in inspector.get_columns("onboarding_issues")}
+            if "status" not in issue_columns:
+                connection.execute(text("ALTER TABLE onboarding_issues ADD COLUMN status VARCHAR(30) DEFAULT 'offen' NOT NULL"))
 
 
 def _seed_defaults(engine) -> None:
