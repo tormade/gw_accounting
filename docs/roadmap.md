@@ -14,6 +14,14 @@ Diese Roadmap uebersetzt den Umsetzungsplan in den aktuellen Projektstand. Sie i
 | Meilenstein 7 | E-Rechnung / ZUGFeRD | spaeter, nach stabiler PDF-/Rechnungslogik |
 | Meilenstein 8 | NAS-/Mehrbenutzerbetrieb im lokalen Netzwerk | spaeter, nach lokaler Einzelplatzversion |
 
+## Technische Architektur
+
+Die Zielarchitektur ist in `docs/technische-architektur.md` festgehalten. Der aktuelle Code wird
+nicht per grossem Schnitt umgebaut; stattdessen werden neue oder groessere Aenderungen schrittweise
+in Kernregeln, Vorgaenge, Adapter und UI-Schale getrennt. Wichtigster naechster Architekturpunkt:
+Belegberechnung und Belegerzeugung weiter aus der UI und aus breit gewachsenen Services loesen,
+damit Excel, PDF und spaeter ZUGFeRD dieselben geprueften Belegdaten verwenden.
+
 ## Naechste fachliche Schritte
 
 1. `Letzte Bestellung uebernehmen` fuer Kundenauftraege konzipieren und danach umsetzen.

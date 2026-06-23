@@ -7,6 +7,18 @@
 - Fachlogik gehoert nie direkt in die Oberflaeche.
 - Vorlagen, Briefkopf, Pfandwerte und Exportpfade sind Konfiguration oder Daten, nicht hart verdrahtete UI-Logik.
 - SQLite bleibt offen lesbar. Excel, PDF und CSV-Ausgaben muessen weiterhin exportierbar bleiben.
+- Die Zielarchitektur steht in `docs/technische-architektur.md` und ist bei groesseren Umbauten verbindlich.
+- Neue groessere Funktionen sollen in Richtung `kern` -> `vorgaenge` -> `adapter` -> `ui` getrennt werden.
+- Bestehende `services` werden schrittweise entkoppelt, nicht blind umbenannt.
+
+## Architektur-Invarianten
+
+1. Der Kern haengt von nichts ab: keine UI-, DB- oder Dateisystem-Imports im Kern.
+2. Persistenz und Ausgabe laufen hinter Schnittstellen und bleiben austauschbar.
+3. Preise werden live beim Erfassen aus dem Artikelstamm gezogen und beim Finalisieren als Snapshot gespeichert.
+4. Vorlagen und Einstellungen sind Konfiguration, kein Code.
+5. Daten bleiben offen exportierbar: SQLite, Excel, PDF und CSV.
+6. Tests sind vor Commit gruen; Golden-Files sind der wichtigste Korrektheitsanker.
 
 ## Datenmodell und Rechenregeln
 

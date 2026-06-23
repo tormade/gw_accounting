@@ -87,3 +87,19 @@ def test_project_docs_include_approved_ux_guidelines_and_roadmap():
     assert "Meilenstein 2" in roadmap
     assert "ZUGFeRD" in roadmap
     assert "Status" in roadmap
+
+
+def test_project_docs_include_technical_architecture_reference():
+    architecture = Path("docs/technische-architektur.md").read_text(encoding="utf-8")
+    agents = Path("AGENTS.md").read_text(encoding="utf-8")
+    roadmap = Path("docs/roadmap.md").read_text(encoding="utf-8")
+
+    assert "UI- und DB-freien Kern" in architecture
+    assert "Oberflaeche -> Vorgaenge -> Kern <- Adapter" in architecture
+    assert "beleg_position" in architecture
+    assert "Snapshot" in architecture
+    assert "docs/technische-architektur.md" in agents
+    assert "Architektur-Invarianten" in agents
+    assert "kern` -> `vorgaenge` -> `adapter` -> `ui" in agents
+    assert "Technische Architektur" in roadmap
+    assert "dieselben geprueften Belegdaten" in roadmap

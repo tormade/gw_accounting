@@ -45,10 +45,12 @@ Das Produktziel steht in `docs/zielbild.md`: ein schlankes lokales Windows-Buero
 - Kundensuche klappt Treffer nach Auswahl ein und oeffnet sie beim Tippen wieder, damit die Auswahl nicht wie eine dauerhafte zweite Liste wirkt.
 - App erzwingt eine helle Palette, damit Tabellen, Dropdowns und Eingabefelder auf macOS nicht durch System-Dark-Mode unlesbar werden.
 - Kundenordner unterscheidet jetzt sichtbar zwischen "Neue Bestellung aus letzten Mengen starten" und "Neue leere Bestellung starten".
+- Technische Zielarchitektur aus neuem Input uebernommen: Clean-Architecture-Richtung mit Kern, Vorgaengen, Adapter und UI-Schale.
+- Architektur-Invarianten in `AGENTS.md` verankert und Roadmap um schrittweise technische Migration ergaenzt.
 
 ## In Arbeit
 
-- Kundenordner-Arbeitsplatz weiter abrunden: echte Windows-Kundenordner importieren und mit dem Bueroablauf gegenpruefen.
+- Kundenordner-Arbeitsplatz weiter abrunden und Beleglogik schrittweise in Kern/Vorgaenge/Adapter trennen.
 
 ## Offen
 
