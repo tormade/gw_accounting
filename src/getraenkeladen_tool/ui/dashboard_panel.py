@@ -12,11 +12,11 @@ DASHBOARD_ACTIONS = {
     "newDeliveryButton": "Neue Lieferung erfassen",
     "refreshDashboardButton": "Heute aktualisieren",
 }
-DASHBOARD_CARDS = ("Lieferungen heute", "Offene Posten", "Kontaktanfragen heute")
+DASHBOARD_CARDS = ("Heute zu liefern", "Offene Posten", "Faellige Kontakte")
 DASHBOARD_GUIDANCE_STEPS = (
-    "Neue Lieferung erfassen starten.",
-    "Kunde auswaehlen und bei Bedarf letzte Bestellung uebernehmen.",
-    "PDF-Belege erzeugen oder offene Aufgaben ueber die Karten pruefen.",
+    "Kunde suchen oder aus der Wiedervorlage oeffnen.",
+    "Letzte Mengen pruefen und nur Abweichungen eintragen.",
+    "Lieferschein oder Rechnung aus der Bestellung erzeugen.",
 )
 DASHBOARD_HELP_TEXT = (
     "Start: Hier sehen Sie die wichtigsten Tageszahlen.\n\n"
@@ -45,22 +45,22 @@ class DashboardPanel(QWidget):
 
         self.help_button = QPushButton(DASHBOARD_ACTIONS["dashboardHelpButton"])
         self.help_button.setObjectName("helpButton")
-        layout.addWidget(PageHeader("Start", "Cockpit fuer Tagesplanung, schnelle Einstiege und offene Aufgaben.", self.help_button))
+        layout.addWidget(PageHeader("Heute", "Liefern, anrufen, kassieren: der Arbeitstag auf einen Blick.", self.help_button))
 
         self.new_delivery_card = ActionCard(
-            "Neue Lieferung",
-            "Direkt einen Auftrag fuer eine Lieferung erfassen.",
+            "Neue Lieferung erfassen",
+            "Kunde oeffnen, letzte Mengen sehen und neue Bestellung eintragen.",
             DASHBOARD_ACTIONS["newDeliveryButton"],
         )
         self.search_order_card = ActionCard(
-            "Auftrag suchen",
-            "Bestehende Auftraege pruefen, filtern oder als Vorlage kopieren.",
-            "Auftraege verwalten",
+            "Kunde suchen",
+            "Schnell zum Kundenkopf und zur letzten Bestellung springen.",
+            "Kunde & Bestellung",
         )
         self.invoice_card = ActionCard(
             "Rechnung erstellen",
-            "Aus einem Auftrag eine Rechnung mit Excel/PDF erzeugen.",
-            "Zu Rechnungen",
+            "Aus einer gespeicherten Bestellung Excel oder PDF erzeugen.",
+            "Zu Belegen",
         )
         self.quick_actions = [self.new_delivery_card, self.search_order_card, self.invoice_card]
         quick_action_grid = QGridLayout()
@@ -71,6 +71,7 @@ class DashboardPanel(QWidget):
         layout.addLayout(quick_action_grid)
 
         layout.addLayout(self._cards_grid())
+        layout.addWidget(self._daily_flow_preview())
 
         action_row = QHBoxLayout()
         self.refresh_button = QPushButton(DASHBOARD_ACTIONS["refreshDashboardButton"])
@@ -114,7 +115,7 @@ class DashboardPanel(QWidget):
         grid.setSpacing(14)
         for column, title in enumerate(DASHBOARD_CARDS):
             card = QWidget()
-            card.setObjectName("metricCard")
+            card.setObjectName("dailyCockpitCard")
             card_layout = QVBoxLayout(card)
             card_layout.setSpacing(8)
 
@@ -129,6 +130,53 @@ class DashboardPanel(QWidget):
             card_layout.addWidget(label)
             grid.addWidget(card, 0, column)
         return grid
+
+    def _daily_flow_preview(self) -> QWidget:
+        box = QWidget()
+        box.setObjectName("heroSearchPanel")
+        layout = QGridLayout(box)
+        layout.setSpacing(16)
+
+        hero = QWidget()
+        hero.setObjectName("customerSearchHero")
+        hero_layout = QVBoxLayout(hero)
+        hero_layout.setSpacing(14)
+        hero_title = QLabel("Kunden finden, Bestellung starten.")
+        hero_title.setObjectName("heroTitle")
+        hero_title.setWordWrap(True)
+        hero_layout.addWidget(hero_title)
+        hero_query = QLabel("Metz...")
+        hero_query.setObjectName("heroSearchQuery")
+        hero_layout.addWidget(hero_query)
+        hero_button = QPushButton("Bestellung erfassen")
+        hero_button.setObjectName("newDeliveryButton")
+        hero_layout.addWidget(hero_button)
+        hero_layout.addStretch()
+        hero_button.clicked.connect(self.new_delivery_requested.emit)
+
+        contacts = QWidget()
+        contacts.setObjectName("todayContactList")
+        contacts_layout = QVBoxLayout(contacts)
+        contacts_layout.setSpacing(10)
+        contacts_title = QLabel("Heute anrufen")
+        contacts_title.setObjectName("sectionTitle")
+        contacts_layout.addWidget(contacts_title)
+        for customer, note in (
+            ("Metzgerei Karl", "bis 13 Uhr und ab 15 Uhr, SEPA"),
+            ("ADC Distribution GmbH", "Rechnung per E-Mail pruefen"),
+            ("1. Poolbillardclub e.V.", "Pfand-Rueckgabe nachfragen"),
+        ):
+            row = QLabel(f"{customer}\n{note}")
+            row.setObjectName("contactPreviewRow")
+            row.setWordWrap(True)
+            contacts_layout.addWidget(row)
+        contacts_layout.addStretch()
+
+        layout.addWidget(hero, 0, 0)
+        layout.addWidget(contacts, 0, 1)
+        layout.setColumnStretch(0, 3)
+        layout.setColumnStretch(1, 2)
+        return box
 
     def refresh_dashboard(self) -> None:
         if self.session_factory is None:

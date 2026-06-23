@@ -141,8 +141,8 @@ def test_order_panel_shows_running_order_total():
 def test_order_panel_exposes_deposit_returns_new_order_and_copy_actions():
     source = Path("src/getraenkeladen_tool/ui/order_panel.py").read_text(encoding="utf-8")
 
-    assert '"newOrderButton": "Neuen Auftrag anlegen"' in source
-    assert '"copyOrderButton": "Aus Auftrag kopieren"' in source
+    assert '"newOrderButton": "Bestellung erfassen"' in source
+    assert '"copyOrderButton": "Aus letzter Bestellung uebernehmen"' in source
     assert '"addDepositReturnButton": "Pfand zurueck hinzufuegen"' in source
     assert "self.deposit_returns_table" in source
     assert "self.deposit_return_select = QComboBox()" in source
@@ -162,7 +162,7 @@ def test_order_panel_warns_before_changing_documented_orders():
 def test_order_panel_filters_orders_by_customer_and_can_copy_existing_order():
     source = Path("src/getraenkeladen_tool/ui/order_panel.py").read_text(encoding="utf-8")
 
-    assert '"copyOrderButton": "Aus Auftrag kopieren"' in source
+    assert '"copyOrderButton": "Aus letzter Bestellung uebernehmen"' in source
     assert "self.order_table_search = QLineEdit()" in source
     assert "self.order_table_search.textChanged.connect(self.apply_order_table_search)" in source
     assert "def apply_order_table_search" in source
@@ -176,7 +176,7 @@ def test_order_panel_filters_orders_by_customer_and_can_copy_existing_order():
 def test_order_panel_focuses_on_order_management_not_document_creation():
     source = Path("src/getraenkeladen_tool/ui/order_panel.py").read_text(encoding="utf-8")
 
-    assert '"saveOrderButton": "Auftrag speichern"' in source
+    assert '"saveOrderButton": "Bestellung speichern"' in source
     assert '"createDeliveryOrderButton"' not in source
     assert '"createInvoiceButton"' not in source
     assert "Excel/PDF aus Auftrag erstellen" not in source

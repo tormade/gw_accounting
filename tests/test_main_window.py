@@ -4,14 +4,13 @@ from getraenkeladen_tool.ui.theme import APP_STYLESHEET
 
 def test_main_window_exposes_first_version_tabs():
     assert MAIN_TABS == (
-        "Start",
-        "Auftraege",
-        "Belegarchiv",
-        "Lieferscheine",
-        "Rechnungen",
-        "Kunden",
-        "Produkte",
-        "Listen",
+        "Heute",
+        "Kunde & Bestellung",
+        "Belege",
+        "Offene Posten",
+        "Tagesliste",
+        "Stammdaten",
+        "Pruefliste",
         "Einstellungen",
     )
 
@@ -64,6 +63,9 @@ def test_theme_uses_winklmeier_work_tool_direction():
     assert "sectionTitle" in APP_STYLESHEET
     assert "documentHeaderCard" in APP_STYLESHEET
     assert "QPushButton#newOrderButton" in APP_STYLESHEET
+    assert "QWidget#heroSearchPanel" in APP_STYLESHEET
+    assert "QWidget#dailyCockpitCard" in APP_STYLESHEET
+    assert "QWidget#liveSummaryCard" in APP_STYLESHEET
     assert "pageHeader" in APP_STYLESHEET
     assert "actionCard" in APP_STYLESHEET
     assert "workspaceSplitter" in APP_STYLESHEET
@@ -179,6 +181,22 @@ def test_order_form_gives_selection_fields_room_to_grow():
     assert "self.product_select.setMinimumWidth(420)" in source
 
 
+def test_target_state_navigation_prioritizes_daily_flow_and_main_order_path():
+    from pathlib import Path
+
+    source = Path("src/getraenkeladen_tool/ui/main_window.py").read_text(encoding="utf-8")
+
+    assert '"Heute"' in source
+    assert '"Kunde & Bestellung"' in source
+    assert '"Offene Posten"' in source
+    assert '"Tagesliste"' in source
+    assert '"Pruefliste"' in source
+    assert '"Auftraege"' not in source
+    assert '"Listen"' not in source
+    assert 'MAIN_TABS.index("Kunde & Bestellung")' in source
+    assert 'MAIN_TABS.index("Belege")' in source
+
+
 
 def test_date_fields_use_calendar_input():
     from getraenkeladen_tool.ui.customer_panel import DATE_FIELD_WIDGETS as CUSTOMER_DATE_FIELDS
@@ -197,13 +215,15 @@ def test_brand_assets_are_available():
     assert CLAIM_PATH.exists()
 
 
-def test_main_window_removes_separate_document_tab_special_path():
+def test_main_window_groups_document_workflows_under_target_state_belege_workspace():
     from pathlib import Path
 
     source = Path("src/getraenkeladen_tool/ui/main_window.py").read_text(encoding="utf-8")
 
     assert "DocumentPanel" not in source
-    assert '"Belege"' not in source
+    assert '"Belege"' in source
+    assert "def _document_workspace" in source
+    assert 'tabs.addTab(self.document_archive_panel, "Archiv")' in source
 
 
 def test_order_tab_exposes_guided_order_actions():
@@ -217,29 +237,29 @@ def test_order_tab_exposes_guided_order_actions():
 
     assert ORDER_PANEL_ACTIONS == {
         "orderHelpButton": "?",
-        "newOrderButton": "Neuen Auftrag anlegen",
-        "copyOrderButton": "Aus Auftrag kopieren",
+        "newOrderButton": "Bestellung erfassen",
+        "copyOrderButton": "Aus letzter Bestellung uebernehmen",
         "refreshOrderDataButton": "Stammdaten laden",
         "addOrderLineButton": "Position hinzufuegen",
         "removeOrderLineButton": "Position entfernen",
         "addDepositReturnButton": "Pfand zurueck hinzufuegen",
         "removeDepositReturnButton": "Pfand zurueck entfernen",
-        "saveOrderButton": "Auftrag speichern",
-        "refreshOrdersButton": "Auftragsliste laden",
+        "saveOrderButton": "Bestellung speichern",
+        "refreshOrdersButton": "Bestellungen laden",
         "createDeliveryNoteFromOrderButton": "Lieferschein erstellen",
         "createInvoiceFromOrderButton": "Rechnung erstellen",
     }
     assert ORDER_PANEL_SECTIONS == (
-        "Kopfdaten",
-        "Positionen",
-        "Auftraege verwalten",
+        "Kundenkopf",
+        "Kundensortiment",
+        "Bestellungen verwalten",
     )
-    assert "Kopfdaten" in ORDER_HELP_TEXT
-    assert "Positionen" in ORDER_HELP_TEXT
+    assert "Kundenkopf" in ORDER_HELP_TEXT
+    assert "Kundensortiment" in ORDER_HELP_TEXT
     assert ORDER_GUIDANCE_STEPS == (
-        "Kunden suchen und Lieferdatum pruefen.",
-        "Produkte hinzufuegen und Positionen kontrollieren.",
-        "Auftrag speichern oder einen vorhandenen Auftrag als Vorlage kopieren.",
+        "Kunde suchen und letzte Mengen als Vorlage sehen.",
+        "Neue Mengen, neue Artikel und Pfand-Rueckgabe erfassen.",
+        "Bestellung speichern und daraus Lieferschein oder Rechnung erzeugen.",
     )
     assert ORDER_CONTEXT_ACTIONS == {
         "open": "Auftrag oeffnen",
@@ -259,8 +279,9 @@ def test_main_window_has_dedicated_delivery_and_invoice_tabs():
     assert "InvoicePanel" in source
     assert "self.delivery_note_panel" in source
     assert "self.invoice_panel" in source
-    assert '"Lieferscheine"' in source
-    assert '"Rechnungen"' in source
+    assert '"Belege"' in source
+    assert '"Lieferscheine"' not in source
+    assert '"Rechnungen"' not in source
 
 
 def test_customer_tab_exposes_master_data_actions():
@@ -358,11 +379,11 @@ def test_dashboard_tab_exposes_daily_guidance():
         "newDeliveryButton": "Neue Lieferung erfassen",
         "refreshDashboardButton": "Heute aktualisieren",
     }
-    assert DASHBOARD_CARDS == ("Lieferungen heute", "Offene Posten", "Kontaktanfragen heute")
+    assert DASHBOARD_CARDS == ("Heute zu liefern", "Offene Posten", "Faellige Kontakte")
     assert DASHBOARD_GUIDANCE_STEPS == (
-        "Neue Lieferung erfassen starten.",
-        "Kunde auswaehlen und bei Bedarf letzte Bestellung uebernehmen.",
-        "PDF-Belege erzeugen oder offene Aufgaben ueber die Karten pruefen.",
+        "Kunde suchen oder aus der Wiedervorlage oeffnen.",
+        "Letzte Mengen pruefen und nur Abweichungen eintragen.",
+        "Lieferschein oder Rechnung aus der Bestellung erzeugen.",
     )
 
 
@@ -374,8 +395,10 @@ def test_dashboard_uses_cockpit_quick_actions_without_calendar():
     assert "QCalendarWidget" not in source
     assert "ActionCard" in source
     assert "self.quick_actions" in source
-    assert "Auftrag suchen" in source
+    assert "Kunde suchen" in source
     assert "Rechnung erstellen" in source
+    assert "heroSearchPanel" in source
+    assert "todayContactList" in source
 
 
 def test_dashboard_primary_action_opens_new_order_dialog():
@@ -384,7 +407,7 @@ def test_dashboard_primary_action_opens_new_order_dialog():
     source = Path("src/getraenkeladen_tool/ui/main_window.py").read_text(encoding="utf-8")
 
     assert "new_delivery_requested.connect(self.open_new_order_dialog)" in source
-    assert 'MAIN_TABS.index("Auftraege")' in source
+    assert 'MAIN_TABS.index("Kunde & Bestellung")' in source
     assert "self.order_panel.open_new_order_dialog()" in source
 
 
@@ -400,7 +423,7 @@ def test_dashboard_quick_actions_open_order_and_invoice_workspaces():
     assert "self.invoice_card.button.clicked.connect(self.invoice_requested.emit)" in dashboard_source
     assert "manage_orders_requested.connect(self.open_orders_tab)" in main_source
     assert "invoice_requested.connect(self.open_invoices_tab)" in main_source
-    assert 'MAIN_TABS.index("Rechnungen")' in main_source
+    assert 'MAIN_TABS.index("Belege")' in main_source
 
 
 def test_order_manage_actions_open_delivery_or_invoice_with_selected_order():

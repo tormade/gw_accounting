@@ -37,36 +37,36 @@ from .searchable_select import SearchableSelect
 
 ORDER_PANEL_ACTIONS = {
     "orderHelpButton": "?",
-    "newOrderButton": "Neuen Auftrag anlegen",
-    "copyOrderButton": "Aus Auftrag kopieren",
+    "newOrderButton": "Bestellung erfassen",
+    "copyOrderButton": "Aus letzter Bestellung uebernehmen",
     "refreshOrderDataButton": "Stammdaten laden",
     "addOrderLineButton": "Position hinzufuegen",
     "removeOrderLineButton": "Position entfernen",
     "addDepositReturnButton": "Pfand zurueck hinzufuegen",
     "removeDepositReturnButton": "Pfand zurueck entfernen",
-    "saveOrderButton": "Auftrag speichern",
-    "refreshOrdersButton": "Auftragsliste laden",
+    "saveOrderButton": "Bestellung speichern",
+    "refreshOrdersButton": "Bestellungen laden",
     "createDeliveryNoteFromOrderButton": "Lieferschein erstellen",
     "createInvoiceFromOrderButton": "Rechnung erstellen",
 }
 
 ORDER_LINE_COLUMNS = ("Produkt", "Menge", "Preis EUR", "Pfand EUR", "Summe EUR")
 DEPOSIT_RETURN_COLUMNS = ("Pfandart", "Menge", "Pfand EUR", "Gutschrift EUR")
-ORDER_COLUMNS = ("Auftrag", "Kunde", "Lieferdatum", "Zeitfenster", "Status")
+ORDER_COLUMNS = ("Bestellung", "Kunde", "Lieferdatum", "Zeitfenster", "Status")
 ORDER_PANEL_SECTIONS = (
-    "Kopfdaten",
-    "Positionen",
-    "Auftraege verwalten",
+    "Kundenkopf",
+    "Kundensortiment",
+    "Bestellungen verwalten",
 )
 ORDER_HELP_TEXT = (
-    "Kopfdaten: Kunde, Lieferdatum, Zeitfenster und Auftragsnummer pruefen.\n\n"
-    "Positionen: Produkt waehlen, Menge eintragen und Position hinzufuegen.\n\n"
-    "Auftragsliste: Vorhandene Auftraege oeffnen, archivieren oder als Vorlage fuer einen neuen Auftrag kopieren."
+    "Kundenkopf: Kunde, Lieferdatum, Zeitfenster und Belegnummer pruefen.\n\n"
+    "Kundensortiment: letzte Mengen sehen, neue Mengen eintragen und Artikel hinzufuegen.\n\n"
+    "Bestellungen: Vorhandene Bestellungen oeffnen, archivieren oder als Vorlage fuer eine neue Bestellung kopieren."
 )
 ORDER_GUIDANCE_STEPS = (
-    "Kunden suchen und Lieferdatum pruefen.",
-    "Produkte hinzufuegen und Positionen kontrollieren.",
-    "Auftrag speichern oder einen vorhandenen Auftrag als Vorlage kopieren.",
+    "Kunde suchen und letzte Mengen als Vorlage sehen.",
+    "Neue Mengen, neue Artikel und Pfand-Rueckgabe erfassen.",
+    "Bestellung speichern und daraus Lieferschein oder Rechnung erzeugen.",
 )
 ORDER_CONTEXT_ACTIONS = {
     "open": "Auftrag oeffnen",
@@ -92,7 +92,7 @@ class OrderPanel(QWidget):
         self.current_order_id = None
         self.current_order_status = "geplant"
 
-        self.order_mode_label = QLabel("Neuer Auftrag")
+        self.order_mode_label = QLabel("Neue Bestellung")
         self.order_mode_label.setObjectName("stepTitle")
         self.customer_select = SearchableSelect("Kunde suchen, z. B. Cafe oder Hotel")
         self.customer_select.setMinimumWidth(420)
@@ -102,7 +102,7 @@ class OrderPanel(QWidget):
         self.product_select = SearchableSelect("Produkt suchen, z. B. Spezi oder Wasser")
         self.product_select.setMinimumWidth(420)
         self.order_number = QLineEdit()
-        self.order_number.setPlaceholderText("z. B. AUF-1001")
+        self.order_number.setPlaceholderText("z. B. 2606196 oder LS-3001")
         self.delivery_date = DateInput(date.today().isoformat())
         self.delivery_slot = QComboBox()
         self.delivery_slot.addItems(["", "vormittag", "nachmittag", "ganztags"])
@@ -126,7 +126,7 @@ class OrderPanel(QWidget):
         self.deposit_returns_table.setHorizontalHeaderLabels(DEPOSIT_RETURN_COLUMNS)
         self.deposit_returns_table.setMaximumHeight(150)
         self.deposit_returns_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-        self.order_total_label = QLabel("Auftragssumme: 0,00 EUR")
+        self.order_total_label = QLabel("Bestellsumme: 0,00 EUR")
         self.order_total_label.setObjectName("stepTitle")
         self.orders_table = QTableWidget(0, len(ORDER_COLUMNS))
         self.orders_table.setHorizontalHeaderLabels(ORDER_COLUMNS)
@@ -134,8 +134,8 @@ class OrderPanel(QWidget):
         self.orders_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         self.order_table_search = QLineEdit()
         self.order_table_search.setObjectName("tableSearchField")
-        self.order_table_search.setPlaceholderText("In der Auftragsliste suchen, z. B. Kunde, Nummer oder Datum")
-        self.status_label = QLabel("Schritt 1: Stammdaten laden, dann Kunde und Produkte auswaehlen.")
+        self.order_table_search.setPlaceholderText("In den Bestellungen suchen, z. B. Kunde, Nummer oder Datum")
+        self.status_label = QLabel("Schritt 1: Kunde suchen, letzte Mengen pruefen, neue Bestellung erfassen.")
         self.status_label.setObjectName("muted")
 
         root_layout = QVBoxLayout(self)
@@ -146,7 +146,7 @@ class OrderPanel(QWidget):
 
         self.help_button = QPushButton(ORDER_PANEL_ACTIONS["orderHelpButton"])
         self.help_button.setObjectName("helpButton")
-        layout.addWidget(PageHeader("Auftraege", "Auftrag neu erfassen oder vorhandene Auftraege verwalten.", self.help_button))
+        layout.addWidget(PageHeader("Kunde & Bestellung", "Kunden oeffnen, letzte Mengen sehen und neue Bestellung erfassen.", self.help_button))
 
         self.refresh_data_button = self._button("refreshOrderDataButton")
         self.add_line_button = self._button("addOrderLineButton")
@@ -170,13 +170,13 @@ class OrderPanel(QWidget):
 
         customer_box, customer_layout = self._section(
             ORDER_PANEL_SECTIONS[0],
-            "Wie beim Rechnungsformular: oben stehen Kunde, Lieferdatum, Zeitfenster und Auftragsnummer.",
+            "Oben stehen die Angaben, die beim Telefonat und fuer den Beleg wichtig sind.",
         )
         customer_layout.addWidget(self.order_mode_label)
         customer_form = QFormLayout()
         configure_form_layout(customer_form)
         customer_form.addRow("Kunde", self.customer_select)
-        customer_form.addRow("Auftragsnummer", self.order_number)
+        customer_form.addRow("Beleg-/Bestellnummer", self.order_number)
         customer_form.addRow("Lieferdatum", self.delivery_date)
         customer_form.addRow("Zeitfenster", self.delivery_slot)
         customer_layout.addLayout(customer_form)

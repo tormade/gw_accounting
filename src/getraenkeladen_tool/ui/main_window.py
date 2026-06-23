@@ -2,7 +2,7 @@ from pathlib import Path
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
-from PySide6.QtWidgets import QHBoxLayout, QLabel, QMainWindow, QPushButton, QScrollArea, QStackedWidget, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QHBoxLayout, QLabel, QMainWindow, QPushButton, QScrollArea, QStackedWidget, QTabWidget, QVBoxLayout, QWidget
 
 from .customer_panel import CustomerPanel
 from .dashboard_panel import DashboardPanel
@@ -16,14 +16,13 @@ from .settings_panel import SettingsPanel
 
 
 MAIN_TABS = (
-    "Start",
-    "Auftraege",
-    "Belegarchiv",
-    "Lieferscheine",
-    "Rechnungen",
-    "Kunden",
-    "Produkte",
-    "Listen",
+    "Heute",
+    "Kunde & Bestellung",
+    "Belege",
+    "Offene Posten",
+    "Tagesliste",
+    "Stammdaten",
+    "Pruefliste",
     "Einstellungen",
 )
 MAIN_WINDOW_INITIAL_SIZE = (1180, 760)
@@ -54,17 +53,29 @@ class MainWindow(QMainWindow):
         self.invoice_panel = InvoicePanel(session_factory=session_factory)
         self.customer_panel = CustomerPanel(session_factory=session_factory)
         self.product_panel = ProductPanel(session_factory=session_factory)
-        self.report_panel = ReportPanel(session_factory=session_factory)
+        self.open_items_panel = ReportPanel(session_factory=session_factory)
+        self.daily_list_panel = ReportPanel(session_factory=session_factory)
         self.settings_panel = SettingsPanel(session_factory=session_factory)
+        self.document_workspace = self._document_workspace()
+        self.master_data_workspace = self._master_data_workspace()
+        self.checklist_panel = self._panel(
+            "Pruefliste",
+            "Konflikte aus Migration, Artikeltreffern und Kundendaten werden hier bewusst entschieden.",
+        )
         self.refreshable_panels = {
-            "Start": (self.dashboard_panel.refresh_dashboard,),
-            "Auftraege": (self.order_panel.refresh_master_data, self.order_panel.refresh_orders),
-            "Belegarchiv": (self.document_archive_panel.refresh_archive,),
-            "Lieferscheine": (self.delivery_note_panel.refresh_master_data, self.delivery_note_panel.refresh_orders),
-            "Rechnungen": (self.invoice_panel.refresh_master_data, self.invoice_panel.refresh_orders),
-            "Kunden": (self.customer_panel.refresh_customers,),
-            "Produkte": (self.product_panel.refresh_products,),
-            "Listen": (self.report_panel.refresh_all_lists,),
+            "Heute": (self.dashboard_panel.refresh_dashboard,),
+            "Kunde & Bestellung": (self.order_panel.refresh_master_data, self.order_panel.refresh_orders),
+            "Belege": (
+                self.document_archive_panel.refresh_archive,
+                self.delivery_note_panel.refresh_master_data,
+                self.delivery_note_panel.refresh_orders,
+                self.invoice_panel.refresh_master_data,
+                self.invoice_panel.refresh_orders,
+            ),
+            "Offene Posten": (self.open_items_panel.refresh_all_lists,),
+            "Tagesliste": (self.daily_list_panel.refresh_all_lists,),
+            "Stammdaten": (self.customer_panel.refresh_customers, self.product_panel.refresh_products),
+            "Pruefliste": (),
             "Einstellungen": (),
         }
 
@@ -85,12 +96,11 @@ class MainWindow(QMainWindow):
         self.pages = QStackedWidget()
         self.pages.addWidget(self._scrollable_tab(self.dashboard_panel))
         self.pages.addWidget(self._scrollable_tab(self.order_panel))
-        self.pages.addWidget(self._scrollable_tab(self.document_archive_panel))
-        self.pages.addWidget(self._scrollable_tab(self.delivery_note_panel))
-        self.pages.addWidget(self._scrollable_tab(self.invoice_panel))
-        self.pages.addWidget(self._scrollable_tab(self.customer_panel))
-        self.pages.addWidget(self._scrollable_tab(self.product_panel))
-        self.pages.addWidget(self._scrollable_tab(self.report_panel))
+        self.pages.addWidget(self._scrollable_tab(self.document_workspace))
+        self.pages.addWidget(self._scrollable_tab(self.open_items_panel))
+        self.pages.addWidget(self._scrollable_tab(self.daily_list_panel))
+        self.pages.addWidget(self._scrollable_tab(self.master_data_workspace))
+        self.pages.addWidget(self._scrollable_tab(self.checklist_panel))
         self.pages.addWidget(self._scrollable_tab(self.settings_panel))
         self.navigation.currentRowChanged.connect(self.pages.setCurrentIndex)
         self.navigation.currentRowChanged.connect(self.refresh_current_tab)
@@ -100,7 +110,7 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(root)
 
     def open_orders_tab(self) -> None:
-        self.navigation.setCurrentRow(MAIN_TABS.index("Auftraege"))
+        self.navigation.setCurrentRow(MAIN_TABS.index("Kunde & Bestellung"))
 
     def open_new_order_dialog(self) -> None:
         self.open_orders_tab()
@@ -111,14 +121,17 @@ class MainWindow(QMainWindow):
         self.order_panel.load_order_by_id(order_id)
 
     def open_invoices_tab(self) -> None:
-        self.navigation.setCurrentRow(MAIN_TABS.index("Rechnungen"))
+        self.navigation.setCurrentRow(MAIN_TABS.index("Belege"))
+        self.document_workspace.setCurrentWidget(self.invoice_panel)
 
     def open_delivery_note_for_order(self, order_id: int) -> None:
-        self.navigation.setCurrentRow(MAIN_TABS.index("Lieferscheine"))
+        self.navigation.setCurrentRow(MAIN_TABS.index("Belege"))
+        self.document_workspace.setCurrentWidget(self.delivery_note_panel)
         self.delivery_note_panel.select_order(order_id)
 
     def open_invoice_for_order(self, order_id: int) -> None:
-        self.navigation.setCurrentRow(MAIN_TABS.index("Rechnungen"))
+        self.navigation.setCurrentRow(MAIN_TABS.index("Belege"))
+        self.document_workspace.setCurrentWidget(self.invoice_panel)
         self.invoice_panel.select_order(order_id)
 
     def open_document_from_archive(self, document_type: str, order_id: int) -> None:
@@ -140,6 +153,21 @@ class MainWindow(QMainWindow):
         scroll_area.setFrameShape(QScrollArea.Shape.NoFrame)
         scroll_area.setWidget(panel)
         return scroll_area
+
+    def _document_workspace(self) -> QTabWidget:
+        tabs = QTabWidget()
+        tabs.setObjectName("workspaceTabs")
+        tabs.addTab(self.document_archive_panel, "Archiv")
+        tabs.addTab(self.delivery_note_panel, "Lieferbeleg")
+        tabs.addTab(self.invoice_panel, "Rechnung")
+        return tabs
+
+    def _master_data_workspace(self) -> QTabWidget:
+        tabs = QTabWidget()
+        tabs.setObjectName("workspaceTabs")
+        tabs.addTab(self.customer_panel, "Kunden")
+        tabs.addTab(self.product_panel, "Artikel")
+        return tabs
 
     def _header(self) -> QWidget:
         header = QWidget()
