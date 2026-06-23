@@ -31,10 +31,11 @@ Das Produktziel steht in `docs/zielbild.md`: ein schlankes lokales Windows-Buero
 - PDF-Nacherzeugung aus vorhandener Excel liest Pfand-Rueckgaben aus denselben Zeilen wie der Excel-Export.
 - Gespeicherte Preisentscheidungen aus der Pruefliste werden im Kundensortiment direkt angewendet.
 - Rechnung-/Lieferschein-Erstellung sprachlich und visuell als gefuehrter Ablauf fuer Erstnutzer vereinfacht.
+- Hauptnavigation auf Kundenordner-Arbeitsweise umgestellt: Kunde suchen, Ordnerdateien sehen, Bestellung und Belege von dort starten.
 
 ## In Arbeit
 
-- Bedienprobe des Hauptwegs Kunde oeffnen -> Sortiment uebernehmen -> Bestellung speichern -> Beleg erzeugen.
+- Kundenordner-Arbeitsplatz weiter abrunden: Altdateien besser als Vorlage nutzen und Dokumentdialoge im Alltag pruefen.
 
 ## Offen
 

@@ -5,6 +5,7 @@ from openpyxl import load_workbook
 from getraenkeladen_tool.models import OpenItem
 from getraenkeladen_tool.schemas import OrderCreate, OrderLineCreate
 from getraenkeladen_tool.services.customer_assortment_service import list_customer_assortment
+from getraenkeladen_tool.services.customer_folder_service import get_customer_folder_snapshot
 from getraenkeladen_tool.services.master_data_import_service import import_master_data_from_folder
 from getraenkeladen_tool.services.onboarding_service import onboard_customer_from_sources
 from getraenkeladen_tool.services.order_service import create_order, create_order_delivery_order, create_order_invoice
@@ -69,6 +70,14 @@ def test_daily_customer_folder_workflow_updates_old_excel_with_central_prices_an
     assert Path(invoice.excel_path).exists()
     assert Path(invoice.pdf_path).read_bytes().startswith(b"%PDF-")
     assert invoice.datev_export_path is not None
+    snapshot = get_customer_folder_snapshot(session, onboarding.customer.id)
+    generated_paths = {file.path for file in snapshot.files}
+    assert Path(delivery_note.excel_path).parent == Path(onboarding.customer.folder_path)
+    assert Path(invoice.excel_path).parent == Path(onboarding.customer.folder_path)
+    assert Path(delivery_note.excel_path) in generated_paths
+    assert Path(delivery_note.pdf_path) in generated_paths
+    assert Path(invoice.excel_path) in generated_paths
+    assert Path(invoice.pdf_path) in generated_paths
 
     workbook = load_workbook(invoice.excel_path, data_only=False)
     sheet = workbook.active
