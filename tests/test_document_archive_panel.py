@@ -30,18 +30,18 @@ def test_document_archive_panel_exposes_two_clear_document_tables_and_actions():
     assert "table.setCurrentCell(clicked_row, 0)" in source
     assert "Im Rechnungsbereich oeffnen" in source
     assert "Im Lieferscheinbereich oeffnen" in source
-    assert "Zugehoerigen Auftrag oeffnen" in source
+    assert "Zugehoerige Bestellung oeffnen" in source
     assert "document_open_requested = Signal(str, int)" in source
     assert "order_open_requested = Signal(int)" in source
 
 
-def test_main_window_keeps_document_archive_as_internal_helper_without_belege_workspace():
+def test_main_window_does_not_wire_hidden_document_archive_workspace():
     source = Path("src/getraenkeladen_tool/ui/main_window.py").read_text(encoding="utf-8")
 
     assert '"Belege"' not in source
-    assert "DocumentArchivePanel" in source
-    assert "self.document_archive_panel = DocumentArchivePanel" in source
+    assert "DocumentArchivePanel" not in source
+    assert "self.document_archive_panel = DocumentArchivePanel" not in source
     assert "self.document_workspace =" not in source
     assert "tabs.addTab(self.document_archive_panel, \"Archiv\")" not in source
-    assert "self.document_archive_panel.document_open_requested.connect" in source
-    assert "self.document_archive_panel.order_open_requested.connect" in source
+    assert "self.document_archive_panel.document_open_requested.connect" not in source
+    assert "self.document_archive_panel.order_open_requested.connect" not in source

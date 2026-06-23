@@ -15,13 +15,15 @@ def test_customer_folder_panel_exposes_real_folder_workflow():
     source = Path("src/getraenkeladen_tool/ui/customer_folder_panel.py").read_text(encoding="utf-8")
 
     assert "class CustomerFolderPanel" in source
-    assert 'PageHeader("Kundenordner"' in source
+    assert "PageHeader(" in source
+    assert '"Kundenordner"' in source
     assert 'SearchableSelect("Kunde suchen' in source
     assert "Kundenakte" in source
     assert "Kundenordner oeffnen" in source
     assert "Dateien im Kundenordner" in source
-    assert "Letzte bekannte Bestellung" in source
-    assert "Neue Bestellung fuer Kunden" in source
+    assert "Vorlage aus Kundenordner" in source
+    assert "Bestellung aus Kundensortiment starten" in source
+    assert "Excel als Vorlage markieren" in source
     assert "Lieferschein erstellen" in source
     assert "Rechnung erstellen" in source
     assert "get_customer_folder_snapshot" in source
@@ -36,6 +38,7 @@ def test_customer_folder_panel_disables_actions_until_customer_context_exists():
     assert panel.open_folder_button.isEnabled() is False
     assert panel.open_file_button.isEnabled() is False
     assert panel.new_order_button.isEnabled() is False
+    assert panel.seed_file_hint.text() == "Keine Excel-Datei als Vorlage markiert."
     assert panel.delivery_note_button.isEnabled() is False
     assert panel.invoice_button.isEnabled() is False
 
@@ -82,17 +85,32 @@ def test_customer_folder_panel_enables_actions_from_snapshot_state(tmp_path: Pat
     assert panel.assortment_table.item(0, 0).text() == "Frucade"
     assert panel.open_folder_button.isEnabled() is True
     assert panel.new_order_button.isEnabled() is True
+    assert panel.seed_file_hint.text() == "Keine Excel-Datei als Vorlage markiert."
     assert panel.delivery_note_button.isEnabled() is False
     assert panel.invoice_button.isEnabled() is False
 
     panel.files_table.setCurrentCell(0, 0)
     panel.update_action_state()
     assert panel.open_file_button.isEnabled() is True
+    assert panel.seed_file_hint.text() == f"Vorlage: {excel_path.name}"
+
+    panel.files_table.setCurrentCell(1, 0)
+    panel.update_action_state()
+    assert panel.seed_file_hint.text() == "Markierte Datei ist keine Excel-Vorlage."
 
     panel.orders_table.setCurrentCell(0, 0)
     panel.update_action_state()
     assert panel.delivery_note_button.isEnabled() is True
     assert panel.invoice_button.isEnabled() is True
+
+
+def test_customer_folder_panel_uses_clear_customer_folder_language():
+    source = Path("src/getraenkeladen_tool/ui/customer_folder_panel.py").read_text(encoding="utf-8")
+
+    assert "Belege anstossen" not in source
+    assert "Bestellung aus Kundensortiment starten" in source
+    assert "Excel als Vorlage markieren" in source
+    assert "Bestellungen dieses Kunden" in source
 
 
 def test_customer_folder_panel_routes_selected_order_to_documents():

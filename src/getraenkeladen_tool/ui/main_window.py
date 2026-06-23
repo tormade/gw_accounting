@@ -19,7 +19,6 @@ from .checklist_panel import ChecklistPanel
 from .customer_folder_panel import CustomerFolderPanel
 from .customer_panel import CustomerPanel
 from .dashboard_panel import DashboardPanel
-from .document_archive_panel import DocumentArchivePanel
 from .document_workflow_panel import DeliveryNotePanel, InvoicePanel
 from .layouts import SidebarNavigation
 from .order_panel import OrderPanel
@@ -61,7 +60,6 @@ class MainWindow(QMainWindow):
         self.dashboard_panel = DashboardPanel(session_factory=session_factory)
         self.customer_folder_panel = CustomerFolderPanel(session_factory=session_factory)
         self.order_panel = OrderPanel(session_factory=session_factory)
-        self.document_archive_panel = DocumentArchivePanel(session_factory=session_factory)
         self.delivery_note_panel = DeliveryNotePanel(session_factory=session_factory)
         self.invoice_panel = InvoicePanel(session_factory=session_factory)
         self.customer_panel = CustomerPanel(session_factory=session_factory)
@@ -87,8 +85,6 @@ class MainWindow(QMainWindow):
         self.customer_folder_panel.invoice_requested.connect(self.open_invoice_for_order)
         self.order_panel.delivery_note_requested.connect(self.open_delivery_note_for_order)
         self.order_panel.invoice_requested.connect(self.open_invoice_for_order)
-        self.document_archive_panel.document_open_requested.connect(self.open_document_from_archive)
-        self.document_archive_panel.order_open_requested.connect(self.open_order_for_id)
 
         app_shell = QWidget()
         app_shell.setObjectName("appShell")

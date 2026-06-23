@@ -10,7 +10,7 @@ Das Produktziel steht in `docs/zielbild.md`: ein schlankes lokales Windows-Buero
 
 ## Erledigt
 
-- UI-Prototyp mit Auftragsverwaltung, Rechnungs-/Lieferschein-Erzeugung, Belegarchiv und Stammdatenpflege.
+- UI-Prototyp mit Kundenordner-Arbeitsplatz, Bestellverwaltung, Rechnungs-/Lieferschein-Erzeugung und Stammdatenpflege.
 - Import der zentralen Artikel- und Lieferkundenlisten als Stammdaten.
 - Archivieren statt Loeschen fuer Stammdaten und Auftraege.
 - Excel-/PDF-Ausgabe fuer Rechnung und Lieferschein mit Lieferpauschale, Pfand und Summenformeln.
@@ -32,10 +32,12 @@ Das Produktziel steht in `docs/zielbild.md`: ein schlankes lokales Windows-Buero
 - Gespeicherte Preisentscheidungen aus der Pruefliste werden im Kundensortiment direkt angewendet.
 - Rechnung-/Lieferschein-Erstellung sprachlich und visuell als gefuehrter Ablauf fuer Erstnutzer vereinfacht.
 - Hauptnavigation auf Kundenordner-Arbeitsweise umgestellt: Kunde suchen, Ordnerdateien sehen, Bestellung und Belege von dort starten.
+- UI-Altlasten entfernt: alter Direktbeleg-Sonderweg geloescht, verstecktes Belegarchiv aus dem Hauptfenster entkoppelt und sichtbare Texte auf Kundenordner/Bestellung vereinheitlicht.
+- Persona-Review fuer einen wenig IT-affinen Erstnutzer umgesetzt: Vorlage aus Kundenordner klarer markiert, Beispielkontakte gekennzeichnet und Beleg-Korrekturen verstaendlicher benannt.
 
 ## In Arbeit
 
-- Kundenordner-Arbeitsplatz weiter abrunden: Altdateien besser als Vorlage nutzen und Dokumentdialoge im Alltag pruefen.
+- Kundenordner-Arbeitsplatz weiter abrunden: echte Windows-Kundenordner importieren und mit dem Bueroablauf gegenpruefen.
 
 ## Offen
 
@@ -48,4 +50,4 @@ Das Produktziel steht in `docs/zielbild.md`: ein schlankes lokales Windows-Buero
 
 ## Naechste Aufgabe
 
-Bedienprobe mit echten Importdaten durchspielen und daraus die naechsten UI-Korrekturen fuer den Hauptweg ableiten.
+Bedienprobe mit einem echten kompletten Kundenordner durchspielen und daraus die naechsten UI-Korrekturen fuer den Hauptweg ableiten.

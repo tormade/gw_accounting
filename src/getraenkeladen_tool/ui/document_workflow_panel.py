@@ -63,8 +63,8 @@ class DocumentWorkflowPanel(QWidget):
         self.document_number = QLineEdit()
         self.document_number.setPlaceholderText(self.number_label)
         self.delivery_fee_choice = QComboBox()
-        self.delivery_fee_choice.addItem("Nein, keine Pauschale", False)
-        self.delivery_fee_choice.addItem("Ja, 3,90 EUR hinzufuegen", True)
+        self.delivery_fee_choice.addItem("Keine Pauschale", False)
+        self.delivery_fee_choice.addItem("3,90 EUR hinzufuegen", True)
         self.document_note = QLineEdit()
         self.document_note.setPlaceholderText(self.default_note_text)
         self.lines_table = QTableWidget(0, len(DOCUMENT_LINE_COLUMNS))
@@ -124,7 +124,7 @@ class DocumentWorkflowPanel(QWidget):
 
         document_box, document_layout = self._section(
             "2. Artikel und Betraege pruefen",
-            "Aenderungen gelten nur fuer diese Ausgabe. Die gespeicherte Bestellung bleibt unveraendert.",
+            "Nur Beleg-Korrektur: Diese Aenderungen speichern keine neue Vorlage im Kundenordner.",
         )
         document_layout.addWidget(self.order_summary)
 
@@ -175,7 +175,7 @@ class DocumentWorkflowPanel(QWidget):
         number_form = QFormLayout()
         configure_form_layout(number_form)
         number_form.addRow(self.number_label, self.document_number)
-        number_form.addRow("Lieferpauschale berechnen?", self.delivery_fee_choice)
+        number_form.addRow("Lieferpauschale hinzufuegen?", self.delivery_fee_choice)
         number_form.addRow(self.note_label, self.document_note)
         details_layout.addLayout(number_form)
         details_layout.addStretch()

@@ -147,7 +147,7 @@ class ReportPanel(QWidget):
             self.status_label.setText(
                 "Beispieldaten angelegt: "
                 f"{result.created_customers} Kunden, {result.created_products} Produkte, "
-                f"{result.created_orders} Auftraege, "
+                f"{result.created_orders} Bestellungen, "
                 f"{result.created_documents} Belege."
             )
         finally:

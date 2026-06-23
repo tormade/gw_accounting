@@ -16,7 +16,7 @@ from PySide6.QtWidgets import (
 )
 
 from ..services.customer_assortment_service import list_customer_assortment
-from ..services.customer_folder_service import get_customer_folder_snapshot
+from ..services.customer_folder_service import CustomerFolderFile, get_customer_folder_snapshot
 from ..services.customer_service import list_active_customers
 from .date_input import to_display_date
 from .layouts import ContentSurface, PageHeader, ResponsiveSplitter, WorkspaceCard
@@ -37,7 +37,7 @@ class CustomerFolderPanel(QWidget):
         super().__init__()
         self.session_factory = session_factory
         self.customers_by_id = {}
-        self.files_by_row: dict[int, Path] = {}
+        self.files_by_row: dict[int, CustomerFolderFile] = {}
         self.order_ids_by_row: dict[int, int] = {}
         self.current_customer_id: int | None = None
         self.current_folder_path: Path | None = None
@@ -47,13 +47,20 @@ class CustomerFolderPanel(QWidget):
         surface = ContentSurface()
         root_layout.addWidget(surface)
         layout = surface.layout
-        layout.addWidget(PageHeader("Kundenordner", "Kundenakte oeffnen, vorhandene Dateien sehen und Belege anstossen."))
+        layout.addWidget(
+            PageHeader(
+                "Kundenordner",
+                "Kunde oeffnen, alte Excel/PDF sehen und daraus die naechste Bestellung starten.",
+            )
+        )
 
         self.customer_select = SearchableSelect("Kunde suchen, z. B. Cafe oder Metzgerei")
         self.refresh_button = QPushButton("Kunden laden")
         self.open_folder_button = QPushButton("Kundenordner oeffnen")
-        self.open_file_button = QPushButton("Datei oeffnen")
-        self.new_order_button = QPushButton("Neue Bestellung fuer Kunden")
+        self.open_file_button = QPushButton("Markierte Excel/PDF oeffnen")
+        self.new_order_button = QPushButton("Bestellung aus Kundensortiment starten")
+        self.seed_file_hint = QLabel("Keine Excel-Datei als Vorlage markiert.")
+        self.seed_file_hint.setObjectName("sectionSubtitle")
         self.delivery_note_button = QPushButton("Lieferschein erstellen")
         self.invoice_button = QPushButton("Rechnung erstellen")
         self.status_label = QLabel("Noch kein Kunde ausgewaehlt.")
@@ -81,16 +88,26 @@ class CustomerFolderPanel(QWidget):
         files_card.layout.addLayout(file_actions)
         splitter.addWidget(files_card)
 
-        workflow_card = WorkspaceCard("Letzte bekannte Bestellung", "Offene Bestellungen und Sortiment als Arbeitsgrundlage.")
+        workflow_card = WorkspaceCard(
+            "Vorlage aus Kundenordner",
+            "Alte Excel/PDF links oeffnen, letzte Mengen rechts als Vorlage nutzen.",
+        )
         self.orders_table = self._table(ORDER_COLUMNS, 180)
         self.assortment_table = self._table(ASSORTMENT_COLUMNS, 260)
+        orders_title = QLabel("Bestellungen dieses Kunden")
+        orders_title.setObjectName("sectionTitle")
+        workflow_card.layout.addWidget(orders_title)
         workflow_card.layout.addWidget(self.orders_table)
+        assortment_title = QLabel("Kundensortiment aus letzter Excel")
+        assortment_title.setObjectName("sectionTitle")
+        workflow_card.layout.addWidget(assortment_title)
         workflow_card.layout.addWidget(self.assortment_table)
         workflow_actions = QHBoxLayout()
         workflow_actions.addWidget(self.delivery_note_button)
         workflow_actions.addWidget(self.invoice_button)
         workflow_actions.addStretch()
         workflow_card.layout.addLayout(workflow_actions)
+        workflow_card.layout.addWidget(self.seed_file_hint)
         splitter.addWidget(workflow_card)
         splitter.setStretchFactor(0, 1)
         splitter.setStretchFactor(1, 2)
@@ -160,8 +177,9 @@ class CustomerFolderPanel(QWidget):
         self.files_by_row.clear()
         self.files_table.setRowCount(len(snapshot.files))
         for row, folder_file in enumerate(snapshot.files):
-            self.files_by_row[row] = folder_file.path
-            self._set_row(self.files_table, row, (folder_file.label, folder_file.kind, "oeffnen"))
+            self.files_by_row[row] = folder_file
+            action = "Excel als Vorlage markieren" if folder_file.can_seed_order else "oeffnen"
+            self._set_row(self.files_table, row, (folder_file.label, folder_file.kind, action))
 
         self.order_ids_by_row.clear()
         self.orders_table.setRowCount(len(snapshot.orders))
@@ -205,10 +223,11 @@ class CustomerFolderPanel(QWidget):
 
     def open_selected_file(self) -> None:
         row = self.files_table.currentRow()
-        path = self.files_by_row.get(row)
-        if path is None:
+        folder_file = self.files_by_row.get(row)
+        if folder_file is None:
             self.status_label.setText("Bitte zuerst eine Datei im Kundenordner auswaehlen.")
             return
+        path = folder_file.path
         if not path.exists():
             self._show_missing_file("Die Datei wurde nicht gefunden.")
             return
@@ -240,13 +259,20 @@ class CustomerFolderPanel(QWidget):
     def update_action_state(self) -> None:
         has_customer = self.current_customer_id is not None
         has_folder = self.current_folder_path is not None and self.current_folder_path.is_dir()
-        has_file = self.files_by_row.get(self.files_table.currentRow()) is not None
+        selected_file = self.files_by_row.get(self.files_table.currentRow())
+        has_file = selected_file is not None
         has_order = self._selected_order_id() is not None
         self.open_folder_button.setEnabled(has_folder)
         self.open_file_button.setEnabled(has_file)
         self.new_order_button.setEnabled(has_customer)
         self.delivery_note_button.setEnabled(has_order)
         self.invoice_button.setEnabled(has_order)
+        if selected_file is None:
+            self.seed_file_hint.setText("Keine Excel-Datei als Vorlage markiert.")
+        elif selected_file.can_seed_order:
+            self.seed_file_hint.setText(f"Vorlage: {selected_file.label}")
+        else:
+            self.seed_file_hint.setText("Markierte Datei ist keine Excel-Vorlage.")
 
     def _set_row(self, table: QTableWidget, row: int, values: tuple[str, ...]) -> None:
         for column, value in enumerate(values):

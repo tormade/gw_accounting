@@ -58,7 +58,7 @@ def test_document_workflow_panels_make_excel_pdf_generation_flow_visible():
     assert "PDF:" in source
     assert "Nummer vorschlagen" not in source
     assert "suggest_document_number" not in source
-    assert "Lieferpauschale berechnen?" in source
+    assert "Lieferpauschale hinzufuegen?" in source
     assert "self.delivery_fee_choice = QComboBox()" in source
     assert "self.document_note = QLineEdit()" in source
 
@@ -113,10 +113,10 @@ def test_document_workflow_uses_clearer_deposit_and_delivery_fee_labels():
 
     assert 'DOCUMENT_LINE_COLUMNS = ("Artikel", "Menge", "Preis je Einheit EUR", "Pfand je Einheit EUR", "Summe EUR")' in source
     assert '"addDocumentDepositReturnButton": "Pfand-Rueckgabe eintragen"' in source
-    assert "Lieferpauschale berechnen?" in source
-    assert "Nein, keine Pauschale" in source
-    assert "Ja, 3,90 EUR hinzufuegen" in source
-    assert "Aenderungen gelten nur fuer diese Ausgabe" in source
+    assert "Lieferpauschale hinzufuegen?" in source
+    assert "Keine Pauschale" in source
+    assert "3,90 EUR hinzufuegen" in source
+    assert "Nur Beleg-Korrektur" in source
     assert "Lieferschein-Nummer" in source
     assert "Hinweis auf dem Lieferschein" in source
     assert "Zahlungshinweis auf Rechnung" in source
@@ -136,7 +136,7 @@ def test_order_panel_supports_editing_existing_orders():
     source = Path("src/getraenkeladen_tool/ui/order_panel.py").read_text(encoding="utf-8")
 
     assert "self.order_mode_label" in source
-    assert "Auftrag bearbeiten" in source
+    assert "Bestellung bearbeiten" in source
     assert "update_order(" in source
     assert "def populate_order_form" in source
     assert "self.order_lines_table.setRowCount(0)" in source
@@ -150,8 +150,8 @@ def test_order_panel_uses_list_page_and_order_dialog_for_editing():
     assert "self.order_dialog" in source
     assert "def open_order_dialog" in source
     assert "def close_order_dialog_after_success" in source
-    assert "Neuen Auftrag anlegen" in source
-    assert "Auftrag speichern" in source
+    assert "Neue Bestellung anlegen" in source
+    assert "Bestellung speichern" in source
     assert "WA_DeleteOnClose" in source
     assert "self.order_workspace_tabs = QTabWidget()" not in source
     assert "self.order_editor_widget" in source
@@ -192,7 +192,7 @@ def test_order_panel_warns_before_changing_documented_orders():
 
     assert "self.current_order_status" in source
     assert "def confirm_documented_order_change" in source
-    assert "Belege neu erstellen" in source
+    assert "Dateien bitte neu erstellen" in source
 
 
 def test_order_panel_has_price_mismatch_confirmation_dialog():
@@ -255,7 +255,7 @@ def test_order_panel_filters_orders_by_customer_and_can_copy_existing_order():
     assert "def apply_order_table_search" in source
     assert "def copy_selected_order_as_new" in source
     assert "self.current_order_id = None" in source
-    assert "Kopie aus Auftrag" in source
+    assert "Kopie aus Bestellung" in source
     assert "list_active_orders(session)" in source
     assert "open_order_dialog" in source
 

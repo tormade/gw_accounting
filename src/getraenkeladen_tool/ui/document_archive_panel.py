@@ -264,7 +264,7 @@ class DocumentArchivePanel(QWidget):
             else "Im Lieferscheinbereich oeffnen"
         )
         open_document_action = menu.addAction(document_label)
-        open_order_action = menu.addAction("Zugehoerigen Auftrag oeffnen")
+        open_order_action = menu.addAction("Zugehoerige Bestellung oeffnen")
         open_order_action.setEnabled(document["order_id"] is not None)
         selected = menu.exec(table.viewport().mapToGlobal(position))
         if selected == pdf_action:
@@ -318,8 +318,8 @@ class DocumentArchivePanel(QWidget):
         if order_id is None:
             QMessageBox.warning(
                 self,
-                "Auftrag nicht gefunden",
-                "Der urspruengliche Auftrag wurde nicht gefunden. Bitte Beleg manuell pruefen.",
+                "Bestellung nicht gefunden",
+                "Die urspruengliche Bestellung wurde nicht gefunden. Bitte Datei manuell pruefen.",
             )
             return
         self.document_open_requested.emit(document["document_type"], order_id)

@@ -241,12 +241,10 @@ def test_checklist_panel_explains_data_changing_actions_for_uncertain_users():
 
 def test_date_fields_use_calendar_input():
     from getraenkeladen_tool.ui.customer_panel import DATE_FIELD_WIDGETS as CUSTOMER_DATE_FIELDS
-    from getraenkeladen_tool.ui.document_panel import DATE_FIELD_WIDGETS as DOCUMENT_DATE_FIELDS
     from getraenkeladen_tool.ui.order_panel import DATE_FIELD_WIDGETS as ORDER_DATE_FIELDS
     from getraenkeladen_tool.ui.report_panel import DATE_FIELD_WIDGETS as REPORT_DATE_FIELDS
 
     assert CUSTOMER_DATE_FIELDS == ("next_contact_date",)
-    assert DOCUMENT_DATE_FIELDS == ("delivery_date",)
     assert ORDER_DATE_FIELDS == ("delivery_date",)
     assert REPORT_DATE_FIELDS == ("target_date",)
 
@@ -264,7 +262,7 @@ def test_main_window_keeps_document_workflows_as_internal_helpers():
     assert "DocumentPanel" not in source
     assert "self.document_workspace =" not in source
     assert "self.pages.addWidget(self._scrollable_tab(self.document_workspace))" not in source
-    assert "DocumentArchivePanel" in source
+    assert "DocumentArchivePanel" not in source
     assert "DeliveryNotePanel" in source
     assert "InvoicePanel" in source
 
@@ -282,7 +280,7 @@ def test_order_tab_exposes_guided_order_actions():
         "orderHelpButton": "?",
         "newOrderButton": "Bestellung erfassen",
         "copyOrderButton": "Markierte Bestellung kopieren",
-        "refreshOrderDataButton": "Stammdaten laden",
+        "refreshOrderDataButton": "Kunden/Artikel neu laden",
         "addOrderLineButton": "Position hinzufuegen",
         "removeOrderLineButton": "Position entfernen",
         "addDepositReturnButton": "Pfand-Rueckgabe eintragen",
@@ -305,11 +303,11 @@ def test_order_tab_exposes_guided_order_actions():
         "Bestellung speichern und daraus Lieferschein oder Rechnung erzeugen.",
     )
     assert ORDER_CONTEXT_ACTIONS == {
-        "open": "Auftrag oeffnen",
-        "copy": "Als neuen Auftrag kopieren",
+        "open": "Bestellung oeffnen",
+        "copy": "Als neue Bestellung kopieren",
         "create_delivery_note": "Lieferschein erstellen",
         "create_invoice": "Rechnung erstellen",
-        "archive": "Auftrag archivieren",
+        "archive": "Bestellung archivieren",
     }
 
 
@@ -465,9 +463,22 @@ def test_dashboard_uses_cockpit_quick_actions_without_calendar():
     assert "ActionCard" in source
     assert "self.quick_actions" in source
     assert "Kunde suchen" in source
-    assert "Rechnung erstellen" in source
+    assert "Kundenordner oeffnen" in source
     assert "heroSearchPanel" in source
     assert "todayContactList" in source
+    assert "Kunde & Bestellung" not in source
+    assert "Zu Belegen" not in source
+
+
+def test_dashboard_copy_matches_customer_folder_workflow():
+    from pathlib import Path
+
+    source = Path("src/getraenkeladen_tool/ui/dashboard_panel.py").read_text(encoding="utf-8")
+
+    assert "Kundenordner öffnen: Startet den normalen Arbeitsablauf" not in source
+    assert "Kundenordner oeffnen: Startet den normalen Arbeitsablauf" in source
+    assert "Kunde oeffnen, alte Excel/PDF sehen und neue Bestellung eintragen." in source
+    assert "Kundenordner" in source
 
 
 def test_dashboard_primary_action_opens_customer_folder_tab():

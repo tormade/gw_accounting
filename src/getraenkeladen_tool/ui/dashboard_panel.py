@@ -20,7 +20,7 @@ DASHBOARD_GUIDANCE_STEPS = (
 )
 DASHBOARD_HELP_TEXT = (
     "Start: Hier sehen Sie die wichtigsten Tageszahlen.\n\n"
-    "Neue Lieferung erfassen: Startet den normalen Arbeitsablauf fuer einen neuen Auftrag.\n\n"
+    "Kundenordner oeffnen: Startet den normalen Arbeitsablauf mit Kunde, alter Excel/PDF und neuer Bestellung.\n\n"
     "Die Karten zeigen, ob heute Lieferungen, offene Posten oder Kontaktanfragen anstehen."
 )
 
@@ -48,19 +48,19 @@ class DashboardPanel(QWidget):
         layout.addWidget(PageHeader("Heute", "Liefern, anrufen, kassieren: der Arbeitstag auf einen Blick.", self.help_button))
 
         self.new_delivery_card = ActionCard(
-            "Neue Lieferung erfassen",
-            "Kunde oeffnen, letzte Mengen sehen und neue Bestellung eintragen.",
+            "Kundenordner oeffnen",
+            "Kunde oeffnen, alte Excel/PDF sehen und neue Bestellung eintragen.",
             DASHBOARD_ACTIONS["newDeliveryButton"],
         )
         self.search_order_card = ActionCard(
             "Kunde suchen",
             "Schnell zum Kundenkopf und zur letzten Bestellung springen.",
-            "Kunde & Bestellung",
+            "Zum Kundenordner",
         )
         self.invoice_card = ActionCard(
-            "Rechnung erstellen",
-            "Aus einer gespeicherten Bestellung Excel oder PDF erzeugen.",
-            "Zu Belegen",
+            "Excel/PDF im Kundenordner",
+            "Rechnung oder Lieferschein aus einer Kundenbestellung erzeugen.",
+            "Kundenordner oeffnen",
         )
         self.quick_actions = [self.new_delivery_card, self.search_order_card, self.invoice_card]
         quick_action_grid = QGridLayout()
@@ -158,7 +158,7 @@ class DashboardPanel(QWidget):
         contacts.setObjectName("todayContactList")
         contacts_layout = QVBoxLayout(contacts)
         contacts_layout.setSpacing(10)
-        contacts_title = QLabel("Heute anrufen")
+        contacts_title = QLabel("Beispiel: Heute anrufen")
         contacts_title.setObjectName("sectionTitle")
         contacts_layout.addWidget(contacts_title)
         for customer, note in (

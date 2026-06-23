@@ -98,7 +98,7 @@ class ProductPanel(QWidget):
 
         edit_box, edit_layout = self._section(
             PRODUCT_PANEL_SECTIONS[0],
-            "Produktname, Artikelnummer, Preis und Pfand sind die Basis fuer spaetere Auftraege.",
+            "Produktname, Artikelnummer, Preis und Pfand sind die Basis fuer spaetere Bestellungen.",
         )
         form = QFormLayout()
         configure_form_layout(form)
