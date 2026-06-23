@@ -6,6 +6,7 @@ def test_main_window_exposes_first_version_tabs():
     assert MAIN_TABS == (
         "Start",
         "Auftraege",
+        "Belegarchiv",
         "Lieferscheine",
         "Rechnungen",
         "Kunden",

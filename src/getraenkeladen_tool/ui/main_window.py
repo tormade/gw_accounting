@@ -6,6 +6,7 @@ from PySide6.QtWidgets import QHBoxLayout, QLabel, QMainWindow, QPushButton, QSc
 
 from .customer_panel import CustomerPanel
 from .dashboard_panel import DashboardPanel
+from .document_archive_panel import DocumentArchivePanel
 from .document_workflow_panel import DeliveryNotePanel, InvoicePanel
 from .layouts import SidebarNavigation
 from .order_panel import OrderPanel
@@ -17,6 +18,7 @@ from .settings_panel import SettingsPanel
 MAIN_TABS = (
     "Start",
     "Auftraege",
+    "Belegarchiv",
     "Lieferscheine",
     "Rechnungen",
     "Kunden",
@@ -47,6 +49,7 @@ class MainWindow(QMainWindow):
 
         self.dashboard_panel = DashboardPanel(session_factory=session_factory)
         self.order_panel = OrderPanel(session_factory=session_factory)
+        self.document_archive_panel = DocumentArchivePanel(session_factory=session_factory)
         self.delivery_note_panel = DeliveryNotePanel(session_factory=session_factory)
         self.invoice_panel = InvoicePanel(session_factory=session_factory)
         self.customer_panel = CustomerPanel(session_factory=session_factory)
@@ -56,6 +59,7 @@ class MainWindow(QMainWindow):
         self.refreshable_panels = {
             "Start": (self.dashboard_panel.refresh_dashboard,),
             "Auftraege": (self.order_panel.refresh_master_data, self.order_panel.refresh_orders),
+            "Belegarchiv": (self.document_archive_panel.refresh_archive,),
             "Lieferscheine": (self.delivery_note_panel.refresh_master_data, self.delivery_note_panel.refresh_orders),
             "Rechnungen": (self.invoice_panel.refresh_master_data, self.invoice_panel.refresh_orders),
             "Kunden": (self.customer_panel.refresh_customers,),
@@ -79,6 +83,7 @@ class MainWindow(QMainWindow):
         self.pages = QStackedWidget()
         self.pages.addWidget(self._scrollable_tab(self.dashboard_panel))
         self.pages.addWidget(self._scrollable_tab(self.order_panel))
+        self.pages.addWidget(self._scrollable_tab(self.document_archive_panel))
         self.pages.addWidget(self._scrollable_tab(self.delivery_note_panel))
         self.pages.addWidget(self._scrollable_tab(self.invoice_panel))
         self.pages.addWidget(self._scrollable_tab(self.customer_panel))
