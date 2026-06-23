@@ -126,7 +126,7 @@ def test_customer_folder_panel_clears_previous_customer_when_search_is_ambiguous
     panel = CustomerFolderPanel(session_factory=None)
     panel.show_snapshot(snapshot, [])
 
-    panel.clear_customer_context("Bitte unten einen Kunden aus der Trefferliste anklicken.")
+    panel.clear_customer_context("Bitte einen Kunden aus der Trefferliste anklicken.")
 
     assert panel.current_customer_id is None
     assert panel.current_folder_path is None
@@ -135,7 +135,7 @@ def test_customer_folder_panel_clears_previous_customer_when_search_is_ambiguous
     assert panel.assortment_table.rowCount() == 0
     assert panel.new_order_button.isEnabled() is False
     assert panel.open_file_button.isEnabled() is False
-    assert panel.status_label.text() == "Bitte unten einen Kunden aus der Trefferliste anklicken."
+    assert panel.status_label.text() == "Bitte einen Kunden aus der Trefferliste anklicken."
 
 
 def test_customer_folder_panel_names_empty_order_action_when_no_seed_quantities(tmp_path: Path):

@@ -163,7 +163,7 @@ class DashboardPanel(QWidget):
         contacts.setObjectName("todayContactList")
         contacts_layout = QVBoxLayout(contacts)
         contacts_layout.setSpacing(10)
-        contacts_title = QLabel("Beispiel: Heute anrufen")
+        contacts_title = QLabel("Demo-Beispiele: Heute anrufen")
         contacts_title.setObjectName("sectionTitle")
         contacts_layout.addWidget(contacts_title)
         for customer, note in (

@@ -131,6 +131,16 @@ def test_shared_layout_widgets_are_available():
     assert 'setObjectName("workspaceCard")' in source
 
 
+def test_sidebar_navigation_is_named_for_keyboard_and_accessibility():
+    from pathlib import Path
+
+    source = Path("src/getraenkeladen_tool/ui/layouts.py").read_text(encoding="utf-8")
+
+    assert 'self.setAccessibleName("Hauptnavigation")' in source
+    assert "Qt.FocusPolicy.StrongFocus" in source
+    assert 'item.setToolTip(f"{label} oeffnen")' in source
+
+
 def test_order_and_document_workspaces_use_named_layout_regions():
     from pathlib import Path
 
@@ -174,6 +184,7 @@ def test_dashboard_uses_modern_surface_and_action_grid():
     assert "QGridLayout" in source
     assert "quick_action_grid" in source
     assert "setColumnStretch" in source
+    assert "Demo-Beispiele" in source
 
 
 def test_order_form_gives_selection_fields_room_to_grow():

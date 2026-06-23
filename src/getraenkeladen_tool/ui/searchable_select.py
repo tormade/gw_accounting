@@ -29,7 +29,7 @@ class SearchableSelect(QWidget):
         self._current_value = None
         self.search_input = QLineEdit()
         self.search_input.setPlaceholderText(placeholder)
-        self.help_label = QLabel("Namen tippen und unten einen Treffer anklicken.")
+        self.help_label = QLabel("Namen tippen, dann Treffer anklicken.")
         self.help_label.setObjectName("sectionSubtitle")
         self.result_list = QListWidget()
         self.result_list.setMaximumHeight(self.DEFAULT_LIST_HEIGHT)
@@ -42,7 +42,9 @@ class SearchableSelect(QWidget):
         layout.addWidget(self.result_list)
 
         self.search_input.textChanged.connect(self._filter_items)
+        self.search_input.returnPressed.connect(self.select_first_visible_item)
         self.result_list.itemClicked.connect(self._select_item)
+        self.result_list.itemDoubleClicked.connect(self._select_item)
 
     def set_items(self, items: Iterable[tuple[str, object, str]]) -> None:
         self._items = [SearchableSelectItem(label, value, detail) for label, value, detail in items]
@@ -83,16 +85,24 @@ class SearchableSelect(QWidget):
         self._current_value = None
         self.selection_changed.emit()
 
+    def select_first_visible_item(self) -> None:
+        for row in range(self.result_list.count()):
+            item = self.result_list.item(row)
+            if item.flags() & Qt.ItemFlag.ItemIsEnabled:
+                self._select_item(item)
+                return
+        self.help_label.setText("Kein Treffer gefunden. Bitte Suchtext pruefen.")
+
     def _filter_items(self, text: str) -> None:
         self.result_list.clear()
         if not text.strip():
             self._current_value = None
             self.result_list.setMaximumHeight(0)
-            self.help_label.setText("Namen tippen, dann unten einen Treffer anklicken.")
+            self.help_label.setText("Namen tippen, dann Treffer anklicken.")
             self.selection_changed.emit()
             return
         self.result_list.setMaximumHeight(self.DEFAULT_LIST_HEIGHT)
-        self.help_label.setText("Namen tippen und unten einen Treffer anklicken.")
+        self.help_label.setText("Treffer in der Liste anklicken.")
         matches = filter_searchable_items(self._items, text)
         for item in matches:
             list_item = QListWidgetItem(item.label)

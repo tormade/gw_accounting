@@ -156,7 +156,7 @@ class CustomerFolderPanel(QWidget):
     def load_selected_customer(self) -> None:
         customer_id = self.customer_select.current_value()
         if customer_id is None:
-            self.clear_customer_context("Bitte unten einen Kunden aus der Trefferliste anklicken.")
+            self.clear_customer_context("Bitte einen Kunden aus der Trefferliste anklicken.")
             return
         if self.session_factory is None:
             self.status_label.setText("Keine Datenbankverbindung vorhanden.")

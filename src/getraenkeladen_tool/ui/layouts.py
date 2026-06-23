@@ -81,11 +81,14 @@ class SidebarNavigation(QListWidget):
     def __init__(self, labels: Iterable[str]) -> None:
         super().__init__()
         self.setObjectName("sidebarNavigation")
+        self.setAccessibleName("Hauptnavigation")
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.setFixedWidth(220)
         self.setSpacing(4)
         for label in labels:
             item = QListWidgetItem(label)
             item.setTextAlignment(Qt.AlignmentFlag.AlignVCenter)
+            item.setToolTip(f"{label} oeffnen")
             self.addItem(item)
         self.setCurrentRow(0)
 
