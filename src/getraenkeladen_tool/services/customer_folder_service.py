@@ -31,7 +31,7 @@ def get_customer_folder_snapshot(session: Session, customer_id: int) -> Customer
         raise ValueError("Kunde wurde nicht gefunden.")
 
     folder_path = Path(customer.folder_path)
-    folder_exists = folder_path.exists()
+    folder_exists = folder_path.is_dir()
     return CustomerFolderSnapshot(
         customer=customer,
         folder_path=folder_path,
@@ -61,6 +61,7 @@ def _customer_orders(session: Session, customer_id: int) -> list[Order]:
             .options(selectinload(Order.lines), selectinload(Order.deposit_returns), selectinload(Order.customer))
             .where(Order.customer_id == customer_id)
             .where(Order.status != "archiviert")
+            .where(Order.number_released == False)  # noqa: E712
             .order_by(Order.delivery_date.desc(), Order.id.desc())
         )
     )

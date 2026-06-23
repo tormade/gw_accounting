@@ -62,11 +62,19 @@ def test_customer_folder_snapshot_combines_customer_documents_orders_and_real_fo
         delivery_date="2026-05-05",
         status="archiviert",
     )
+    released_order = Order(
+        order_number="AUF-FREI",
+        customer_id=customer.id,
+        order_date="2026-05-01",
+        delivery_date="2026-05-06",
+        status="geplant",
+        number_released=True,
+    )
     foreign_order = Order(
         order_number="AUF-FREMD",
         customer_id=other_customer.id,
         order_date="2026-05-01",
-        delivery_date="2026-05-06",
+        delivery_date="2026-05-07",
         status="geplant",
     )
     session.add_all(
@@ -76,6 +84,7 @@ def test_customer_folder_snapshot_combines_customer_documents_orders_and_real_fo
             foreign_document,
             active_order,
             archived_order,
+            released_order,
             foreign_order,
         ]
     )
@@ -97,6 +106,19 @@ def test_customer_folder_snapshot_combines_customer_documents_orders_and_real_fo
 
 def test_customer_folder_snapshot_marks_missing_folder_and_returns_empty_files(session, tmp_path: Path):
     customer = Customer(name="Hotel Blau", folder_path=str(tmp_path / "fehlt"), is_active=True)
+    session.add(customer)
+    session.commit()
+
+    snapshot = get_customer_folder_snapshot(session, customer.id)
+
+    assert snapshot.folder_exists is False
+    assert snapshot.files == []
+
+
+def test_customer_folder_snapshot_treats_existing_file_path_as_missing_folder(session, tmp_path: Path):
+    file_path = tmp_path / "kein_ordner.xlsx"
+    file_path.write_text("not a folder", encoding="utf-8")
+    customer = Customer(name="Falscher Pfad", folder_path=str(file_path), is_active=True)
     session.add(customer)
     session.commit()
 
