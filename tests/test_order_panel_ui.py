@@ -25,12 +25,12 @@ def test_document_workflow_panels_make_excel_pdf_generation_flow_visible():
 
     assert "class DeliveryNotePanel" in source
     assert "class InvoicePanel" in source
-    assert "Excel-Lieferschein erstellen" in source
-    assert "PDF-Lieferschein erstellen" in source
-    assert "Lieferschein komplett erstellen" in source
-    assert "Excel-Rechnung erstellen" in source
-    assert "PDF-Rechnung erstellen" in source
-    assert "Rechnung komplett erstellen" in source
+    assert "Nur Excel-Lieferschein" in source
+    assert "Nur PDF-Lieferschein" in source
+    assert "Lieferschein als Excel + PDF erstellen" in source
+    assert "Nur Excel-Rechnung" in source
+    assert "Nur PDF-Rechnung" in source
+    assert "Rechnung als Excel + PDF erstellen" in source
     assert "self.create_both_button.clicked.connect(self.create_complete_document)" in source
     assert "self.create_excel_button.clicked.connect(self.create_excel_document)" in source
     assert "self.create_pdf_button.clicked.connect(self.create_pdf_document)" in source
@@ -40,8 +40,8 @@ def test_document_workflow_panels_make_excel_pdf_generation_flow_visible():
     assert "QMessageBox.critical" in source
     assert "QMessageBox.warning" in source
     assert "Erstellung fehlgeschlagen" in source
-    assert "Auftrag suchen" in source
-    assert 'self.order_select = SearchableSelect("Kunde, Auftragsnummer oder Lieferdatum suchen")' in source
+    assert "Kundenbestellung suchen" in source
+    assert 'self.order_select = SearchableSelect("Kunde, Bestellnummer oder Lieferdatum suchen")' in source
     assert "self.order_select.set_items(" in source
     assert "self.order_select.current_value()" in source
     assert "self.orders_table = QTableWidget" not in source
@@ -50,7 +50,7 @@ def test_document_workflow_panels_make_excel_pdf_generation_flow_visible():
     assert "PDF:" in source
     assert "Nummer vorschlagen" not in source
     assert "suggest_document_number" not in source
-    assert "Lieferpauschale 3,90 EUR" in source
+    assert "Lieferpauschale berechnen?" in source
     assert "self.delivery_fee_choice = QComboBox()" in source
     assert "self.document_note = QLineEdit()" in source
 
@@ -59,23 +59,23 @@ def test_document_workflow_uses_compact_order_search_instead_of_large_order_list
     source = Path("src/getraenkeladen_tool/ui/document_workflow_panel.py").read_text(encoding="utf-8")
 
     assert "SearchableSelect" in source
-    assert "Auftrag uebernehmen" in source
+    assert "Diese Bestellung verwenden" in source
     assert "Suche zuruecksetzen" in source
-    assert "Ausgewaehlter Auftrag" in source
-    assert "Kunde, Auftragsnummer oder Lieferdatum suchen" in source
+    assert "Ausgewaehlte Bestellung" in source
+    assert "Kunde, Bestellnummer oder Lieferdatum suchen" in source
 
 
 def test_document_workflow_uses_rounded_tabs_for_document_steps():
     source = Path("src/getraenkeladen_tool/ui/document_workflow_panel.py").read_text(encoding="utf-8")
 
     assert "self.document_tabs = QTabWidget()" in source
-    assert 'addTab(positions_tab, "1 Positionen")' in source
-    assert 'addTab(deposit_tab, "2 Pfand")' in source
-    assert 'addTab(details_tab, "3 Belegdaten")' in source
-    assert 'addTab(output_tab, "4 Ausgabe")' in source
+    assert 'addTab(positions_tab, "1 Artikel pruefen")' in source
+    assert 'addTab(deposit_tab, "2 Leergut/Pfand zurueck")' in source
+    assert 'addTab(details_tab, "3 Nummer und Text")' in source
+    assert 'addTab(output_tab, "4 Excel/PDF erstellen")' in source
     assert "document_layout.addWidget(total_bar)" in source
-    assert "PDF-Rechnung erstellen" in source
-    assert "PDF-Lieferschein erstellen" in source
+    assert "Nur PDF-Rechnung" in source
+    assert "Nur PDF-Lieferschein" in source
 
 
 def test_document_workflow_allows_editing_lines_and_deposit_returns():
@@ -105,8 +105,13 @@ def test_document_workflow_uses_clearer_deposit_and_delivery_fee_labels():
 
     assert 'DOCUMENT_LINE_COLUMNS = ("Artikel", "Menge", "Preis je Einheit EUR", "Pfand je Einheit EUR", "Summe EUR")' in source
     assert '"addDocumentDepositReturnButton": "Pfand-Rueckgabe eintragen"' in source
-    assert "Lieferpauschale 3,90 EUR" in source
-    assert "Aendert nur diesen Beleg" in source
+    assert "Lieferpauschale berechnen?" in source
+    assert "Nein, keine Pauschale" in source
+    assert "Ja, 3,90 EUR hinzufuegen" in source
+    assert "Aenderungen gelten nur fuer diese Ausgabe" in source
+    assert "Lieferschein-Nummer" in source
+    assert "Hinweis auf dem Lieferschein" in source
+    assert "Zahlungshinweis auf Rechnung" in source
 
 
 def test_document_workflow_prioritizes_complete_excel_pdf_generation():
@@ -116,6 +121,7 @@ def test_document_workflow_prioritizes_complete_excel_pdf_generation():
     assert 'self.create_document({"excel", "pdf"})' in source
     assert "self.create_both_button" in source
     assert "Excel + PDF erstellt" in source
+    assert "Das ist der normale Weg" in source
 
 
 def test_order_panel_supports_editing_existing_orders():

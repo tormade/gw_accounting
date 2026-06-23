@@ -36,6 +36,8 @@ DOCUMENT_RETURN_COLUMNS = ("Pfandart", "Menge", "Pfand EUR", "Gutschrift EUR")
 
 class DocumentWorkflowPanel(QWidget):
     document_type = ""
+    document_singular = ""
+    page_title = ""
     number_label = ""
     note_label = "Freitext"
     default_note_text = ""
@@ -51,18 +53,18 @@ class DocumentWorkflowPanel(QWidget):
         self.last_excel_path: Path | None = None
         self.last_pdf_path: Path | None = None
 
-        self.order_select = SearchableSelect("Kunde, Auftragsnummer oder Lieferdatum suchen")
+        self.order_select = SearchableSelect("Kunde, Bestellnummer oder Lieferdatum suchen")
         self.order_select.search_input.setObjectName("tableSearchField")
         self.order_select.setMaximumHeight(180)
 
-        self.order_summary = QLabel("Noch kein Auftrag ausgewaehlt.")
+        self.order_summary = QLabel("Noch keine Bestellung ausgewaehlt.")
         self.order_summary.setObjectName("sectionSubtitle")
         self.order_summary.setWordWrap(True)
         self.document_number = QLineEdit()
         self.document_number.setPlaceholderText(self.number_label)
         self.delivery_fee_choice = QComboBox()
-        self.delivery_fee_choice.addItem("Nein", False)
-        self.delivery_fee_choice.addItem("Ja", True)
+        self.delivery_fee_choice.addItem("Nein, keine Pauschale", False)
+        self.delivery_fee_choice.addItem("Ja, 3,90 EUR hinzufuegen", True)
         self.document_note = QLineEdit()
         self.document_note.setPlaceholderText(self.default_note_text)
         self.lines_table = QTableWidget(0, len(DOCUMENT_LINE_COLUMNS))
@@ -80,9 +82,9 @@ class DocumentWorkflowPanel(QWidget):
         self.deposit_return_quantity.setPlaceholderText("z. B. 1")
         self.deposit_return_eur = QLineEdit()
         self.deposit_return_eur.setPlaceholderText("z. B. 4,80")
-        self.total_label = QLabel("Belegsumme: 0,00 EUR")
+        self.total_label = QLabel("Gesamtsumme: 0,00 EUR")
         self.total_label.setObjectName("stepTitle")
-        self.status_label = QLabel("Auftrag auswaehlen, Positionen pruefen, dann Excel oder PDF erstellen.")
+        self.status_label = QLabel("Bestellung auswaehlen, Artikel pruefen, dann als Excel oder PDF erstellen.")
         self.status_label.setObjectName("muted")
         self.result_label = QLabel("Noch keine Datei erstellt.")
         self.result_label.setObjectName("sectionSubtitle")
@@ -96,8 +98,8 @@ class DocumentWorkflowPanel(QWidget):
 
         layout.addWidget(
             PageHeader(
-                self.document_type,
-                "Auftrag waehlen, Positionen bei Bedarf fuer diesen Beleg anpassen und Excel oder PDF separat erzeugen.",
+                self.page_title or self.document_type,
+                "Die Bestellung kommt aus der Kunden-Excel/Vorlage. Mengen, Preise und Pfand pruefen, dann Excel oder PDF erstellen.",
             )
         )
 
@@ -105,13 +107,13 @@ class DocumentWorkflowPanel(QWidget):
         layout.addWidget(body, 1)
 
         order_box, order_layout = self._section(
-            "1. Auftrag suchen",
-            "Kunde, Auftragsnummer oder Lieferdatum eingeben. Danach passenden Auftrag uebernehmen.",
+            "1. Kundenbestellung suchen",
+            "Kunde, Bestellnummer oder Lieferdatum eingeben. Danach diese Bestellung verwenden.",
         )
         order_layout.addWidget(self.order_select)
         refresh_row = QHBoxLayout()
         self.refresh_button = QPushButton("Liste aktualisieren")
-        self.load_button = QPushButton("Auftrag uebernehmen")
+        self.load_button = QPushButton("Diese Bestellung verwenden")
         self.reset_order_button = QPushButton("Suche zuruecksetzen")
         refresh_row.addWidget(self.refresh_button)
         refresh_row.addWidget(self.load_button)
@@ -121,8 +123,8 @@ class DocumentWorkflowPanel(QWidget):
         body.addWidget(order_box)
 
         document_box, document_layout = self._section(
-            "2. Beleg pruefen",
-            "Aendert nur diesen Beleg. Die gespeicherte Bestellung bleibt als Vorlage erhalten.",
+            "2. Artikel und Betraege pruefen",
+            "Aenderungen gelten nur fuer diese Ausgabe. Die gespeicherte Bestellung bleibt unveraendert.",
         )
         document_layout.addWidget(self.order_summary)
 
@@ -145,7 +147,7 @@ class DocumentWorkflowPanel(QWidget):
         total_layout.setContentsMargins(0, 0, 0, 0)
         total_layout.addStretch()
         total_layout.addWidget(self.total_label)
-        self.document_tabs.addTab(positions_tab, "1 Positionen")
+        self.document_tabs.addTab(positions_tab, "1 Artikel pruefen")
 
         deposit_tab = QWidget()
         deposit_layout = QVBoxLayout(deposit_tab)
@@ -165,7 +167,7 @@ class DocumentWorkflowPanel(QWidget):
         return_action_row.addStretch()
         deposit_layout.addLayout(return_action_row)
         deposit_layout.addWidget(self.returns_table)
-        self.document_tabs.addTab(deposit_tab, "2 Pfand")
+        self.document_tabs.addTab(deposit_tab, "2 Leergut/Pfand zurueck")
 
         details_tab = QWidget()
         details_layout = QVBoxLayout(details_tab)
@@ -173,17 +175,18 @@ class DocumentWorkflowPanel(QWidget):
         number_form = QFormLayout()
         configure_form_layout(number_form)
         number_form.addRow(self.number_label, self.document_number)
-        number_form.addRow("Lieferpauschale 3,90 EUR", self.delivery_fee_choice)
+        number_form.addRow("Lieferpauschale berechnen?", self.delivery_fee_choice)
         number_form.addRow(self.note_label, self.document_note)
         details_layout.addLayout(number_form)
         details_layout.addStretch()
-        self.document_tabs.addTab(details_tab, "3 Belegdaten")
+        self.document_tabs.addTab(details_tab, "3 Nummer und Text")
 
         output_tab = QWidget()
         output_layout = QVBoxLayout(output_tab)
         output_layout.setContentsMargins(10, 10, 10, 10)
         action_row = QHBoxLayout()
         self.create_both_button = QPushButton(self.create_both_button_text)
+        self.create_both_button.setObjectName("primaryAction")
         self.create_excel_button = QPushButton(self.create_excel_button_text)
         self.create_pdf_button = QPushButton(self.create_pdf_button_text)
         self.open_excel_button = QPushButton("Excel oeffnen")
@@ -197,9 +200,13 @@ class DocumentWorkflowPanel(QWidget):
         action_row.addWidget(self.open_pdf_button)
         action_row.addStretch()
         output_layout.addLayout(action_row)
+        normal_hint = QLabel("Das ist der normale Weg: Der obere Button erstellt Excel und PDF zusammen.")
+        normal_hint.setObjectName("sectionSubtitle")
+        normal_hint.setWordWrap(True)
+        output_layout.addWidget(normal_hint)
         output_layout.addWidget(self.result_label)
         output_layout.addStretch()
-        self.document_tabs.addTab(output_tab, "4 Ausgabe")
+        self.document_tabs.addTab(output_tab, "4 Excel/PDF erstellen")
         document_layout.addWidget(total_bar)
 
         body.addWidget(document_box)
@@ -255,20 +262,20 @@ class DocumentWorkflowPanel(QWidget):
                 for order in orders
             )
         )
-        self.status_label.setText(f"{len(orders)} Auftraege fuer die Suche geladen.")
+        self.status_label.setText(f"{len(orders)} Bestellungen fuer die Suche geladen.")
 
     def load_selected_order(self) -> None:
         order_id = self.order_select.current_value()
         if order_id is None or self.session_factory is None:
-            self.status_label.setText("Bitte zuerst einen Auftrag auswaehlen.")
+            self.status_label.setText("Bitte zuerst eine Bestellung auswaehlen.")
             return
         self.select_order(order_id)
 
     def reset_order_selection(self) -> None:
         self.current_order_id = None
         self.order_select.set_search_text("")
-        self.order_summary.setText("Noch kein Auftrag ausgewaehlt.")
-        self.status_label.setText("Bitte Auftrag suchen und uebernehmen.")
+        self.order_summary.setText("Noch keine Bestellung ausgewaehlt.")
+        self.status_label.setText("Bitte Kundenbestellung suchen und verwenden.")
 
     def select_order(self, order_id: int) -> None:
         if self.session_factory is None:
@@ -278,7 +285,7 @@ class DocumentWorkflowPanel(QWidget):
             order = get_order(session, order_id)
             self.current_order_id = order.id
             self.order_summary.setText(
-                "Ausgewaehlter Auftrag: "
+                "Ausgewaehlte Bestellung: "
                 f"{order.order_number} | {order.customer.name} | Lieferung {to_display_date(order.delivery_date)} | "
                 f"{len(order.lines)} Positionen"
             )
@@ -289,7 +296,7 @@ class DocumentWorkflowPanel(QWidget):
                 self._append_line(line.product_name, line.quantity, line.unit_price_cents, line.deposit_cents)
             for deposit_return in order.deposit_returns:
                 self._append_return(deposit_return.name, deposit_return.quantity, deposit_return.deposit_cents)
-            self.status_label.setText("Auftrag uebernommen. Positionen pruefen und Beleg erstellen.")
+            self.status_label.setText("Bestellung verwendet. Artikel pruefen und danach Excel oder PDF erstellen.")
         finally:
             session.close()
 
@@ -307,9 +314,9 @@ class DocumentWorkflowPanel(QWidget):
         if self.current_order_id is None:
             self.load_selected_order()
         if self.current_order_id is None:
-            message = "Bitte zuerst einen Auftrag auswaehlen."
+            message = "Bitte zuerst eine Bestellung auswaehlen."
             self.status_label.setText(message)
-            QMessageBox.warning(self, f"{self.document_type} erstellen", message)
+            QMessageBox.warning(self, f"{self._document_name()} erstellen", message)
             return
         if self.session_factory is None:
             message = "Keine Datenbankverbindung vorhanden."
@@ -324,7 +331,7 @@ class DocumentWorkflowPanel(QWidget):
             QMessageBox.critical(
                 self,
                 "Erstellung fehlgeschlagen",
-                f"{self.document_type} konnte nicht als {asset_label} erstellt werden.\n\nGrund: {error}",
+                f"{self._document_name()} konnte nicht als {asset_label} erstellt werden.\n\nGrund: {error}",
             )
             return
         finally:
@@ -336,14 +343,17 @@ class DocumentWorkflowPanel(QWidget):
         self.open_pdf_button.setEnabled(self.last_pdf_path.exists())
         self.result_label.setText(self._created_asset_result(asset_label))
         self.status_label.setText(
-            f"Erfolgreich erstellt: {self.document_type} {document.document_number} als {asset_label}."
+            f"Erfolgreich erstellt: {self._document_name()} {document.document_number} als {asset_label}."
         )
         QMessageBox.information(
             self,
-            f"{self.document_type} erstellt",
-            f"{self.document_type} {document.document_number} wurde als {asset_label} erstellt.\n\n"
+            f"{self._document_name()} erstellt",
+            f"{self._document_name()} {document.document_number} wurde als {asset_label} erstellt.\n\n"
             f"Datei: {self._created_asset_path(asset_label)}",
         )
+
+    def _document_name(self) -> str:
+        return self.document_singular or self.document_type
 
     def _created_asset_label(self, assets: set[str]) -> str:
         if assets == {"excel", "pdf"}:
@@ -412,7 +422,7 @@ class DocumentWorkflowPanel(QWidget):
             self.status_label.setText("Bitte Menge und Pfandwert groesser 0 eintragen.")
             return
         self._append_return(name, quantity, deposit_cents)
-        self.status_label.setText("Pfandrueckgabe fuer diesen Beleg hinzugefuegt.")
+        self.status_label.setText("Pfandrueckgabe fuer diese Ausgabe hinzugefuegt.")
 
     def apply_selected_deposit_return(self) -> None:
         cents = self.deposit_return_select.currentData()
@@ -485,7 +495,7 @@ class DocumentWorkflowPanel(QWidget):
         finally:
             self.lines_table.blockSignals(False)
             self.returns_table.blockSignals(False)
-        self.total_label.setText(f"Belegsumme: {self._format_euro_cents(total_cents)}")
+        self.total_label.setText(f"Gesamtsumme: {self._format_euro_cents(total_cents)}")
 
     def _set_total_item(self, table: QTableWidget, row: int, column: int, cents: int) -> None:
         item = table.item(row, column)
@@ -544,12 +554,14 @@ class DocumentWorkflowPanel(QWidget):
 
 class DeliveryNotePanel(DocumentWorkflowPanel):
     document_type = "Lieferscheine"
-    number_label = "LS-Nummer"
-    note_label = "Kommentar oben rechts"
+    document_singular = "Lieferschein"
+    page_title = "Lieferschein aus Bestellung erstellen"
+    number_label = "Lieferschein-Nummer"
+    note_label = "Hinweis auf dem Lieferschein"
     default_note_text = ""
-    create_excel_button_text = "Excel-Lieferschein erstellen"
-    create_pdf_button_text = "PDF-Lieferschein erstellen"
-    create_both_button_text = "Lieferschein komplett erstellen"
+    create_excel_button_text = "Nur Excel-Lieferschein"
+    create_pdf_button_text = "Nur PDF-Lieferschein"
+    create_both_button_text = "Lieferschein als Excel + PDF erstellen"
 
     def _create_document_for_order(self, session, assets: set[str]):
         return create_order_delivery_order(
@@ -567,12 +579,14 @@ class DeliveryNotePanel(DocumentWorkflowPanel):
 
 class InvoicePanel(DocumentWorkflowPanel):
     document_type = "Rechnungen"
+    document_singular = "Rechnung"
+    page_title = "Rechnung aus Bestellung erstellen"
     number_label = "Rechnungsnummer"
-    note_label = "Rechnungstext unten"
+    note_label = "Zahlungshinweis auf Rechnung"
     default_note_text = "Rechnungsbetrag wird per Sepa Basis Lastschrift Mandat eingezogen."
-    create_excel_button_text = "Excel-Rechnung erstellen"
-    create_pdf_button_text = "PDF-Rechnung erstellen"
-    create_both_button_text = "Rechnung komplett erstellen"
+    create_excel_button_text = "Nur Excel-Rechnung"
+    create_pdf_button_text = "Nur PDF-Rechnung"
+    create_both_button_text = "Rechnung als Excel + PDF erstellen"
 
     def _create_document_for_order(self, session, assets: set[str]):
         return create_order_invoice(

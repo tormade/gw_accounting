@@ -30,6 +30,7 @@ Das Produktziel steht in `docs/zielbild.md`: ein schlankes lokales Windows-Buero
 - Belegfluss mit Hauptbutton fuer komplette Erstellung von Excel + PDF.
 - PDF-Nacherzeugung aus vorhandener Excel liest Pfand-Rueckgaben aus denselben Zeilen wie der Excel-Export.
 - Gespeicherte Preisentscheidungen aus der Pruefliste werden im Kundensortiment direkt angewendet.
+- Rechnung-/Lieferschein-Erstellung sprachlich und visuell als gefuehrter Ablauf fuer Erstnutzer vereinfacht.
 
 ## In Arbeit
 
