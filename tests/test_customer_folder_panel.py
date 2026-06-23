@@ -93,3 +93,13 @@ def test_customer_folder_panel_enables_actions_from_snapshot_state(tmp_path: Pat
     panel.update_action_state()
     assert panel.delivery_note_button.isEnabled() is True
     assert panel.invoice_button.isEnabled() is True
+
+
+def test_customer_folder_panel_routes_selected_order_to_documents():
+    source = Path("src/getraenkeladen_tool/ui/customer_folder_panel.py").read_text(encoding="utf-8")
+
+    assert "def request_delivery_note_for_selected_order" in source
+    assert "self.delivery_note_requested.emit(order_id)" in source
+    assert "def request_invoice_for_selected_order" in source
+    assert "self.invoice_requested.emit(order_id)" in source
+    assert "Bitte zuerst eine Bestellung dieses Kunden auswaehlen" in source
