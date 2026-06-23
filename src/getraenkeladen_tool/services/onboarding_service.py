@@ -8,7 +8,7 @@ from openpyxl import load_workbook
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from ..models import Customer, OnboardingIssue
+from ..models import Customer, CustomerAssortmentItem, OnboardingIssue, Product, ProductAlias
 from ..schemas import CustomerCreate
 from .customer_service import create_customer, update_customer
 from .master_data_import_service import _clean_text, _date_to_iso, _sheet_rows
@@ -179,6 +179,9 @@ def onboard_customer_from_sources(
     else:
         customer = update_customer(session, customer.id, payload)
 
+    assortment_issues = _sync_customer_assortment(session, customer, folder_snapshot)
+    issues.extend(assortment_issues)
+
     persisted_issues = []
     for issue in issues:
         session.add(issue)
@@ -197,6 +200,90 @@ def onboard_customer_from_sources(
             unreadable_files=0,
         ),
         issues=persisted_issues,
+    )
+
+
+def _sync_customer_assortment(
+    session: Session,
+    customer: Customer,
+    snapshot: CustomerWorkbookSnapshot,
+) -> list[OnboardingIssue]:
+    existing_items = {
+        _normalize_compare(item.source_product_name): item
+        for item in session.scalars(
+            select(CustomerAssortmentItem).where(CustomerAssortmentItem.customer_id == customer.id)
+        )
+    }
+    issues = []
+    product_index = _product_index(session)
+    for sort_order, line in enumerate(snapshot.lines, start=1):
+        product = product_index.get(_normalize_product_name(line.name))
+        normalized_source = _normalize_compare(line.name)
+        item = existing_items.get(normalized_source)
+        if item is None:
+            item = CustomerAssortmentItem(
+                customer_id=customer.id,
+                source_product_name=line.name,
+                sort_order=sort_order,
+                source_file=snapshot.source_file,
+            )
+            session.add(item)
+        item.product_id = product.id if product is not None else None
+        item.last_quantity = line.quantity
+        item.last_unit_price_cents = line.unit_price_cents
+        item.last_deposit_cents = line.deposit_cents
+        item.sort_order = sort_order
+        item.is_active = True
+        item.source_file = snapshot.source_file
+        if product is None:
+            issues.append(
+                OnboardingIssue(
+                    customer_name=customer.name,
+                    source_file=snapshot.source_file,
+                    issue_type="product_match",
+                    field_name="product",
+                    list_value=None,
+                    folder_value=line.name,
+                    message=f"Artikel konnte nicht sicher zugeordnet werden: {line.name}",
+                    status="offen",
+                    created_at=datetime.now().isoformat(timespec="seconds"),
+                )
+            )
+        else:
+            _ensure_product_alias(session, product, line.name, snapshot.source_file)
+    return issues
+
+
+def _product_index(session: Session) -> dict[str, Product]:
+    products = list(session.scalars(select(Product).where(Product.is_active == True)))  # noqa: E712
+    aliases = list(session.scalars(select(ProductAlias).where(ProductAlias.product_id.is_not(None))))
+    index = {_normalize_product_name(product.name): product for product in products}
+    products_by_id = {product.id: product for product in products}
+    for alias in aliases:
+        product = products_by_id.get(alias.product_id)
+        if product is not None:
+            index[_normalize_product_name(alias.alias)] = product
+    return index
+
+
+def _ensure_product_alias(session: Session, product: Product, alias: str, source_file: str) -> None:
+    existing = session.scalar(
+        select(ProductAlias)
+        .where(ProductAlias.product_id == product.id)
+        .where(ProductAlias.alias == alias)
+        .limit(1)
+    )
+    if existing is not None:
+        existing.status = "bestaetigt"
+        existing.source_file = source_file
+        return
+    session.add(
+        ProductAlias(
+            product_id=product.id,
+            alias=alias,
+            source_file=source_file,
+            status="bestaetigt",
+        )
     )
 
 
@@ -495,6 +582,16 @@ def _join_notes(*values: str | None) -> str | None:
 
 def _normalize_compare(value: str) -> str:
     return re.sub(r"[^a-z0-9@]+", "", value.lower())
+
+
+def _normalize_product_name(value: str) -> str:
+    normalized = value.lower()
+    normalized = normalized.replace("ä", "ae").replace("ö", "oe").replace("ü", "ue").replace("ß", "ss")
+    normalized = normalized.replace(".", "")
+    normalized = re.sub(r"\s+", " ", normalized)
+    normalized = normalized.replace(" x ", "x")
+    normalized = normalized.replace(" x", "x").replace("x ", "x")
+    return re.sub(r"[^a-z0-9,]+", "", normalized)
 
 
 def _int_value(value) -> int:

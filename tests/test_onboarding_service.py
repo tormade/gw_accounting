@@ -2,12 +2,13 @@ from pathlib import Path
 
 from sqlalchemy import select
 
-from getraenkeladen_tool.models import OnboardingIssue
+from getraenkeladen_tool.models import CustomerAssortmentItem, OnboardingIssue, ProductAlias
 from getraenkeladen_tool.services.onboarding_service import (
     analyze_customer_workbook,
     onboard_customer_from_sources,
     onboard_customer_workbook_folder,
 )
+from getraenkeladen_tool.services.master_data_import_service import import_master_data_from_folder
 
 
 INPUT_DIR = Path("/Users/thomasrumel/Documents/Codex/2026-06-20/Input")
@@ -76,6 +77,8 @@ def test_customer_workbook_parser_reads_overweisung_due_date_from_footer():
 
 
 def test_onboarding_merges_folder_operational_truth_with_customer_list_and_keeps_conflicts(session):
+    import_master_data_from_folder(session, INPUT_DIR)
+
     result = onboard_customer_from_sources(
         session,
         customer_name="Metzgerei Karl",
@@ -101,7 +104,52 @@ def test_onboarding_merges_folder_operational_truth_with_customer_list_and_keeps
     assert all(issue.status == "offen" for issue in issues)
 
 
+def test_onboarding_builds_customer_assortment_and_product_aliases(session):
+    import_master_data_from_folder(session, INPUT_DIR)
+
+    result = onboard_customer_from_sources(
+        session,
+        customer_name="Metzgerei Karl",
+        customer_list_path=INPUT_DIR / "Lieferkunden Liste.xlsx",
+        workbook_path=INPUT_DIR / "_ RE 0525 Metzgerei Karl .xlsx",
+    )
+
+    assortment = list(
+        session.scalars(
+            select(CustomerAssortmentItem)
+            .where(CustomerAssortmentItem.customer_id == result.customer.id)
+            .order_by(CustomerAssortmentItem.sort_order)
+        )
+    )
+    assert len(assortment) == 16
+    frucade = next(item for item in assortment if item.source_product_name == "Frucade Colamix 20x0,5")
+    assert frucade.product is not None
+    assert frucade.product.name == "Frucade Colamix 20x0,5"
+    assert frucade.last_quantity == 3
+    assert frucade.last_unit_price_cents == 1048
+    assert frucade.last_deposit_cents == 310
+    assert frucade.is_active is True
+
+    alias = session.scalar(select(ProductAlias).where(ProductAlias.alias == "Frucade Colamix 20x0,5"))
+    assert alias is not None
+    assert alias.product_id == frucade.product_id
+    assert alias.status == "bestaetigt"
+
+    unresolved = next(item for item in assortment if item.source_product_name == "Labert. ACE 20x0,5")
+    assert unresolved.product_id is None
+    product_issues = list(
+        session.scalars(
+            select(OnboardingIssue)
+            .where(OnboardingIssue.issue_type == "product_match")
+            .order_by(OnboardingIssue.id)
+        )
+    )
+    assert any("Labert. ACE 20x0,5" in issue.folder_value for issue in product_issues if issue.folder_value)
+
+
 def test_folder_onboarding_reports_readable_customers_and_skips_outliers(session, tmp_path):
+    import_master_data_from_folder(session, INPUT_DIR)
+
     customer_dir = tmp_path / "Kundenordner"
     customer_dir.mkdir()
     readable = customer_dir / "_ RE 0525 Metzgerei Karl .xlsx"

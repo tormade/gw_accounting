@@ -18,11 +18,13 @@ Das Produktziel steht in `docs/zielbild.md`: ein schlankes lokales Windows-Buero
 - Golden-File-Tests fuer Metzgerei Karl Rechnung und Lieferschein.
 - Golden-File-Test fuer Privat-Ueberweiser mit Faelligkeitsdatum.
 - Robuster Ordnerlauf, der Ausreisser-Dateien meldet und ueberspringt.
+- Artikel-Matching gegen die zentrale Artikelliste mit bestaetigten Alias-Schreibweisen.
+- Kundensortiment-Datenmodell mit letzter Menge, alter Quelle und aktuellem zentralem Preis.
 
 ## In Arbeit
 
 - Pruefliste fuer Konflikte aus Lieferkundenliste und Kundenordnerdatei.
-- Artikel-Matching mit Alias-Speicherung fuer abgekuerzte Produktnamen.
+- Integration des Kundensortiments in den Hauptscreen Kunde & Bestellung.
 
 ## Offen
 
@@ -37,4 +39,4 @@ Das Produktziel steht in `docs/zielbild.md`: ein schlankes lokales Windows-Buero
 
 ## Naechste Aufgabe
 
-Artikel-Matching gegen die Artikelliste ergaenzen, sichere Treffer automatisch verbinden und unsichere Treffer als Prueflistenpunkte speichern.
+Prueflisten-UI fuer offene Kunden-/Artikelkonflikte bauen und danach das Kundensortiment im Hauptscreen anzeigen.

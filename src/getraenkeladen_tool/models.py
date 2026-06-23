@@ -80,6 +80,24 @@ class ProductAlias(Base):
     product: Mapped["Product | None"] = relationship()
 
 
+class CustomerAssortmentItem(Base):
+    __tablename__ = "customer_assortment_items"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    customer_id: Mapped[int] = mapped_column(ForeignKey("customers.id"))
+    product_id: Mapped[int | None] = mapped_column(ForeignKey("products.id"), nullable=True)
+    source_product_name: Mapped[str] = mapped_column(String(200))
+    last_quantity: Mapped[int] = mapped_column(Integer(), default=0)
+    last_unit_price_cents: Mapped[int] = mapped_column(Integer(), default=0)
+    last_deposit_cents: Mapped[int] = mapped_column(Integer(), default=0)
+    sort_order: Mapped[int] = mapped_column(Integer(), default=0)
+    is_active: Mapped[bool] = mapped_column(Boolean(), default=True)
+    source_file: Mapped[str | None] = mapped_column(String(500), nullable=True)
+
+    customer: Mapped[Customer] = relationship()
+    product: Mapped["Product | None"] = relationship()
+
+
 class DropdownOption(Base):
     __tablename__ = "dropdown_options"
 

@@ -67,6 +67,16 @@ def _add_missing_columns(engine) -> None:
             issue_columns = {column["name"] for column in inspector.get_columns("onboarding_issues")}
             if "status" not in issue_columns:
                 connection.execute(text("ALTER TABLE onboarding_issues ADD COLUMN status VARCHAR(30) DEFAULT 'offen' NOT NULL"))
+        if "product_aliases" in table_names:
+            alias_columns = {column["name"] for column in inspector.get_columns("product_aliases")}
+            if "status" not in alias_columns:
+                connection.execute(text("ALTER TABLE product_aliases ADD COLUMN status VARCHAR(30) DEFAULT 'offen' NOT NULL"))
+        if "customer_assortment_items" in table_names:
+            assortment_columns = {column["name"] for column in inspector.get_columns("customer_assortment_items")}
+            if "is_active" not in assortment_columns:
+                connection.execute(text("ALTER TABLE customer_assortment_items ADD COLUMN is_active BOOLEAN DEFAULT 1 NOT NULL"))
+            if "source_file" not in assortment_columns:
+                connection.execute(text("ALTER TABLE customer_assortment_items ADD COLUMN source_file VARCHAR(500)"))
 
 
 def _seed_defaults(engine) -> None:
