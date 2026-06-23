@@ -171,6 +171,20 @@ def test_order_panel_has_price_mismatch_confirmation_dialog():
     assert "unit_price_cents = product.standard_price_cents" in source
 
 
+def test_order_panel_loads_customer_assortment_into_order_dialog():
+    source = Path("src/getraenkeladen_tool/ui/order_panel.py").read_text(encoding="utf-8")
+
+    assert "list_customer_assortment" in source
+    assert "ASSORTMENT_COLUMNS" in source
+    assert "self.assortment_table = QTableWidget" in source
+    assert "def refresh_customer_assortment" in source
+    assert "self.customer_select.selection_changed.connect(self.apply_selected_customer)" in source
+    assert "self.refresh_customer_assortment(customer.id)" in source
+    assert "self.use_assortment_button.clicked.connect(self.add_selected_assortment_item)" in source
+    assert "def add_selected_assortment_item" in source
+    assert "row.price_differs_from_central" in source
+
+
 def test_order_panel_filters_orders_by_customer_and_can_copy_existing_order():
     source = Path("src/getraenkeladen_tool/ui/order_panel.py").read_text(encoding="utf-8")
 

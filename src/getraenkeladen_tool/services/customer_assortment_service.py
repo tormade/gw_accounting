@@ -9,6 +9,7 @@ from ..models import CustomerAssortmentItem
 @dataclass(frozen=True, slots=True)
 class CustomerAssortmentRow:
     id: int
+    product_id: int | None
     source_product_name: str
     product_name: str | None
     last_quantity: int
@@ -47,6 +48,7 @@ def _row_from_item(item: CustomerAssortmentItem) -> CustomerAssortmentRow:
     )
     return CustomerAssortmentRow(
         id=item.id,
+        product_id=item.product_id,
         source_product_name=item.source_product_name,
         product_name=product.name if product is not None else None,
         last_quantity=item.last_quantity,

@@ -21,6 +21,7 @@ from PySide6.QtCore import Qt, Signal
 
 from ..schemas import DepositReturnCreate, OrderCreate, OrderLineCreate
 from ..services.customer_service import list_active_customers
+from ..services.customer_assortment_service import list_customer_assortment
 from ..services.order_service import (
     archive_order,
     create_order,
@@ -51,6 +52,7 @@ ORDER_PANEL_ACTIONS = {
 }
 
 ORDER_LINE_COLUMNS = ("Produkt", "Menge", "Preis EUR", "Pfand EUR", "Summe EUR")
+ASSORTMENT_COLUMNS = ("Artikel", "Letzte Menge", "Preis aktuell", "Preis Excel", "Hinweis")
 DEPOSIT_RETURN_COLUMNS = ("Pfandart", "Menge", "Pfand EUR", "Gutschrift EUR")
 ORDER_COLUMNS = ("Bestellung", "Kunde", "Lieferdatum", "Zeitfenster", "Status")
 ORDER_PANEL_SECTIONS = (
@@ -89,6 +91,7 @@ class OrderPanel(QWidget):
         self.products_by_id = {}
         self.customer_rows = []
         self.order_ids_by_row = {}
+        self.assortment_rows_by_row = {}
         self.current_order_id = None
         self.current_order_status = "geplant"
 
@@ -101,6 +104,12 @@ class OrderPanel(QWidget):
         self.customer_summary.setWordWrap(True)
         self.product_select = SearchableSelect("Produkt suchen, z. B. Spezi oder Wasser")
         self.product_select.setMinimumWidth(420)
+        self.assortment_table = QTableWidget(0, len(ASSORTMENT_COLUMNS))
+        self.assortment_table.setHorizontalHeaderLabels(ASSORTMENT_COLUMNS)
+        self.assortment_table.setMinimumHeight(220)
+        self.assortment_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self.assortment_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        self.assortment_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         self.order_number = QLineEdit()
         self.order_number.setPlaceholderText("z. B. 2606196 oder LS-3001")
         self.delivery_date = DateInput(date.today().isoformat())
@@ -160,6 +169,7 @@ class OrderPanel(QWidget):
         self.copy_order_button = self._button("copyOrderButton")
         self.create_delivery_note_button = self._button("createDeliveryNoteFromOrderButton")
         self.create_invoice_button = self._button("createInvoiceFromOrderButton")
+        self.use_assortment_button = QPushButton("Aus Sortiment uebernehmen")
 
         self.order_dialog: QDialog | None = None
         self.order_editor_widget = QWidget()
@@ -196,6 +206,11 @@ class OrderPanel(QWidget):
             ORDER_PANEL_SECTIONS[1],
             "Links Produkt erfassen, rechts die Positionen wie in einer Belegliste kontrollieren.",
         )
+        position_layout.addWidget(self.assortment_table)
+        assortment_actions = QHBoxLayout()
+        assortment_actions.addWidget(self.use_assortment_button)
+        assortment_actions.addStretch()
+        position_layout.addLayout(assortment_actions)
         position_form = QFormLayout()
         configure_form_layout(position_form)
         position_form.addRow("Produkt", self.product_select)
@@ -264,6 +279,7 @@ class OrderPanel(QWidget):
         self.copy_order_button.clicked.connect(self.copy_selected_order_as_new)
         self.create_delivery_note_button.clicked.connect(self.request_delivery_note_for_selected_order)
         self.create_invoice_button.clicked.connect(self.request_invoice_for_selected_order)
+        self.use_assortment_button.clicked.connect(self.add_selected_assortment_item)
         self.add_line_button.clicked.connect(self.add_order_line)
         self.remove_line_button.clicked.connect(self.remove_selected_order_line)
         self.add_deposit_return_button.clicked.connect(self.add_deposit_return)
@@ -456,12 +472,75 @@ class OrderPanel(QWidget):
         customer = self.customers_by_id.get(customer_id)
         if customer is None:
             self.customer_summary.setText("Noch kein Kunde ausgewaehlt.")
+            self.show_customer_assortment([])
             return
         details = [
             f"Adresse: {customer.address or 'nicht gepflegt'}",
             f"Hinweis: {customer.delivery_notes or 'kein Lieferhinweis'}",
         ]
         self.customer_summary.setText(" | ".join(details))
+        self.refresh_customer_assortment(customer.id)
+
+    def refresh_customer_assortment(self, customer_id: int) -> None:
+        if self.session_factory is None:
+            self.show_customer_assortment([])
+            return
+        session = self.session_factory()
+        try:
+            rows = list_customer_assortment(session, customer_id)
+        finally:
+            session.close()
+        self.show_customer_assortment(rows)
+
+    def show_customer_assortment(self, rows: list) -> None:
+        self.assortment_rows_by_row = {}
+        self.assortment_table.setRowCount(len(rows))
+        for row_index, row in enumerate(rows):
+            self.assortment_rows_by_row[row_index] = row
+            hint = ""
+            if row.product_id is None:
+                hint = "Artikel pruefen"
+            elif row.price_differs_from_central:
+                hint = "Preis pruefen"
+            values = (
+                row.product_name or row.source_product_name,
+                str(row.last_quantity),
+                self._format_euro_cents(row.current_price_cents),
+                self._format_euro_cents(row.excel_price_cents),
+                hint,
+            )
+            for column, value in enumerate(values):
+                self.assortment_table.setItem(row_index, column, QTableWidgetItem(value))
+
+    def add_selected_assortment_item(self) -> None:
+        row = self.assortment_rows_by_row.get(self.assortment_table.currentRow())
+        if row is None:
+            self.status_label.setText("Bitte zuerst einen Artikel aus dem Kundensortiment auswaehlen.")
+            return
+        if row.product_id is None:
+            self.status_label.setText("Artikel ist noch nicht sicher zugeordnet. Bitte zuerst in der Pruefliste klaeren.")
+            return
+        unit_price_cents = row.current_price_cents
+        deposit_cents = row.current_deposit_cents
+        if row.price_differs_from_central:
+            use_central_price = self.confirm_price_mismatch(
+                row.product_name or row.source_product_name,
+                row.excel_price_cents,
+                row.current_price_cents,
+                row.excel_deposit_cents,
+                row.current_deposit_cents,
+            )
+            if not use_central_price:
+                unit_price_cents = row.excel_price_cents
+                deposit_cents = row.excel_deposit_cents
+        self._append_order_line_to_table(
+            row.product_name or row.source_product_name,
+            row.last_quantity if row.last_quantity > 0 else self.quantity.value(),
+            unit_price_cents,
+            deposit_cents,
+            row.product_id,
+        )
+        self.status_label.setText("Position aus Kundensortiment uebernommen.")
 
     def apply_selected_product(self) -> None:
         product_id = self.product_select.current_value()

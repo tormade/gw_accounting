@@ -197,6 +197,16 @@ def test_target_state_navigation_prioritizes_daily_flow_and_main_order_path():
     assert 'MAIN_TABS.index("Belege")' in source
 
 
+def test_main_window_uses_real_checklist_panel_for_migration_conflicts():
+    from pathlib import Path
+
+    source = Path("src/getraenkeladen_tool/ui/main_window.py").read_text(encoding="utf-8")
+
+    assert "from .checklist_panel import ChecklistPanel" in source
+    assert "self.checklist_panel = ChecklistPanel(session_factory=session_factory)" in source
+    assert '"Pruefliste": (self.checklist_panel.refresh_issues,)' in source
+    assert 'self._panel(\n            "Pruefliste"' not in source
+
 
 def test_date_fields_use_calendar_input():
     from getraenkeladen_tool.ui.customer_panel import DATE_FIELD_WIDGETS as CUSTOMER_DATE_FIELDS

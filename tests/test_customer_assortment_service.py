@@ -21,6 +21,7 @@ def test_list_customer_assortment_returns_last_quantities_and_current_product_pr
 
     assert len(rows) == 16
     frucade = next(row for row in rows if row.source_product_name == "Frucade Colamix 20x0,5")
+    assert frucade.product_id is not None
     assert frucade.product_name == "Frucade Colamix 20x0,5"
     assert frucade.last_quantity == 3
     assert frucade.excel_price_cents == 1048

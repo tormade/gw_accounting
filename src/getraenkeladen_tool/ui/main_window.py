@@ -4,6 +4,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QMainWindow, QPushButton, QScrollArea, QStackedWidget, QTabWidget, QVBoxLayout, QWidget
 
+from .checklist_panel import ChecklistPanel
 from .customer_panel import CustomerPanel
 from .dashboard_panel import DashboardPanel
 from .document_archive_panel import DocumentArchivePanel
@@ -58,10 +59,7 @@ class MainWindow(QMainWindow):
         self.settings_panel = SettingsPanel(session_factory=session_factory)
         self.document_workspace = self._document_workspace()
         self.master_data_workspace = self._master_data_workspace()
-        self.checklist_panel = self._panel(
-            "Pruefliste",
-            "Konflikte aus Migration, Artikeltreffern und Kundendaten werden hier bewusst entschieden.",
-        )
+        self.checklist_panel = ChecklistPanel(session_factory=session_factory)
         self.refreshable_panels = {
             "Heute": (self.dashboard_panel.refresh_dashboard,),
             "Kunde & Bestellung": (self.order_panel.refresh_master_data, self.order_panel.refresh_orders),
@@ -75,7 +73,7 @@ class MainWindow(QMainWindow):
             "Offene Posten": (self.open_items_panel.refresh_all_lists,),
             "Tagesliste": (self.daily_list_panel.refresh_all_lists,),
             "Stammdaten": (self.customer_panel.refresh_customers, self.product_panel.refresh_products),
-            "Pruefliste": (),
+            "Pruefliste": (self.checklist_panel.refresh_issues,),
             "Einstellungen": (),
         }
 

@@ -21,18 +21,17 @@ Das Produktziel steht in `docs/zielbild.md`: ein schlankes lokales Windows-Buero
 - Artikel-Matching gegen die zentrale Artikelliste mit bestaetigten Alias-Schreibweisen.
 - Kundensortiment-Datenmodell mit letzter Menge, alter Quelle und aktuellem zentralem Preis.
 - Preisabweichungen zwischen Kunden-Excel und zentralem Artikelstamm werden als offene Prueffaelle erkannt.
+- Prueflisten-UI fuer offene Kunden-/Artikel-/Preiskonflikte mit Erledigt/Wieder-oeffnen-Aktion.
+- Kundensortiment im Auftragsdialog: letzte Artikel sehen und direkt als Position uebernehmen.
 
 ## In Arbeit
 
-- Pruefliste fuer Konflikte aus Lieferkundenliste und Kundenordnerdatei.
-- Integration des Kundensortiments in den Hauptscreen Kunde & Bestellung.
-- Warnfenster fuer Preisentscheidungen im Kundensortiment-Hauptweg verdrahten.
+- Bedienprobe des Hauptwegs Kunde oeffnen -> Sortiment uebernehmen -> Bestellung speichern -> Beleg erzeugen.
 
 ## Offen
 
-- UI fuer Pruefliste und manuelle Konfliktfreigabe.
 - Importlauf mit einem echten kompletten Windows-Kundenordner testen.
-- Hauptweg nach Migration: Kunde oeffnen -> letzte Mengen sehen -> Mengen anpassen -> Beleg erzeugen.
+- Pruefliste fachlich vertiefen: konkrete Korrekturaktionen fuer Adresse, Artikelalias und Preisentscheidung.
 - Offene Posten, Tagesliste und spaetere Windows-Verpackung.
 - Startbildschirm mit Kennzahlen: heutige Lieferungen, offene Posten, faellige Kontakte.
 - Tagesliste fuer Fahrer mit Adresse, Zeitfenster und Kundenhinweisen.
@@ -41,4 +40,4 @@ Das Produktziel steht in `docs/zielbild.md`: ein schlankes lokales Windows-Buero
 
 ## Naechste Aufgabe
 
-Prueflisten-UI fuer offene Kunden-/Artikel-/Preiskonflikte bauen und danach das Kundensortiment im Hauptscreen mit Preisentscheidung anzeigen.
+Bedienprobe mit echten Importdaten durchspielen und daraus die naechsten UI-Korrekturen fuer den Hauptweg ableiten.
