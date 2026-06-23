@@ -365,6 +365,15 @@ def test_order_panel_guides_next_step_after_successful_save():
     assert "self.invoice_requested.emit(order_id)" in source
 
 
+def test_order_panel_warns_clearly_before_invalid_save():
+    source = Path("src/getraenkeladen_tool/ui/order_panel.py").read_text(encoding="utf-8")
+
+    assert "def warn_invalid_order_save" in source
+    assert "Bitte eine Bestellnummer eintragen." in source
+    assert "Bitte mindestens eine Position hinzufuegen." in source
+    assert "QMessageBox.warning" in source
+
+
 def test_order_panel_uses_clearer_labels_for_less_technical_users():
     source = Path("src/getraenkeladen_tool/ui/order_panel.py").read_text(encoding="utf-8")
 

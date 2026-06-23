@@ -56,7 +56,7 @@ class CustomerFolderPanel(QWidget):
         )
 
         self.customer_select = SearchableSelect("Kunde suchen, z. B. Cafe oder Metzgerei")
-        self.refresh_button = QPushButton("Kunden laden")
+        self.refresh_button = QPushButton("Kundenliste aktualisieren")
         self.open_folder_button = QPushButton("Kundenordner oeffnen")
         self.open_file_button = QPushButton("Markierte Excel/PDF oeffnen")
         self.new_order_button = QPushButton("Neue Bestellung aus letzten Mengen starten")
@@ -282,12 +282,19 @@ class CustomerFolderPanel(QWidget):
         self.new_order_button.setEnabled(has_customer)
         if self.has_seed_quantities:
             self.new_order_button.setText("Neue Bestellung aus letzten Mengen starten")
+        elif has_customer and not has_folder:
+            self.new_order_button.setText("Ohne Kundenordner leere Bestellung starten")
         else:
             self.new_order_button.setText("Neue leere Bestellung starten")
         self.delivery_note_button.setEnabled(has_order)
         self.invoice_button.setEnabled(has_order)
         if selected_file is None:
-            self.seed_file_hint.setText("Die Vorlage kommt aus den letzten importierten Mengen rechts.")
+            if has_customer and not has_folder:
+                self.seed_file_hint.setText(
+                    "Kundenordner fehlt. Es kann nur eine leere Bestellung gestartet werden."
+                )
+            else:
+                self.seed_file_hint.setText("Die Vorlage kommt aus den letzten importierten Mengen rechts.")
         elif selected_file.can_seed_order:
             self.seed_file_hint.setText(f"Excel-Datei zum Nachsehen: {selected_file.label}")
         else:

@@ -680,15 +680,18 @@ class OrderPanel(QWidget):
 
     def save_order(self) -> None:
         if self.session_factory is None:
-            self.status_label.setText("Keine Datenbankverbindung vorhanden.")
+            self.warn_invalid_order_save("Keine Datenbankverbindung vorhanden.")
             return
         customer_id = self.customer_select.current_value()
         if customer_id is None:
-            self.status_label.setText("Bitte zuerst einen Kunden auswaehlen.")
+            self.warn_invalid_order_save("Bitte zuerst einen Kunden auswaehlen.")
+            return
+        if not self.order_number.text().strip():
+            self.warn_invalid_order_save("Bitte eine Bestellnummer eintragen.")
             return
         order_lines = self._order_lines_from_table()
         if not order_lines:
-            self.status_label.setText("Bitte mindestens eine Position hinzufuegen.")
+            self.warn_invalid_order_save("Bitte mindestens eine Position hinzufuegen.")
             return
         if self.current_order_id is not None and not self.confirm_documented_order_change():
             return
@@ -725,6 +728,10 @@ class OrderPanel(QWidget):
             )
         finally:
             session.close()
+
+    def warn_invalid_order_save(self, message: str) -> None:
+        self.status_label.setText(message)
+        QMessageBox.warning(self, "Bestellung noch nicht gespeichert", message)
 
     def refresh_orders(self) -> None:
         if self.session_factory is None:

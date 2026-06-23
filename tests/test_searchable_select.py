@@ -62,13 +62,26 @@ def test_searchable_select_guides_uncertain_users_to_click_a_result():
     select = SearchableSelect("Kunde suchen")
     select.set_items([("Cafe Nord", 1, "Muenchen"), ("Hotel Sued", 2, "Rosenheim")])
 
-    assert select.help_label.text() == "Namen tippen und unten einen Treffer anklicken."
+    assert select.help_label.text() == "Namen tippen, dann unten einen Treffer anklicken."
 
     select.set_search_text("xyz")
 
     assert select.result_list.count() == 1
     assert select.result_list.item(0).text() == "Kein Treffer gefunden"
     assert select.result_list.item(0).flags().value & 1 == 0
+
+
+def test_searchable_select_does_not_show_random_initial_suggestions():
+    _app()
+    from getraenkeladen_tool.ui.searchable_select import SearchableSelect
+
+    select = SearchableSelect("Kunde suchen")
+    select.set_items([("Cafe Nord", 1, "Muenchen"), ("Hotel Sued", 2, "Rosenheim")])
+
+    assert select.current_value() is None
+    assert select.result_list.count() == 0
+    assert select.result_list.maximumHeight() == 0
+    assert select.help_label.text() == "Namen tippen, dann unten einen Treffer anklicken."
 
 
 def test_searchable_select_collapses_results_after_selection_and_reopens_while_typing():

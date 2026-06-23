@@ -63,6 +63,17 @@ class SearchableSelect(QWidget):
         ]
 
     def select_value(self, value: object) -> None:
+        for searchable_item in self._items:
+            if searchable_item.value == value:
+                self._current_value = searchable_item.value
+                self.search_input.blockSignals(True)
+                self.search_input.setText(searchable_item.label)
+                self.search_input.blockSignals(False)
+                self.result_list.clear()
+                self.result_list.setMaximumHeight(0)
+                self.help_label.setText("Ausgewaehlt. Zum Aendern einfach neuen Namen tippen.")
+                self.selection_changed.emit()
+                return
         for row in range(self.result_list.count()):
             item = self.result_list.item(row)
             if item.data(Qt.ItemDataRole.UserRole) == value:
@@ -73,9 +84,15 @@ class SearchableSelect(QWidget):
         self.selection_changed.emit()
 
     def _filter_items(self, text: str) -> None:
+        self.result_list.clear()
+        if not text.strip():
+            self._current_value = None
+            self.result_list.setMaximumHeight(0)
+            self.help_label.setText("Namen tippen, dann unten einen Treffer anklicken.")
+            self.selection_changed.emit()
+            return
         self.result_list.setMaximumHeight(self.DEFAULT_LIST_HEIGHT)
         self.help_label.setText("Namen tippen und unten einen Treffer anklicken.")
-        self.result_list.clear()
         matches = filter_searchable_items(self._items, text)
         for item in matches:
             list_item = QListWidgetItem(item.label)

@@ -20,6 +20,7 @@ def test_customer_folder_panel_exposes_real_folder_workflow():
     assert 'SearchableSelect("Kunde suchen' in source
     assert "Kundenakte" in source
     assert "Kundenordner oeffnen" in source
+    assert "Kundenliste aktualisieren" in source
     assert "Dateien im Kundenordner" in source
     assert "Vorlage aus Kundenordner" in source
     assert "Neue Bestellung aus letzten Mengen starten" in source
@@ -155,7 +156,8 @@ def test_customer_folder_panel_names_empty_order_action_when_no_seed_quantities(
     panel.show_snapshot(snapshot, [])
 
     assert panel.new_order_button.isEnabled() is True
-    assert panel.new_order_button.text() == "Neue leere Bestellung starten"
+    assert panel.new_order_button.text() == "Ohne Kundenordner leere Bestellung starten"
+    assert "Kundenordner fehlt" in panel.seed_file_hint.text()
 
 
 def test_customer_folder_panel_uses_clear_customer_folder_language():

@@ -50,6 +50,10 @@ Das Produktziel steht in `docs/zielbild.md`: ein schlankes lokales Windows-Buero
 - Belegberechnung als UI- und DB-freie Kernregel umgesetzt und mit Golden-Werten fuer Metzgerei Karl abgesichert.
 - Offene Posten, Excel, PDF und Belegvorschau nutzen dieselbe Kernberechnung.
 - Erster Anwendungsvorgang `beleg_erzeugen` angelegt und im Bestell-Hauptweg fuer Lieferschein/Rechnung genutzt.
+- Mac-Oberflaechentest aus 60+-Erstnutzer-Perspektive erneut durchgespielt und drei Stolperstellen verbessert.
+- Suchfelder zeigen ohne Eingabe keine zufaellige Anfangsliste mehr, sondern warten auf eine konkrete Suche.
+- Kundenordner ohne echten Ordner wird am Startknopf klar als "Ohne Kundenordner leere Bestellung starten" gekennzeichnet.
+- Ungueltiges Speichern einer Bestellung zeigt jetzt ein klares Warnfenster, z. B. bei fehlender Bestellnummer.
 
 ## In Arbeit
 
