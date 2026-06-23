@@ -1,6 +1,15 @@
 from pathlib import Path
 
 
+def _app():
+    import os
+
+    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+    from PySide6.QtWidgets import QApplication
+
+    return QApplication.instance() or QApplication([])
+
+
 def test_order_panel_loads_master_data_and_orders_on_open():
     source = Path("src/getraenkeladen_tool/ui/order_panel.py").read_text(encoding="utf-8")
 
@@ -15,6 +24,117 @@ def test_order_panel_can_start_new_order_for_preselected_customer():
     assert "def open_new_order_for_customer" in source
     assert "self.customer_select.select_value(customer_id)" in source
     assert "Neue Bestellung aus Kundenordner" in source
+
+
+def test_order_panel_prefills_lines_from_customer_assortment_when_started_from_customer_folder(session):
+    _app()
+    from getraenkeladen_tool.models import Customer, CustomerAssortmentItem, Product
+    from getraenkeladen_tool.ui.order_panel import OrderPanel
+
+    customer = Customer(name="Cafe Nord", folder_path="/tmp/Cafe Nord", address="Markt 1", is_active=True)
+    water = Product(
+        name="Adelholzener Wasser 12x0,7",
+        unit="Kiste",
+        standard_price_cents=890,
+        default_deposit_cents=330,
+        is_active=True,
+    )
+    spezi = Product(
+        name="Paulaner Spezi 20x0,5",
+        unit="Kiste",
+        standard_price_cents=1490,
+        default_deposit_cents=310,
+        is_active=True,
+    )
+    session.add_all([customer, water, spezi])
+    session.flush()
+    session.add_all(
+        [
+            CustomerAssortmentItem(
+                customer_id=customer.id,
+                product_id=water.id,
+                source_product_name=water.name,
+                last_quantity=4,
+                last_unit_price_cents=890,
+                last_deposit_cents=330,
+                sort_order=1,
+                price_decision="zentraler_preis",
+            ),
+            CustomerAssortmentItem(
+                customer_id=customer.id,
+                product_id=spezi.id,
+                source_product_name=spezi.name,
+                last_quantity=2,
+                last_unit_price_cents=1490,
+                last_deposit_cents=310,
+                sort_order=2,
+                price_decision="zentraler_preis",
+            ),
+        ]
+    )
+    session.commit()
+    session_factory = lambda: session
+
+    panel = OrderPanel(session_factory=session_factory)
+    panel.open_new_order_for_customer(customer.id)
+
+    assert panel.customer_select.current_value() == customer.id
+    assert panel.order_lines_table.rowCount() == 2
+    assert panel.order_lines_table.item(0, 0).text() == water.name
+    assert panel.order_lines_table.item(0, 1).text() == "4"
+    assert panel.order_lines_table.item(1, 0).text() == spezi.name
+    assert panel.order_lines_table.item(1, 1).text() == "2"
+    assert "letzten Mengen" in panel.status_label.text()
+    panel.close_order_dialog()
+
+
+def test_order_panel_skips_unresolved_assortment_items_when_prefilling_from_customer_folder(session):
+    _app()
+    from getraenkeladen_tool.models import Customer, CustomerAssortmentItem, Product
+    from getraenkeladen_tool.ui.order_panel import OrderPanel
+
+    customer = Customer(name="Cafe Nord", folder_path="/tmp/Cafe Nord", is_active=True)
+    water = Product(
+        name="Adelholzener Wasser 12x0,7",
+        unit="Kiste",
+        standard_price_cents=890,
+        default_deposit_cents=330,
+        is_active=True,
+    )
+    session.add_all([customer, water])
+    session.flush()
+    session.add_all(
+        [
+            CustomerAssortmentItem(
+                customer_id=customer.id,
+                product_id=water.id,
+                source_product_name=water.name,
+                last_quantity=4,
+                last_unit_price_cents=890,
+                last_deposit_cents=330,
+                sort_order=1,
+            ),
+            CustomerAssortmentItem(
+                customer_id=customer.id,
+                product_id=None,
+                source_product_name="Unbekannte Limo 20x0,5",
+                last_quantity=3,
+                last_unit_price_cents=1090,
+                last_deposit_cents=310,
+                sort_order=2,
+            ),
+        ]
+    )
+    session.commit()
+    session_factory = lambda: session
+
+    panel = OrderPanel(session_factory=session_factory)
+    panel.open_new_order_for_customer(customer.id)
+
+    assert panel.order_lines_table.rowCount() == 1
+    assert panel.order_lines_table.item(0, 0).text() == water.name
+    assert "Ungeklaerte Artikel wurden ausgelassen." in panel.status_label.text()
+    panel.close_order_dialog()
 
 
 def test_order_panel_uses_searchable_customer_and_product_selects():

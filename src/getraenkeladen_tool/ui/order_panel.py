@@ -339,6 +339,7 @@ class OrderPanel(QWidget):
         self.customer_select.select_value(customer_id)
         self.apply_selected_customer()
         self.order_mode_label.setText("Neue Bestellung aus Kundenordner")
+        self.prefill_order_lines_from_customer_assortment()
         self.open_order_dialog("Neue Bestellung aus Kundenordner")
 
     def open_order_dialog(self, title: str = "Bestellung bearbeiten") -> None:
@@ -547,6 +548,31 @@ class OrderPanel(QWidget):
             )
             for column, value in enumerate(values):
                 self.assortment_table.setItem(row_index, column, QTableWidgetItem(value))
+
+    def prefill_order_lines_from_customer_assortment(self) -> None:
+        self.order_lines_table.setRowCount(0)
+        added_count = 0
+        skipped_count = 0
+        for row in self.assortment_rows_by_row.values():
+            if row.product_id is None or row.last_quantity <= 0:
+                skipped_count += 1
+                continue
+            self._append_order_line_to_table(
+                row.product_name or row.source_product_name,
+                row.last_quantity,
+                row.current_price_cents,
+                row.current_deposit_cents,
+                row.product_id,
+            )
+            added_count += 1
+        self.update_order_total()
+        if added_count:
+            message = f"{added_count} Positionen aus den letzten Mengen uebernommen."
+            if skipped_count:
+                message += " Ungeklaerte Artikel wurden ausgelassen."
+            self.status_label.setText(message)
+        else:
+            self.status_label.setText("Keine letzten Mengen zum Uebernehmen gefunden. Bitte Positionen manuell erfassen.")
 
     def add_selected_assortment_item(self) -> None:
         row = self.assortment_rows_by_row.get(self.assortment_table.currentRow())

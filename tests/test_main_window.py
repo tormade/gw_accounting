@@ -472,6 +472,10 @@ def test_dashboard_uses_cockpit_quick_actions_without_calendar():
     assert "Preis-/Importpruefung" in source
     assert "heroSearchPanel" in source
     assert "todayContactList" in source
+    assert "Heute starten" in source
+    assert "Im Kundenordner suchen Sie den Kunden" in source
+    assert "Metz..." not in source
+    assert "heroSearchQuery" not in source
     assert "Kunde & Bestellung" not in source
     assert "Zu Belegen" not in source
 

@@ -38,6 +38,8 @@ Das Produktziel steht in `docs/zielbild.md`: ein schlankes lokales Windows-Buero
 - Neues Bestellfenster kleiner und scrollbar gemacht, damit es auf kleineren Bildschirmen nutzbar bleibt.
 - Kundenordner zeigt neueste Excel/PDF-Dateien zuerst und vermeidet das falsche Versprechen einer markierten Excel-Direktvorlage.
 - Suchfelder erklaeren jetzt, dass ein Treffer angeklickt werden muss, und zeigen klar an, wenn nichts gefunden wurde.
+- "Neue Bestellung aus letzten Mengen starten" befuellt jetzt automatisch die Bestellpositionen aus dem Kundensortiment und laesst ungeklaerte Artikel aus.
+- Startseite vereinfacht: die grosse gruene Box erklaert jetzt den Kundenordner-Start statt ein unechtes Suchfeld zu zeigen.
 
 ## In Arbeit
 

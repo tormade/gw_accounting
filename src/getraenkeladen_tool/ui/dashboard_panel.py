@@ -142,14 +142,18 @@ class DashboardPanel(QWidget):
         hero.setObjectName("customerSearchHero")
         hero_layout = QVBoxLayout(hero)
         hero_layout.setSpacing(14)
-        hero_title = QLabel("Kunden finden, Bestellung starten.")
+        hero_title = QLabel("Heute starten")
         hero_title.setObjectName("heroTitle")
         hero_title.setWordWrap(True)
         hero_layout.addWidget(hero_title)
-        hero_query = QLabel("Metz...")
-        hero_query.setObjectName("heroSearchQuery")
-        hero_layout.addWidget(hero_query)
-        hero_button = QPushButton("Bestellung erfassen")
+        hero_text = QLabel(
+            "Im Kundenordner suchen Sie den Kunden, sehen alte Excel/PDF-Dateien "
+            "und starten aus den letzten Mengen eine neue Bestellung."
+        )
+        hero_text.setObjectName("sectionSubtitle")
+        hero_text.setWordWrap(True)
+        hero_layout.addWidget(hero_text)
+        hero_button = QPushButton("Kundenordner oeffnen")
         hero_button.setObjectName("newDeliveryButton")
         hero_layout.addWidget(hero_button)
         hero_layout.addStretch()
