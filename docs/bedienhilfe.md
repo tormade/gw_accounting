@@ -10,21 +10,28 @@ Die Startseite ist der erste Blick in den Arbeitstag. Dort sehen Sie:
 - Offene Posten
 - Kontaktanfragen heute
 
-Wenn hier etwas angezeigt wird, ist das der naechste Arbeitsvorrat. Danach wechseln Sie in den passenden Bereich: Auftraege, Listen, Kunden oder Produkte.
+Wenn hier etwas angezeigt wird, ist das der naechste Arbeitsvorrat.
 
-## Auftrag erfassen
+Die drei Startbuttons fuehren auf unterschiedliche Arbeitsbereiche:
+
+- Kundenordner oeffnen: normaler Weg fuer Kunde, alte Excel/PDF und neue Bestellung.
+- Offene Posten pruefen: Zahlungen, SEPA und offene Rechnungen kontrollieren.
+- Preis-/Importpruefung: unklare Artikel, Preise oder Kundenhinweise abarbeiten.
+
+## Kundenordner und Bestellung
 
 Der normale Ablauf ist:
 
-1. Stammdaten laden und Kunden waehlen.
-2. Auftragsnummer vorschlagen lassen oder manuell eintragen.
-3. Lieferdatum und Zeitfenster eintragen.
-4. Produkt waehlen, Menge pruefen und Position hinzufuegen.
-5. Auftrag speichern.
-6. Bei Bedarf Lieferscheinnummer oder Rechnungsnummer vorschlagen lassen.
-7. Lieferschein und Rechnung erzeugen.
+1. Auf der Startseite "Kundenordner oeffnen" waehlen.
+2. Kunden suchen und in der Trefferliste anklicken.
+3. Alte Excel- oder PDF-Dateien im Kundenordner bei Bedarf oeffnen.
+4. Rechts die letzten importierten Mengen pruefen.
+5. "Neue Bestellung aus letzten Mengen starten" waehlen.
+6. Bestellnummer, Lieferdatum, Mengen, Preise und Pfand pruefen.
+7. Bestellung speichern.
+8. Danach Lieferschein oder Rechnung aus der markierten Bestellung erstellen.
 
-Auftrags-, Lieferschein- und Rechnungsnummern werden einzeln vorgeschlagen. Jede Nummer kann immer ueberschrieben werden. Wenn eine hoehere Nummer manuell eingetragen und gespeichert wird, zaehlt die App beim naechsten Vorschlag von dieser Nummer aus weiter.
+Bestell-, Lieferschein- und Rechnungsnummern werden frei eingetragen. Die App uebernimmt genau die Nummer, die im Feld steht.
 
 Datumsfelder koennen entweder ueber den Kalender ausgewaehlt oder direkt im Format TT.MM.JJJJ eingetragen werden, zum Beispiel 21.06.2026.
 
@@ -43,13 +50,13 @@ Neue Kunden und Produkte werden links eingetragen. Vorhandene Stammdaten werden 
 
 Bei Produkten koennen versehentliche Eingaben mit "Aenderungen verwerfen" zurueckgenommen werden, solange noch nicht gespeichert wurde. Die Einheit wird ueber ein Dropdown gewaehlt.
 
-In den Listen fuer Kunden, Produkte und Auftraege koennen Eintraege per Rechtsklick bearbeitet, archiviert oder wiederhergestellt werden. Doppelklick laedt einen Eintrag ebenfalls zur Bearbeitung.
+In den Listen fuer Kunden, Produkte und Bestellungen koennen Eintraege per Rechtsklick bearbeitet, archiviert oder wiederhergestellt werden. Doppelklick laedt einen Eintrag ebenfalls zur Bearbeitung.
 
 Wichtig: Archivieren statt loeschen. Dadurch verschwinden Kunden oder Produkte aus dem normalen Alltag, koennen aber bei einem Fehler wiederhergestellt werden.
 
 ## Einstellungen
 
-Im Bereich Einstellungen werden zentrale Auswahlwerte gepflegt. Aktuell koennen dort Produkteinheiten wie Kiste, Flasche, Fass oder Karton erweitert werden. Diese Werte erscheinen im Feld "Einheit" bei Produkten.
+Im Bereich Einstellungen werden zentrale Auswahlwerte und Hilfsfunktionen gepflegt.
 
 Zusaetzlich koennen Stammdaten manuell aus dem Input-Ordner importiert werden. Erwartet werden die Dateien "Artikel Liste Preise.xlsx" und "Lieferkunden Liste.xlsx". Die App liest diese Excel-Dateien nur aus und schreibt keine Aenderungen in die Originaldateien zurueck.
 

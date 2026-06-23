@@ -78,8 +78,8 @@ class MainWindow(QMainWindow):
         }
 
         self.dashboard_panel.new_delivery_requested.connect(self.open_customer_folder_tab)
-        self.dashboard_panel.manage_orders_requested.connect(self.open_customer_folder_tab)
-        self.dashboard_panel.invoice_requested.connect(self.open_customer_folder_tab)
+        self.dashboard_panel.open_items_requested.connect(self.open_open_items_tab)
+        self.dashboard_panel.checklist_requested.connect(self.open_checklist_tab)
         self.customer_folder_panel.new_order_requested.connect(self.open_new_order_for_customer)
         self.customer_folder_panel.delivery_note_requested.connect(self.open_delivery_note_for_order)
         self.customer_folder_panel.invoice_requested.connect(self.open_invoice_for_order)
@@ -108,6 +108,12 @@ class MainWindow(QMainWindow):
 
     def open_customer_folder_tab(self) -> None:
         self.navigation.setCurrentRow(MAIN_TABS.index("Kundenordner"))
+
+    def open_open_items_tab(self) -> None:
+        self.navigation.setCurrentRow(MAIN_TABS.index("Offene Posten"))
+
+    def open_checklist_tab(self) -> None:
+        self.navigation.setCurrentRow(MAIN_TABS.index("Pruefliste"))
 
     def open_orders_tab(self) -> None:
         self.open_customer_folder_tab()

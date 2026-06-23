@@ -128,8 +128,11 @@ def test_document_workflow_prioritizes_complete_excel_pdf_generation():
     assert "def create_complete_document" in source
     assert 'self.create_document({"excel", "pdf"})' in source
     assert "self.create_both_button" in source
+    assert "primary_action_row.addWidget(self.create_both_button)" in source
+    assert "secondary_action_row.addWidget(self.create_excel_button)" in source
+    assert "secondary_action_row.addWidget(self.create_pdf_button)" in source
     assert "Excel + PDF erstellt" in source
-    assert "Das ist der normale Weg" in source
+    assert "Normalerweise reicht der gruene Hauptbutton: Excel und PDF zusammen erstellen." in source
 
 
 def test_order_panel_supports_editing_existing_orders():
@@ -147,14 +150,29 @@ def test_order_panel_uses_list_page_and_order_dialog_for_editing():
     source = Path("src/getraenkeladen_tool/ui/order_panel.py").read_text(encoding="utf-8")
 
     assert "QDialog" in source
+    assert "QScrollArea" in source
     assert "self.order_dialog" in source
     assert "def open_order_dialog" in source
     assert "def close_order_dialog_after_success" in source
     assert "Neue Bestellung anlegen" in source
     assert "Bestellung speichern" in source
     assert "WA_DeleteOnClose" in source
+    assert "setWidgetResizable(True)" in source
+    assert "self.order_dialog.setMinimumSize(760, 480)" in source
+    assert "self.order_dialog.resize(1020, 620)" in source
     assert "self.order_workspace_tabs = QTabWidget()" not in source
     assert "self.order_editor_widget" in source
+
+
+def test_order_dialog_content_can_scroll_instead_of_forcing_full_screen_height():
+    source = Path("src/getraenkeladen_tool/ui/order_panel.py").read_text(encoding="utf-8")
+
+    assert "self.order_editor_scroll = QScrollArea()" in source
+    assert "self.order_editor_scroll.setWidget(self.order_editor_widget)" in source
+    assert "self.order_editor_scroll.takeWidget()" in source
+    assert "self.assortment_table.setMinimumHeight(180)" in source
+    assert "self.order_lines_table.setMinimumHeight(220)" in source
+    assert "self.deposit_returns_table.setMaximumHeight(120)" in source
 
 
 def test_order_panel_keeps_product_ids_when_existing_orders_are_loaded():

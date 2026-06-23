@@ -1,6 +1,15 @@
 from getraenkeladen_tool.ui.searchable_select import SearchableSelectItem, filter_searchable_items
 
 
+def _app():
+    import os
+
+    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+    from PySide6.QtWidgets import QApplication
+
+    return QApplication.instance() or QApplication([])
+
+
 def test_searchable_select_filters_items_while_typing():
     items = [
         SearchableSelectItem("Adelholzener Wasser 12x0,7", 1, "Kiste"),
@@ -44,3 +53,19 @@ def test_order_searchable_select_is_exposed_as_widget_contract():
     assert "SearchableSelect(\"Produkt suchen" in source
     assert "selection_changed.connect(self.apply_selected_customer)" in source
     assert "selection_changed.connect(self.apply_selected_product)" in source
+
+
+def test_searchable_select_guides_uncertain_users_to_click_a_result():
+    _app()
+    from getraenkeladen_tool.ui.searchable_select import SearchableSelect
+
+    select = SearchableSelect("Kunde suchen")
+    select.set_items([("Cafe Nord", 1, "Muenchen"), ("Hotel Sued", 2, "Rosenheim")])
+
+    assert select.help_label.text() == "Namen tippen und unten einen Treffer anklicken."
+
+    select.set_search_text("xyz")
+
+    assert select.result_list.count() == 1
+    assert select.result_list.item(0).text() == "Kein Treffer gefunden"
+    assert select.result_list.item(0).flags().value & 1 == 0

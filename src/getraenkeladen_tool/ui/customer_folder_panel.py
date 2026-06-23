@@ -58,11 +58,11 @@ class CustomerFolderPanel(QWidget):
         self.refresh_button = QPushButton("Kunden laden")
         self.open_folder_button = QPushButton("Kundenordner oeffnen")
         self.open_file_button = QPushButton("Markierte Excel/PDF oeffnen")
-        self.new_order_button = QPushButton("Bestellung aus Kundensortiment starten")
-        self.seed_file_hint = QLabel("Keine Excel-Datei als Vorlage markiert.")
+        self.new_order_button = QPushButton("Neue Bestellung aus letzten Mengen starten")
+        self.seed_file_hint = QLabel("Die Vorlage kommt aus den letzten importierten Mengen rechts.")
         self.seed_file_hint.setObjectName("sectionSubtitle")
-        self.delivery_note_button = QPushButton("Lieferschein erstellen")
-        self.invoice_button = QPushButton("Rechnung erstellen")
+        self.delivery_note_button = QPushButton("Aus markierter Bestellung Lieferschein")
+        self.invoice_button = QPushButton("Aus markierter Bestellung Rechnung")
         self.status_label = QLabel("Noch kein Kunde ausgewaehlt.")
         self.status_label.setObjectName("muted")
 
@@ -178,7 +178,7 @@ class CustomerFolderPanel(QWidget):
         self.files_table.setRowCount(len(snapshot.files))
         for row, folder_file in enumerate(snapshot.files):
             self.files_by_row[row] = folder_file
-            action = "Excel als Vorlage markieren" if folder_file.can_seed_order else "oeffnen"
+            action = "Excel ansehen" if folder_file.can_seed_order else "oeffnen"
             self._set_row(self.files_table, row, (folder_file.label, folder_file.kind, action))
 
         self.order_ids_by_row.clear()
@@ -268,11 +268,11 @@ class CustomerFolderPanel(QWidget):
         self.delivery_note_button.setEnabled(has_order)
         self.invoice_button.setEnabled(has_order)
         if selected_file is None:
-            self.seed_file_hint.setText("Keine Excel-Datei als Vorlage markiert.")
+            self.seed_file_hint.setText("Die Vorlage kommt aus den letzten importierten Mengen rechts.")
         elif selected_file.can_seed_order:
-            self.seed_file_hint.setText(f"Vorlage: {selected_file.label}")
+            self.seed_file_hint.setText(f"Excel-Datei zum Nachsehen: {selected_file.label}")
         else:
-            self.seed_file_hint.setText("Markierte Datei ist keine Excel-Vorlage.")
+            self.seed_file_hint.setText("PDF ist nur zum Nachsehen. Neue Mengen stehen rechts.")
 
     def _set_row(self, table: QTableWidget, row: int, values: tuple[str, ...]) -> None:
         for column, value in enumerate(values):

@@ -1,4 +1,5 @@
 from pathlib import Path
+import os
 
 from getraenkeladen_tool.models import Customer, Document, Order
 from getraenkeladen_tool.services.customer_folder_service import (
@@ -113,6 +114,26 @@ def test_customer_folder_snapshot_marks_missing_folder_and_returns_empty_files(s
 
     assert snapshot.folder_exists is False
     assert snapshot.files == []
+
+
+def test_customer_folder_snapshot_lists_newest_folder_files_first(session, tmp_path: Path):
+    folder = tmp_path / "Kunden" / "Metzgerei Karl"
+    folder.mkdir(parents=True)
+    older_excel = folder / "2026-04-01_RE_ALT_Metzgerei.xlsx"
+    newer_excel = folder / "2026-06-01_RE_NEU_Metzgerei.xlsx"
+    newer_pdf = folder / "2026-06-01_RE_NEU_Metzgerei.pdf"
+    for path in (older_excel, newer_excel, newer_pdf):
+        path.write_text("placeholder", encoding="utf-8")
+    os.utime(older_excel, (1_700_000_000, 1_700_000_000))
+    os.utime(newer_excel, (1_800_000_000, 1_800_000_000))
+    os.utime(newer_pdf, (1_800_000_100, 1_800_000_100))
+    customer = Customer(name="Metzgerei Karl", folder_path=str(folder), is_active=True)
+    session.add(customer)
+    session.commit()
+
+    snapshot = get_customer_folder_snapshot(session, customer.id)
+
+    assert [file.path for file in snapshot.files] == [newer_pdf, newer_excel, older_excel]
 
 
 def test_customer_folder_snapshot_treats_existing_file_path_as_missing_folder(session, tmp_path: Path):

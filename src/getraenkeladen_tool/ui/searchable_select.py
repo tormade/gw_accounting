@@ -2,7 +2,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtWidgets import QLineEdit, QListWidget, QListWidgetItem, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QLabel, QLineEdit, QListWidget, QListWidgetItem, QVBoxLayout, QWidget
 
 
 @dataclass(slots=True)
@@ -28,6 +28,8 @@ class SearchableSelect(QWidget):
         self._current_value = None
         self.search_input = QLineEdit()
         self.search_input.setPlaceholderText(placeholder)
+        self.help_label = QLabel("Namen tippen und unten einen Treffer anklicken.")
+        self.help_label.setObjectName("sectionSubtitle")
         self.result_list = QListWidget()
         self.result_list.setMaximumHeight(130)
 
@@ -35,6 +37,7 @@ class SearchableSelect(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(6)
         layout.addWidget(self.search_input)
+        layout.addWidget(self.help_label)
         layout.addWidget(self.result_list)
 
         self.search_input.textChanged.connect(self._filter_items)
@@ -76,6 +79,10 @@ class SearchableSelect(QWidget):
             list_item.setToolTip(item.detail)
             list_item.setData(Qt.ItemDataRole.UserRole, item.value)
             self.result_list.addItem(list_item)
+        if not matches and text.strip():
+            empty_item = QListWidgetItem("Kein Treffer gefunden")
+            empty_item.setFlags(empty_item.flags() & ~Qt.ItemFlag.ItemIsSelectable & ~Qt.ItemFlag.ItemIsEnabled)
+            self.result_list.addItem(empty_item)
 
         self._current_value = matches[0].value if len(matches) == 1 else None
         self.selection_changed.emit()

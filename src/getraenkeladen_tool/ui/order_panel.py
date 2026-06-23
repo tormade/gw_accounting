@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QPushButton,
     QHeaderView,
+    QScrollArea,
     QSpinBox,
     QTableWidget,
     QTableWidgetItem,
@@ -106,7 +107,7 @@ class OrderPanel(QWidget):
         self.product_select.setMinimumWidth(420)
         self.assortment_table = QTableWidget(0, len(ASSORTMENT_COLUMNS))
         self.assortment_table.setHorizontalHeaderLabels(ASSORTMENT_COLUMNS)
-        self.assortment_table.setMinimumHeight(220)
+        self.assortment_table.setMinimumHeight(180)
         self.assortment_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.assortment_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.assortment_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
@@ -129,11 +130,11 @@ class OrderPanel(QWidget):
         self.deposit_return_eur.setPlaceholderText("z. B. 4,80")
         self.order_lines_table = QTableWidget(0, len(ORDER_LINE_COLUMNS))
         self.order_lines_table.setHorizontalHeaderLabels(ORDER_LINE_COLUMNS)
-        self.order_lines_table.setMinimumHeight(320)
+        self.order_lines_table.setMinimumHeight(220)
         self.order_lines_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         self.deposit_returns_table = QTableWidget(0, len(DEPOSIT_RETURN_COLUMNS))
         self.deposit_returns_table.setHorizontalHeaderLabels(DEPOSIT_RETURN_COLUMNS)
-        self.deposit_returns_table.setMaximumHeight(150)
+        self.deposit_returns_table.setMaximumHeight(120)
         self.deposit_returns_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         self.order_total_label = QLabel("Bestellsumme: 0,00 EUR")
         self.order_total_label.setObjectName("stepTitle")
@@ -172,6 +173,7 @@ class OrderPanel(QWidget):
         self.use_assortment_button = QPushButton("Aus Sortiment uebernehmen")
 
         self.order_dialog: QDialog | None = None
+        self.order_editor_scroll: QScrollArea | None = None
         self.order_editor_widget = QWidget()
         self.order_editor_widget.setObjectName("orderEditorDialogBody")
         new_order_layout = QVBoxLayout(self.order_editor_widget)
@@ -346,14 +348,22 @@ class OrderPanel(QWidget):
         self.order_dialog.setWindowTitle(title)
         self.order_dialog.setModal(True)
         self.order_dialog.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
-        self.order_dialog.resize(1100, 760)
+        self.order_dialog.setMinimumSize(760, 480)
+        self.order_dialog.resize(1020, 620)
         dialog_layout = QVBoxLayout(self.order_dialog)
-        dialog_layout.setContentsMargins(18, 18, 18, 18)
-        dialog_layout.addWidget(self.order_editor_widget)
+        dialog_layout.setContentsMargins(12, 12, 12, 12)
+        self.order_editor_scroll = QScrollArea()
+        self.order_editor_scroll.setWidgetResizable(True)
+        self.order_editor_scroll.setFrameShape(QScrollArea.Shape.NoFrame)
+        self.order_editor_scroll.setWidget(self.order_editor_widget)
+        dialog_layout.addWidget(self.order_editor_scroll)
         self.order_dialog.finished.connect(lambda _result: self._restore_order_editor_parent())
         self.order_dialog.show()
 
     def _restore_order_editor_parent(self) -> None:
+        if self.order_editor_scroll is not None:
+            self.order_editor_scroll.takeWidget()
+            self.order_editor_scroll = None
         self.order_editor_widget.setParent(self)
         self.order_dialog = None
 

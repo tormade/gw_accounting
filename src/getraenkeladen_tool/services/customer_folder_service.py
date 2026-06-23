@@ -69,7 +69,7 @@ def _customer_orders(session: Session, customer_id: int) -> list[Order]:
 
 def _folder_files(folder_path: Path) -> list[CustomerFolderFile]:
     files = []
-    for path in sorted(folder_path.iterdir(), key=lambda item: item.name.lower()):
+    for path in sorted(folder_path.iterdir(), key=lambda item: (-item.stat().st_mtime, item.name.lower())):
         if not path.is_file() or path.suffix.lower() not in {".xlsx", ".pdf"}:
             continue
         files.append(

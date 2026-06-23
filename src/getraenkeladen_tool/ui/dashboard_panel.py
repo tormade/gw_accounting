@@ -21,14 +21,15 @@ DASHBOARD_GUIDANCE_STEPS = (
 DASHBOARD_HELP_TEXT = (
     "Start: Hier sehen Sie die wichtigsten Tageszahlen.\n\n"
     "Kundenordner oeffnen: Startet den normalen Arbeitsablauf mit Kunde, alter Excel/PDF und neuer Bestellung.\n\n"
+    "Alle wichtigen Wege fuehren jetzt auf unterschiedliche Arbeitsbereiche. "
     "Die Karten zeigen, ob heute Lieferungen, offene Posten oder Kontaktanfragen anstehen."
 )
 
 
 class DashboardPanel(QWidget):
     new_delivery_requested = Signal()
-    manage_orders_requested = Signal()
-    invoice_requested = Signal()
+    open_items_requested = Signal()
+    checklist_requested = Signal()
 
     def __init__(self, session_factory=None) -> None:
         super().__init__()
@@ -52,17 +53,17 @@ class DashboardPanel(QWidget):
             "Kunde oeffnen, alte Excel/PDF sehen und neue Bestellung eintragen.",
             DASHBOARD_ACTIONS["newDeliveryButton"],
         )
-        self.search_order_card = ActionCard(
-            "Kunde suchen",
-            "Schnell zum Kundenkopf und zur letzten Bestellung springen.",
-            "Zum Kundenordner",
+        self.open_items_card = ActionCard(
+            "Offene Posten pruefen",
+            "Zahlungen, SEPA und offene Rechnungen kontrollieren.",
+            "Zu offenen Posten",
         )
-        self.invoice_card = ActionCard(
-            "Excel/PDF im Kundenordner",
-            "Rechnung oder Lieferschein aus einer Kundenbestellung erzeugen.",
-            "Kundenordner oeffnen",
+        self.checklist_card = ActionCard(
+            "Preis-/Importpruefung",
+            "Unklare Artikel, Preise und Kundenhinweise abarbeiten.",
+            "Zur Pruefliste",
         )
-        self.quick_actions = [self.new_delivery_card, self.search_order_card, self.invoice_card]
+        self.quick_actions = [self.new_delivery_card, self.open_items_card, self.checklist_card]
         quick_action_grid = QGridLayout()
         quick_action_grid.setSpacing(14)
         for column, card in enumerate(self.quick_actions):
@@ -87,8 +88,8 @@ class DashboardPanel(QWidget):
         layout.addStretch()
 
         self.new_delivery_card.button.clicked.connect(self.new_delivery_requested.emit)
-        self.search_order_card.button.clicked.connect(self.manage_orders_requested.emit)
-        self.invoice_card.button.clicked.connect(self.invoice_requested.emit)
+        self.open_items_card.button.clicked.connect(self.open_items_requested.emit)
+        self.checklist_card.button.clicked.connect(self.checklist_requested.emit)
         self.help_button.clicked.connect(self.show_help)
         self.refresh_button.clicked.connect(self.refresh_dashboard)
         self.refresh_dashboard()

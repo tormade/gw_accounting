@@ -47,10 +47,14 @@ def test_dashboard_quick_actions_open_customer_folder_workspace():
     source = Path("src/getraenkeladen_tool/ui/main_window.py").read_text(encoding="utf-8")
 
     assert "self.dashboard_panel.new_delivery_requested.connect(self.open_customer_folder_tab)" in source
-    assert "self.dashboard_panel.manage_orders_requested.connect(self.open_customer_folder_tab)" in source
-    assert "self.dashboard_panel.invoice_requested.connect(self.open_customer_folder_tab)" in source
+    assert "self.dashboard_panel.open_items_requested.connect(self.open_open_items_tab)" in source
+    assert "self.dashboard_panel.checklist_requested.connect(self.open_checklist_tab)" in source
     assert "def open_customer_folder_tab" in source
+    assert "def open_open_items_tab" in source
+    assert "def open_checklist_tab" in source
     assert 'MAIN_TABS.index("Kundenordner")' in source
+    assert 'MAIN_TABS.index("Offene Posten")' in source
+    assert 'MAIN_TABS.index("Pruefliste")' in source
 
 
 def test_theme_uses_winklmeier_work_tool_direction():
@@ -464,6 +468,8 @@ def test_dashboard_uses_cockpit_quick_actions_without_calendar():
     assert "self.quick_actions" in source
     assert "Kunde suchen" in source
     assert "Kundenordner oeffnen" in source
+    assert "Offene Posten pruefen" in source
+    assert "Preis-/Importpruefung" in source
     assert "heroSearchPanel" in source
     assert "todayContactList" in source
     assert "Kunde & Bestellung" not in source
@@ -479,6 +485,7 @@ def test_dashboard_copy_matches_customer_folder_workflow():
     assert "Kundenordner oeffnen: Startet den normalen Arbeitsablauf" in source
     assert "Kunde oeffnen, alte Excel/PDF sehen und neue Bestellung eintragen." in source
     assert "Kundenordner" in source
+    assert "Alle wichtigen Wege fuehren jetzt auf unterschiedliche Arbeitsbereiche." in source
 
 
 def test_dashboard_primary_action_opens_customer_folder_tab():
@@ -496,12 +503,14 @@ def test_dashboard_quick_actions_open_customer_folder_workspace_signals():
     dashboard_source = Path("src/getraenkeladen_tool/ui/dashboard_panel.py").read_text(encoding="utf-8")
     main_source = Path("src/getraenkeladen_tool/ui/main_window.py").read_text(encoding="utf-8")
 
-    assert "manage_orders_requested = Signal()" in dashboard_source
-    assert "invoice_requested = Signal()" in dashboard_source
-    assert "self.search_order_card.button.clicked.connect(self.manage_orders_requested.emit)" in dashboard_source
-    assert "self.invoice_card.button.clicked.connect(self.invoice_requested.emit)" in dashboard_source
-    assert "manage_orders_requested.connect(self.open_customer_folder_tab)" in main_source
-    assert "invoice_requested.connect(self.open_customer_folder_tab)" in main_source
+    assert "open_items_requested = Signal()" in dashboard_source
+    assert "checklist_requested = Signal()" in dashboard_source
+    assert "self.open_items_card.button.clicked.connect(self.open_items_requested.emit)" in dashboard_source
+    assert "self.checklist_card.button.clicked.connect(self.checklist_requested.emit)" in dashboard_source
+    assert "manage_orders_requested" not in dashboard_source
+    assert "invoice_requested = Signal()" not in dashboard_source
+    assert "open_items_requested.connect(self.open_open_items_tab)" in main_source
+    assert "checklist_requested.connect(self.open_checklist_tab)" in main_source
     assert 'MAIN_TABS.index("Kundenordner")' in main_source
 
 

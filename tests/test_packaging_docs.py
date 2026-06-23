@@ -70,7 +70,8 @@ def test_user_guide_explains_guided_daily_workflow():
     guide = Path("docs/bedienhilfe.md").read_text(encoding="utf-8")
 
     assert "Startseite" in guide
-    assert "Auftrag erfassen" in guide
+    assert "Kundenordner und Bestellung" in guide
+    assert "Neue Bestellung aus letzten Mengen starten" in guide
     assert "Archivieren statt loeschen" in guide
     assert "Windows" in guide
 
