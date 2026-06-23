@@ -22,6 +22,7 @@ from ..services.order_service import create_order_delivery_order, create_order_i
 from .date_input import to_display_date
 from .deposit_return_presets import DEPOSIT_RETURN_PRESETS
 from .layouts import ContentSurface, PageHeader, ResponsiveSplitter, WorkspaceCard, configure_form_layout
+from .searchable_select import SearchableSelect
 
 
 DOCUMENT_WORKFLOW_ACTIONS = {
@@ -31,8 +32,6 @@ DOCUMENT_WORKFLOW_ACTIONS = {
 }
 DOCUMENT_LINE_COLUMNS = ("Artikel", "Menge", "Preis EUR", "Pfand EUR", "Summe EUR")
 DOCUMENT_RETURN_COLUMNS = ("Pfandart", "Menge", "Pfand EUR", "Gutschrift EUR")
-DOCUMENT_ORDER_COLUMNS = ("Auftrag", "Kunde", "Lieferdatum", "Zeitfenster", "Status")
-
 
 class DocumentWorkflowPanel(QWidget):
     document_type = ""
@@ -50,13 +49,9 @@ class DocumentWorkflowPanel(QWidget):
         self.last_excel_path: Path | None = None
         self.last_pdf_path: Path | None = None
 
-        self.orders_table = QTableWidget(0, len(DOCUMENT_ORDER_COLUMNS))
-        self.orders_table.setHorizontalHeaderLabels(DOCUMENT_ORDER_COLUMNS)
-        self.orders_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-        self.orders_table.setMinimumHeight(220)
-        self.order_table_search = QLineEdit()
-        self.order_table_search.setObjectName("tableSearchField")
-        self.order_table_search.setPlaceholderText("In der Auftragsliste suchen, z. B. Kunde, Nummer oder Datum")
+        self.order_select = SearchableSelect("Kunde, Auftragsnummer oder Lieferdatum suchen")
+        self.order_select.search_input.setObjectName("tableSearchField")
+        self.order_select.setMaximumHeight(180)
 
         self.order_summary = QLabel("Noch kein Auftrag ausgewaehlt.")
         self.order_summary.setObjectName("sectionSubtitle")
@@ -107,14 +102,18 @@ class DocumentWorkflowPanel(QWidget):
         body = ResponsiveSplitter()
         layout.addWidget(body, 1)
 
-        order_box, order_layout = self._section("1. Auftrag auswaehlen", "In der Tabelle suchen und Auftrag doppelt anklicken.")
-        order_layout.addWidget(self.order_table_search)
-        order_layout.addWidget(self.orders_table)
+        order_box, order_layout = self._section(
+            "1. Auftrag suchen",
+            "Kunde, Auftragsnummer oder Lieferdatum eingeben. Danach passenden Auftrag uebernehmen.",
+        )
+        order_layout.addWidget(self.order_select)
         refresh_row = QHBoxLayout()
-        self.refresh_button = QPushButton("Auftraege laden")
+        self.refresh_button = QPushButton("Liste aktualisieren")
         self.load_button = QPushButton("Auftrag uebernehmen")
+        self.reset_order_button = QPushButton("Suche zuruecksetzen")
         refresh_row.addWidget(self.refresh_button)
         refresh_row.addWidget(self.load_button)
+        refresh_row.addWidget(self.reset_order_button)
         refresh_row.addStretch()
         order_layout.addLayout(refresh_row)
         body.addWidget(order_box)
@@ -182,6 +181,7 @@ class DocumentWorkflowPanel(QWidget):
 
         self.refresh_button.clicked.connect(self.refresh_orders)
         self.load_button.clicked.connect(self.load_selected_order)
+        self.reset_order_button.clicked.connect(self.reset_order_selection)
         self.remove_line_button.clicked.connect(self.remove_selected_line)
         self.add_return_button.clicked.connect(self.add_deposit_return)
         self.remove_return_button.clicked.connect(self.remove_selected_deposit_return)
@@ -190,8 +190,6 @@ class DocumentWorkflowPanel(QWidget):
         self.create_pdf_button.clicked.connect(self.create_pdf_document)
         self.open_excel_button.clicked.connect(lambda: self._open_local_file(self.last_excel_path))
         self.open_pdf_button.clicked.connect(lambda: self._open_local_file(self.last_pdf_path))
-        self.orders_table.itemDoubleClicked.connect(lambda _item: self.load_selected_order())
-        self.order_table_search.textChanged.connect(self.apply_order_table_search)
         self.lines_table.itemChanged.connect(self.update_total)
         self.returns_table.itemChanged.connect(self.update_total)
         self.refresh_master_data()
@@ -218,42 +216,30 @@ class DocumentWorkflowPanel(QWidget):
         finally:
             session.close()
         self.order_ids_by_row = {}
-        self.orders_table.setRowCount(len(orders))
-        for row, order in enumerate(orders):
-            self.order_ids_by_row[row] = order.id
-            values = (
-                order.order_number,
-                order.customer.name,
-                to_display_date(order.delivery_date),
-                order.delivery_slot or "",
-                order.status,
+        self.order_select.set_items(
+            (
+                (
+                    f"{order.order_number} | {order.customer.name} | Lieferung {to_display_date(order.delivery_date)}",
+                    order.id,
+                    f"{order.status} {order.delivery_slot or ''}",
+                )
+                for order in orders
             )
-            for column, value in enumerate(values):
-                self.orders_table.setItem(row, column, QTableWidgetItem(value))
-        self.apply_order_table_search()
-        self.status_label.setText(f"{len(orders)} Auftraege geladen.")
-
-    def apply_order_table_search(self) -> None:
-        query = self.order_table_search.text().strip().lower()
-        for row in range(self.orders_table.rowCount()):
-            self.orders_table.setRowHidden(row, not self._row_matches_query(self.orders_table, row, query))
-
-    def _row_matches_query(self, table: QTableWidget, row: int, query: str) -> bool:
-        if not query:
-            return True
-        for column in range(table.columnCount()):
-            item = table.item(row, column)
-            if item is not None and query in item.text().lower():
-                return True
-        return False
+        )
+        self.status_label.setText(f"{len(orders)} Auftraege fuer die Suche geladen.")
 
     def load_selected_order(self) -> None:
-        row = self.orders_table.currentRow()
-        order_id = self.order_ids_by_row.get(row)
+        order_id = self.order_select.current_value()
         if order_id is None or self.session_factory is None:
             self.status_label.setText("Bitte zuerst einen Auftrag auswaehlen.")
             return
         self.select_order(order_id)
+
+    def reset_order_selection(self) -> None:
+        self.current_order_id = None
+        self.order_select.set_search_text("")
+        self.order_summary.setText("Noch kein Auftrag ausgewaehlt.")
+        self.status_label.setText("Bitte Auftrag suchen und uebernehmen.")
 
     def select_order(self, order_id: int) -> None:
         if self.session_factory is None:
@@ -263,7 +249,9 @@ class DocumentWorkflowPanel(QWidget):
             order = get_order(session, order_id)
             self.current_order_id = order.id
             self.order_summary.setText(
-                f"{order.order_number} | {order.customer.name} | Lieferdatum {to_display_date(order.delivery_date)}"
+                "Ausgewaehlter Auftrag: "
+                f"{order.order_number} | {order.customer.name} | Lieferung {to_display_date(order.delivery_date)} | "
+                f"{len(order.lines)} Positionen"
             )
             self.lines_table.setRowCount(0)
             self.returns_table.setRowCount(0)

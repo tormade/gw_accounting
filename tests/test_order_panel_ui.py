@@ -36,7 +36,12 @@ def test_document_workflow_panels_make_excel_pdf_generation_flow_visible():
     assert "QMessageBox.critical" in source
     assert "QMessageBox.warning" in source
     assert "Erstellung fehlgeschlagen" in source
-    assert "Auftrag waehlen" in source
+    assert "Auftrag suchen" in source
+    assert 'self.order_select = SearchableSelect("Kunde, Auftragsnummer oder Lieferdatum suchen")' in source
+    assert "self.order_select.set_items(" in source
+    assert "self.order_select.current_value()" in source
+    assert "self.orders_table = QTableWidget" not in source
+    assert "Auftraege laden" not in source
     assert "Excel:" in source
     assert "PDF:" in source
     assert "Nummer vorschlagen" not in source
@@ -44,6 +49,16 @@ def test_document_workflow_panels_make_excel_pdf_generation_flow_visible():
     assert "Lieferpauschale" in source
     assert "self.delivery_fee_choice = QComboBox()" in source
     assert "self.document_note = QLineEdit()" in source
+
+
+def test_document_workflow_uses_compact_order_search_instead_of_large_order_list():
+    source = Path("src/getraenkeladen_tool/ui/document_workflow_panel.py").read_text(encoding="utf-8")
+
+    assert "SearchableSelect" in source
+    assert "Auftrag uebernehmen" in source
+    assert "Suche zuruecksetzen" in source
+    assert "Ausgewaehlter Auftrag" in source
+    assert "Kunde, Auftragsnummer oder Lieferdatum suchen" in source
 
 
 def test_document_workflow_allows_editing_lines_and_deposit_returns():
@@ -176,7 +191,8 @@ def test_order_and_document_use_table_search_instead_of_customer_filter_dropdown
     assert "self.customer_filter" not in document_source
     assert "setObjectName(\"tableSearchField\")" in document_source
     assert "def _row_matches_query" in order_source
-    assert "def _row_matches_query" in document_source
+    assert "self.order_select = SearchableSelect" in document_source
+    assert "def _row_matches_query" not in document_source
 
 
 def test_order_context_menu_offers_copy_delivery_note_and_invoice_actions():

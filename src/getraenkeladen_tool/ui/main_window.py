@@ -73,6 +73,8 @@ class MainWindow(QMainWindow):
         self.dashboard_panel.invoice_requested.connect(self.open_invoices_tab)
         self.order_panel.delivery_note_requested.connect(self.open_delivery_note_for_order)
         self.order_panel.invoice_requested.connect(self.open_invoice_for_order)
+        self.document_archive_panel.document_open_requested.connect(self.open_document_from_archive)
+        self.document_archive_panel.order_open_requested.connect(self.open_order_for_id)
 
         app_shell = QWidget()
         app_shell.setObjectName("appShell")
@@ -100,6 +102,10 @@ class MainWindow(QMainWindow):
     def open_orders_tab(self) -> None:
         self.navigation.setCurrentRow(MAIN_TABS.index("Auftraege"))
 
+    def open_order_for_id(self, order_id: int) -> None:
+        self.open_orders_tab()
+        self.order_panel.load_order_by_id(order_id)
+
     def open_invoices_tab(self) -> None:
         self.navigation.setCurrentRow(MAIN_TABS.index("Rechnungen"))
 
@@ -110,6 +116,12 @@ class MainWindow(QMainWindow):
     def open_invoice_for_order(self, order_id: int) -> None:
         self.navigation.setCurrentRow(MAIN_TABS.index("Rechnungen"))
         self.invoice_panel.select_order(order_id)
+
+    def open_document_from_archive(self, document_type: str, order_id: int) -> None:
+        if document_type == "Rechnung":
+            self.open_invoice_for_order(order_id)
+        else:
+            self.open_delivery_note_for_order(order_id)
 
     def refresh_current_tab(self, index: int) -> None:
         if index < 0:

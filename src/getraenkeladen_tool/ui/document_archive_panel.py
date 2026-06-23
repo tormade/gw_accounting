@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from PySide6.QtCore import QUrl
+from PySide6.QtCore import Qt, QUrl, Signal
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
     QAbstractItemView,
@@ -8,6 +8,7 @@ from PySide6.QtWidgets import (
     QHeaderView,
     QLabel,
     QLineEdit,
+    QMenu,
     QMessageBox,
     QPushButton,
     QTableWidget,
@@ -16,7 +17,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from ..services.document_archive_service import list_documents_by_type
+from ..services.document_archive_service import list_documents_by_type, regenerate_document_asset
 from .date_input import to_display_date
 from .layouts import ContentSurface, PageHeader, WorkspaceCard
 
@@ -30,6 +31,9 @@ DOCUMENT_ARCHIVE_ACTIONS = {
 
 
 class DocumentArchivePanel(QWidget):
+    document_open_requested = Signal(str, int)
+    order_open_requested = Signal(int)
+
     def __init__(self, session_factory=None) -> None:
         super().__init__()
         self.session_factory = session_factory
@@ -56,9 +60,15 @@ class DocumentArchivePanel(QWidget):
         self.search_field.setPlaceholderText("Kunde, Nummer oder Datum suchen")
         search_box = WorkspaceCard("Suchen", "Tippen reicht: Kunde, Rechnungsnummer, Lieferscheinnummer oder Datum.")
         search_box.layout.addWidget(self.search_field)
+        self.context_hint = QLabel("Tipp: Rechtsklick auf einen Beleg oeffnet weitere Aktionen wie PDF neu erzeugen.")
+        self.context_hint.setObjectName("sectionSubtitle")
+        search_box.layout.addWidget(self.context_hint)
         layout.addWidget(search_box)
 
         self.invoice_table = self._document_table()
+        self.invoice_table.customContextMenuRequested.connect(
+            lambda position: self.show_document_context_menu(self.invoice_table, self.invoice_ids_by_row, position)
+        )
         invoice_box = WorkspaceCard(
             "Bereits erstellte Rechnungen",
             "Eine Rechnung markieren und dann Excel, PDF oder Ordner oeffnen.",
@@ -68,6 +78,9 @@ class DocumentArchivePanel(QWidget):
         layout.addWidget(invoice_box)
 
         self.delivery_note_table = self._document_table()
+        self.delivery_note_table.customContextMenuRequested.connect(
+            lambda position: self.show_document_context_menu(self.delivery_note_table, self.delivery_note_ids_by_row, position)
+        )
         delivery_box = WorkspaceCard(
             "Bereits erstellte Lieferscheine",
             "Einen Lieferschein markieren und dann Excel, PDF oder Ordner oeffnen.",
@@ -94,6 +107,7 @@ class DocumentArchivePanel(QWidget):
         table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
+        table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         table.setMinimumHeight(220)
         return table
 
@@ -132,6 +146,8 @@ class DocumentArchivePanel(QWidget):
                     "pdf_path": Path(document.pdf_path),
                     "customer_name": document.customer.name,
                     "document_number": document.document_number,
+                    "document_type": document.document_type,
+                    "order_id": document.order_id,
                 }
                 for document in [*invoices, *delivery_notes]
             }
@@ -223,6 +239,91 @@ class DocumentArchivePanel(QWidget):
             return
         self._open_url(folder_path, "Ordner")
 
+    def show_document_context_menu(self, table: QTableWidget, row_map: dict[int, int], position) -> None:
+        clicked_row = table.indexAt(position).row()
+        if clicked_row >= 0:
+            table.setCurrentCell(clicked_row, 0)
+        document = self._selected_document(table, row_map, warn=False)
+        if document is None:
+            return
+        menu = QMenu(self)
+        pdf_action = menu.addAction("PDF oeffnen")
+        excel_action = menu.addAction("Excel oeffnen")
+        folder_action = menu.addAction("Kundenordner oeffnen")
+        menu.addSeparator()
+        regenerate_pdf_action = menu.addAction("PDF neu erzeugen")
+        regenerate_excel_action = menu.addAction("Excel neu erzeugen")
+        regenerate_pdf_action.setEnabled(not document["pdf_path"].exists())
+        regenerate_excel_action.setEnabled(not document["excel_path"].exists())
+        regenerate_pdf_action.setToolTip("Nur aktiv, wenn die PDF-Datei fehlt.")
+        regenerate_excel_action.setToolTip("Nur aktiv, wenn die Excel-Datei fehlt.")
+        menu.addSeparator()
+        document_label = (
+            "Im Rechnungsbereich oeffnen"
+            if document["document_type"] == "Rechnung"
+            else "Im Lieferscheinbereich oeffnen"
+        )
+        open_document_action = menu.addAction(document_label)
+        open_order_action = menu.addAction("Zugehoerigen Auftrag oeffnen")
+        open_order_action.setEnabled(document["order_id"] is not None)
+        selected = menu.exec(table.viewport().mapToGlobal(position))
+        if selected == pdf_action:
+            self.open_selected_pdf(table, row_map)
+        elif selected == excel_action:
+            self.open_selected_excel(table, row_map)
+        elif selected == folder_action:
+            self.open_selected_folder(table, row_map)
+        elif selected == regenerate_pdf_action:
+            self.regenerate_selected_asset(table, row_map, "pdf")
+        elif selected == regenerate_excel_action:
+            self.regenerate_selected_asset(table, row_map, "excel")
+        elif selected == open_document_action:
+            self.open_selected_document_workflow(document)
+        elif selected == open_order_action and document["order_id"] is not None:
+            self.order_open_requested.emit(document["order_id"])
+
+    def regenerate_selected_asset(self, table: QTableWidget, row_map: dict[int, int], asset: str) -> None:
+        document_id = self._selected_document_id(table, row_map)
+        if document_id is None:
+            return
+        if self.session_factory is None:
+            self.status_label.setText("Keine Datenbankverbindung vorhanden.")
+            return
+        session = self.session_factory()
+        try:
+            document = regenerate_document_asset(session, document_id, asset)
+            document_number = document.document_number
+        except Exception as error:
+            QMessageBox.critical(
+                self,
+                "Datei konnte nicht neu erstellt werden",
+                f"Die Datei konnte nicht neu erstellt werden.\n\nGrund: {error}\n\n"
+                "Die vorhandenen Belegdaten wurden nicht veraendert.",
+            )
+            self.status_label.setText(f"Neu-Erzeugung fehlgeschlagen: {error}")
+            return
+        finally:
+            session.close()
+        asset_label = "PDF" if asset == "pdf" else "Excel"
+        self.refresh_archive()
+        self.status_label.setText(f"{asset_label} neu erstellt und im Kundenordner abgelegt.")
+        QMessageBox.information(
+            self,
+            f"{asset_label} neu erstellt",
+            f"{asset_label} fuer {document_number} wurde neu erstellt und im Kundenordner abgelegt.",
+        )
+
+    def open_selected_document_workflow(self, document: dict) -> None:
+        order_id = document.get("order_id")
+        if order_id is None:
+            QMessageBox.warning(
+                self,
+                "Auftrag nicht gefunden",
+                "Der urspruengliche Auftrag wurde nicht gefunden. Bitte Beleg manuell pruefen.",
+            )
+            return
+        self.document_open_requested.emit(document["document_type"], order_id)
+
     def _open_selected_path(self, table: QTableWidget, row_map: dict[int, int], path_key: str, error_message: str) -> None:
         document = self._selected_document(table, row_map)
         if document is None:
@@ -233,11 +334,18 @@ class DocumentArchivePanel(QWidget):
             return
         self._open_url(path, path.name)
 
-    def _selected_document(self, table: QTableWidget, row_map: dict[int, int]) -> dict | None:
+    def _selected_document_id(self, table: QTableWidget, row_map: dict[int, int], warn: bool = True) -> int | None:
         row = table.currentRow()
         document_id = row_map.get(row)
         if document_id is None or not table.selectedItems() or table.isRowHidden(row):
-            QMessageBox.warning(self, "Beleg auswaehlen", "Bitte zuerst einen Beleg in der Tabelle auswaehlen.")
+            if warn:
+                QMessageBox.warning(self, "Beleg auswaehlen", "Bitte zuerst einen Beleg in der Tabelle auswaehlen.")
+            return None
+        return document_id
+
+    def _selected_document(self, table: QTableWidget, row_map: dict[int, int], warn: bool = True) -> dict | None:
+        document_id = self._selected_document_id(table, row_map, warn=warn)
+        if document_id is None:
             return None
         document = self.documents_by_id.get(document_id)
         if document is None:

@@ -21,6 +21,18 @@ def test_document_archive_panel_exposes_two_clear_document_tables_and_actions():
     assert "clearSelection()" in source
     assert "Belege gefunden" in source
     assert "konnte nicht geoeffnet werden" in source
+    assert "customContextMenuRequested.connect" in source
+    assert "show_document_context_menu" in source
+    assert "PDF neu erzeugen" in source
+    assert "Excel neu erzeugen" in source
+    assert "Tipp: Rechtsklick auf einen Beleg" in source
+    assert "table.indexAt(position).row()" in source
+    assert "table.setCurrentCell(clicked_row, 0)" in source
+    assert "Im Rechnungsbereich oeffnen" in source
+    assert "Im Lieferscheinbereich oeffnen" in source
+    assert "Zugehoerigen Auftrag oeffnen" in source
+    assert "document_open_requested = Signal(str, int)" in source
+    assert "order_open_requested = Signal(int)" in source
 
 
 def test_main_window_adds_document_archive_tab_and_refresh_hook():
@@ -30,3 +42,5 @@ def test_main_window_adds_document_archive_tab_and_refresh_hook():
     assert "DocumentArchivePanel" in source
     assert "self.document_archive_panel = DocumentArchivePanel" in source
     assert '"Belegarchiv": (self.document_archive_panel.refresh_archive,)' in source
+    assert "self.document_archive_panel.document_open_requested.connect" in source
+    assert "self.document_archive_panel.order_open_requested.connect" in source
