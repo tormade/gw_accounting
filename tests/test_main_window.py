@@ -5,10 +5,8 @@ from getraenkeladen_tool.ui.theme import APP_STYLESHEET
 def test_main_window_exposes_first_version_tabs():
     assert MAIN_TABS == (
         "Heute",
-        "Kunde & Bestellung",
-        "Belege",
+        "Kundenordner",
         "Offene Posten",
-        "Tagesliste",
         "Stammdaten",
         "Pruefliste",
         "Einstellungen",
@@ -43,14 +41,16 @@ def test_main_window_uses_sidebar_app_shell_instead_of_top_tabs():
     assert "self.tabs = QTabWidget()" not in source
 
 
-def test_dashboard_new_delivery_opens_order_dialog():
+def test_dashboard_quick_actions_open_customer_folder_workspace():
     from pathlib import Path
 
     source = Path("src/getraenkeladen_tool/ui/main_window.py").read_text(encoding="utf-8")
 
-    assert "self.dashboard_panel.new_delivery_requested.connect(self.open_new_order_dialog)" in source
-    assert "def open_new_order_dialog" in source
-    assert "self.order_panel.open_new_order_dialog()" in source
+    assert "self.dashboard_panel.new_delivery_requested.connect(self.open_customer_folder_tab)" in source
+    assert "self.dashboard_panel.manage_orders_requested.connect(self.open_customer_folder_tab)" in source
+    assert "self.dashboard_panel.invoice_requested.connect(self.open_customer_folder_tab)" in source
+    assert "def open_customer_folder_tab" in source
+    assert 'MAIN_TABS.index("Kundenordner")' in source
 
 
 def test_theme_uses_winklmeier_work_tool_direction():
@@ -181,20 +181,21 @@ def test_order_form_gives_selection_fields_room_to_grow():
     assert "self.product_select.setMinimumWidth(420)" in source
 
 
-def test_target_state_navigation_prioritizes_daily_flow_and_main_order_path():
+def test_target_state_navigation_prioritizes_customer_folder_path():
     from pathlib import Path
 
     source = Path("src/getraenkeladen_tool/ui/main_window.py").read_text(encoding="utf-8")
 
     assert '"Heute"' in source
-    assert '"Kunde & Bestellung"' in source
+    assert '"Kundenordner"' in source
     assert '"Offene Posten"' in source
-    assert '"Tagesliste"' in source
     assert '"Pruefliste"' in source
+    assert '"Kunde & Bestellung"' not in source
+    assert '"Belege"' not in source
+    assert '"Tagesliste"' not in source
     assert '"Auftraege"' not in source
     assert '"Listen"' not in source
-    assert 'MAIN_TABS.index("Kunde & Bestellung")' in source
-    assert 'MAIN_TABS.index("Belege")' in source
+    assert 'MAIN_TABS.index("Kundenordner")' in source
 
 
 def test_main_window_uses_real_checklist_panel_for_migration_conflicts():
@@ -255,15 +256,17 @@ def test_brand_assets_are_available():
     assert CLAIM_PATH.exists()
 
 
-def test_main_window_groups_document_workflows_under_target_state_belege_workspace():
+def test_main_window_keeps_document_workflows_as_internal_helpers():
     from pathlib import Path
 
     source = Path("src/getraenkeladen_tool/ui/main_window.py").read_text(encoding="utf-8")
 
     assert "DocumentPanel" not in source
-    assert '"Belege"' in source
-    assert "def _document_workspace" in source
-    assert 'tabs.addTab(self.document_archive_panel, "Archiv")' in source
+    assert "self.document_workspace =" not in source
+    assert "self.pages.addWidget(self._scrollable_tab(self.document_workspace))" not in source
+    assert "DocumentArchivePanel" in source
+    assert "DeliveryNotePanel" in source
+    assert "InvoicePanel" in source
 
 
 def test_order_tab_exposes_guided_order_actions():
@@ -318,8 +321,19 @@ def test_main_window_has_dedicated_delivery_and_invoice_tabs():
     assert "DeliveryNotePanel" in source
     assert "InvoicePanel" in source
     assert "self.delivery_note_panel" in source
-    assert "self.invoice_panel" in source
-    assert '"Belege"' in source
+
+
+def test_main_window_embeds_customer_folder_as_second_page_and_wires_actions():
+    from pathlib import Path
+
+    source = Path("src/getraenkeladen_tool/ui/main_window.py").read_text(encoding="utf-8")
+
+    assert "from .customer_folder_panel import CustomerFolderPanel" in source
+    assert "self.customer_folder_panel = CustomerFolderPanel(session_factory=session_factory)" in source
+    assert "self.pages.addWidget(self._scrollable_tab(self.customer_folder_panel))" in source
+    assert "self.customer_folder_panel.new_order_requested.connect(self.open_new_order_for_customer)" in source
+    assert "self.customer_folder_panel.delivery_note_requested.connect(self.open_delivery_note_for_order)" in source
+    assert "self.customer_folder_panel.invoice_requested.connect(self.open_invoice_for_order)" in source
     assert '"Lieferscheine"' not in source
     assert '"Rechnungen"' not in source
 
@@ -441,17 +455,16 @@ def test_dashboard_uses_cockpit_quick_actions_without_calendar():
     assert "todayContactList" in source
 
 
-def test_dashboard_primary_action_opens_new_order_dialog():
+def test_dashboard_primary_action_opens_customer_folder_tab():
     from pathlib import Path
 
     source = Path("src/getraenkeladen_tool/ui/main_window.py").read_text(encoding="utf-8")
 
-    assert "new_delivery_requested.connect(self.open_new_order_dialog)" in source
-    assert 'MAIN_TABS.index("Kunde & Bestellung")' in source
-    assert "self.order_panel.open_new_order_dialog()" in source
+    assert "new_delivery_requested.connect(self.open_customer_folder_tab)" in source
+    assert 'MAIN_TABS.index("Kundenordner")' in source
 
 
-def test_dashboard_quick_actions_open_order_and_invoice_workspaces():
+def test_dashboard_quick_actions_open_customer_folder_workspace_signals():
     from pathlib import Path
 
     dashboard_source = Path("src/getraenkeladen_tool/ui/dashboard_panel.py").read_text(encoding="utf-8")
@@ -461,9 +474,9 @@ def test_dashboard_quick_actions_open_order_and_invoice_workspaces():
     assert "invoice_requested = Signal()" in dashboard_source
     assert "self.search_order_card.button.clicked.connect(self.manage_orders_requested.emit)" in dashboard_source
     assert "self.invoice_card.button.clicked.connect(self.invoice_requested.emit)" in dashboard_source
-    assert "manage_orders_requested.connect(self.open_orders_tab)" in main_source
-    assert "invoice_requested.connect(self.open_invoices_tab)" in main_source
-    assert 'MAIN_TABS.index("Belege")' in main_source
+    assert "manage_orders_requested.connect(self.open_customer_folder_tab)" in main_source
+    assert "invoice_requested.connect(self.open_customer_folder_tab)" in main_source
+    assert 'MAIN_TABS.index("Kundenordner")' in main_source
 
 
 def test_order_manage_actions_open_delivery_or_invoice_with_selected_order():
@@ -493,7 +506,6 @@ def test_main_window_refreshes_tab_data_when_user_switches_tabs():
 
     assert "currentRowChanged.connect(self.refresh_current_tab)" in source
     assert "def refresh_current_tab" in source
-    assert "refresh_master_data" in source
     assert "refresh_products" in source
     assert "refresh_customers" in source
 

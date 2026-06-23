@@ -5,6 +5,7 @@ from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QMainWindow, QPushButton, QScrollArea, QStackedWidget, QTabWidget, QVBoxLayout, QWidget
 
 from .checklist_panel import ChecklistPanel
+from .customer_folder_panel import CustomerFolderPanel
 from .customer_panel import CustomerPanel
 from .dashboard_panel import DashboardPanel
 from .document_archive_panel import DocumentArchivePanel
@@ -18,10 +19,8 @@ from .settings_panel import SettingsPanel
 
 MAIN_TABS = (
     "Heute",
-    "Kunde & Bestellung",
-    "Belege",
+    "Kundenordner",
     "Offene Posten",
-    "Tagesliste",
     "Stammdaten",
     "Pruefliste",
     "Einstellungen",
@@ -48,6 +47,7 @@ class MainWindow(QMainWindow):
         root_layout.addWidget(self._header())
 
         self.dashboard_panel = DashboardPanel(session_factory=session_factory)
+        self.customer_folder_panel = CustomerFolderPanel(session_factory=session_factory)
         self.order_panel = OrderPanel(session_factory=session_factory)
         self.document_archive_panel = DocumentArchivePanel(session_factory=session_factory)
         self.delivery_note_panel = DeliveryNotePanel(session_factory=session_factory)
@@ -55,31 +55,24 @@ class MainWindow(QMainWindow):
         self.customer_panel = CustomerPanel(session_factory=session_factory)
         self.product_panel = ProductPanel(session_factory=session_factory)
         self.open_items_panel = ReportPanel(session_factory=session_factory)
-        self.daily_list_panel = ReportPanel(session_factory=session_factory)
         self.settings_panel = SettingsPanel(session_factory=session_factory)
-        self.document_workspace = self._document_workspace()
         self.master_data_workspace = self._master_data_workspace()
         self.checklist_panel = ChecklistPanel(session_factory=session_factory)
         self.refreshable_panels = {
             "Heute": (self.dashboard_panel.refresh_dashboard,),
-            "Kunde & Bestellung": (self.order_panel.refresh_master_data, self.order_panel.refresh_orders),
-            "Belege": (
-                self.document_archive_panel.refresh_archive,
-                self.delivery_note_panel.refresh_master_data,
-                self.delivery_note_panel.refresh_orders,
-                self.invoice_panel.refresh_master_data,
-                self.invoice_panel.refresh_orders,
-            ),
+            "Kundenordner": (self.customer_folder_panel.refresh_customers,),
             "Offene Posten": (self.open_items_panel.refresh_all_lists,),
-            "Tagesliste": (self.daily_list_panel.refresh_all_lists,),
             "Stammdaten": (self.customer_panel.refresh_customers, self.product_panel.refresh_products),
             "Pruefliste": (self.checklist_panel.refresh_issues,),
             "Einstellungen": (),
         }
 
-        self.dashboard_panel.new_delivery_requested.connect(self.open_new_order_dialog)
-        self.dashboard_panel.manage_orders_requested.connect(self.open_orders_tab)
-        self.dashboard_panel.invoice_requested.connect(self.open_invoices_tab)
+        self.dashboard_panel.new_delivery_requested.connect(self.open_customer_folder_tab)
+        self.dashboard_panel.manage_orders_requested.connect(self.open_customer_folder_tab)
+        self.dashboard_panel.invoice_requested.connect(self.open_customer_folder_tab)
+        self.customer_folder_panel.new_order_requested.connect(self.open_new_order_for_customer)
+        self.customer_folder_panel.delivery_note_requested.connect(self.open_delivery_note_for_order)
+        self.customer_folder_panel.invoice_requested.connect(self.open_invoice_for_order)
         self.order_panel.delivery_note_requested.connect(self.open_delivery_note_for_order)
         self.order_panel.invoice_requested.connect(self.open_invoice_for_order)
         self.document_archive_panel.document_open_requested.connect(self.open_document_from_archive)
@@ -93,10 +86,8 @@ class MainWindow(QMainWindow):
         self.navigation = SidebarNavigation(MAIN_TABS)
         self.pages = QStackedWidget()
         self.pages.addWidget(self._scrollable_tab(self.dashboard_panel))
-        self.pages.addWidget(self._scrollable_tab(self.order_panel))
-        self.pages.addWidget(self._scrollable_tab(self.document_workspace))
+        self.pages.addWidget(self._scrollable_tab(self.customer_folder_panel))
         self.pages.addWidget(self._scrollable_tab(self.open_items_panel))
-        self.pages.addWidget(self._scrollable_tab(self.daily_list_panel))
         self.pages.addWidget(self._scrollable_tab(self.master_data_workspace))
         self.pages.addWidget(self._scrollable_tab(self.checklist_panel))
         self.pages.addWidget(self._scrollable_tab(self.settings_panel))
@@ -107,11 +98,18 @@ class MainWindow(QMainWindow):
         root_layout.addWidget(app_shell, 1)
         self.setCentralWidget(root)
 
+    def open_customer_folder_tab(self) -> None:
+        self.navigation.setCurrentRow(MAIN_TABS.index("Kundenordner"))
+
     def open_orders_tab(self) -> None:
-        self.navigation.setCurrentRow(MAIN_TABS.index("Kunde & Bestellung"))
+        self.open_customer_folder_tab()
 
     def open_new_order_dialog(self) -> None:
         self.open_orders_tab()
+        self.order_panel.open_new_order_dialog()
+
+    def open_new_order_for_customer(self, _customer_id: int) -> None:
+        self.open_customer_folder_tab()
         self.order_panel.open_new_order_dialog()
 
     def open_order_for_id(self, order_id: int) -> None:
@@ -119,17 +117,14 @@ class MainWindow(QMainWindow):
         self.order_panel.load_order_by_id(order_id)
 
     def open_invoices_tab(self) -> None:
-        self.navigation.setCurrentRow(MAIN_TABS.index("Belege"))
-        self.document_workspace.setCurrentWidget(self.invoice_panel)
+        self.open_customer_folder_tab()
 
     def open_delivery_note_for_order(self, order_id: int) -> None:
-        self.navigation.setCurrentRow(MAIN_TABS.index("Belege"))
-        self.document_workspace.setCurrentWidget(self.delivery_note_panel)
+        self.open_customer_folder_tab()
         self.delivery_note_panel.select_order(order_id)
 
     def open_invoice_for_order(self, order_id: int) -> None:
-        self.navigation.setCurrentRow(MAIN_TABS.index("Belege"))
-        self.document_workspace.setCurrentWidget(self.invoice_panel)
+        self.open_customer_folder_tab()
         self.invoice_panel.select_order(order_id)
 
     def open_document_from_archive(self, document_type: str, order_id: int) -> None:
@@ -151,14 +146,6 @@ class MainWindow(QMainWindow):
         scroll_area.setFrameShape(QScrollArea.Shape.NoFrame)
         scroll_area.setWidget(panel)
         return scroll_area
-
-    def _document_workspace(self) -> QTabWidget:
-        tabs = QTabWidget()
-        tabs.setObjectName("workspaceTabs")
-        tabs.addTab(self.document_archive_panel, "Archiv")
-        tabs.addTab(self.delivery_note_panel, "Lieferbeleg")
-        tabs.addTab(self.invoice_panel, "Rechnung")
-        return tabs
 
     def _master_data_workspace(self) -> QTabWidget:
         tabs = QTabWidget()
