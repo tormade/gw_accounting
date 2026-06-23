@@ -228,6 +228,16 @@ def test_checklist_panel_exposes_concrete_resolution_actions():
     assert "def use_folder_value_for_selected_issue" in source
 
 
+def test_checklist_panel_explains_data_changing_actions_for_uncertain_users():
+    from pathlib import Path
+
+    source = Path("src/getraenkeladen_tool/ui/checklist_panel.py").read_text(encoding="utf-8")
+
+    assert "Erklaerung der Aktionen" in source
+    assert "Aendert Stammdaten oder Kundensortiment" in source
+    assert "Wenn die Artikelliste aktueller ist" in source
+
+
 def test_date_fields_use_calendar_input():
     from getraenkeladen_tool.ui.customer_panel import DATE_FIELD_WIDGETS as CUSTOMER_DATE_FIELDS
     from getraenkeladen_tool.ui.document_panel import DATE_FIELD_WIDGETS as DOCUMENT_DATE_FIELDS
@@ -268,12 +278,12 @@ def test_order_tab_exposes_guided_order_actions():
     assert ORDER_PANEL_ACTIONS == {
         "orderHelpButton": "?",
         "newOrderButton": "Bestellung erfassen",
-        "copyOrderButton": "Aus letzter Bestellung uebernehmen",
+        "copyOrderButton": "Markierte Bestellung kopieren",
         "refreshOrderDataButton": "Stammdaten laden",
         "addOrderLineButton": "Position hinzufuegen",
         "removeOrderLineButton": "Position entfernen",
-        "addDepositReturnButton": "Pfand zurueck hinzufuegen",
-        "removeDepositReturnButton": "Pfand zurueck entfernen",
+        "addDepositReturnButton": "Pfand-Rueckgabe eintragen",
+        "removeDepositReturnButton": "Pfand-Rueckgabe entfernen",
         "saveOrderButton": "Bestellung speichern",
         "refreshOrdersButton": "Bestellungen laden",
         "createDeliveryNoteFromOrderButton": "Lieferschein erstellen",

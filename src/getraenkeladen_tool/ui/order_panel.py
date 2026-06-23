@@ -39,19 +39,19 @@ from .searchable_select import SearchableSelect
 ORDER_PANEL_ACTIONS = {
     "orderHelpButton": "?",
     "newOrderButton": "Bestellung erfassen",
-    "copyOrderButton": "Aus letzter Bestellung uebernehmen",
+    "copyOrderButton": "Markierte Bestellung kopieren",
     "refreshOrderDataButton": "Stammdaten laden",
     "addOrderLineButton": "Position hinzufuegen",
     "removeOrderLineButton": "Position entfernen",
-    "addDepositReturnButton": "Pfand zurueck hinzufuegen",
-    "removeDepositReturnButton": "Pfand zurueck entfernen",
+    "addDepositReturnButton": "Pfand-Rueckgabe eintragen",
+    "removeDepositReturnButton": "Pfand-Rueckgabe entfernen",
     "saveOrderButton": "Bestellung speichern",
     "refreshOrdersButton": "Bestellungen laden",
     "createDeliveryNoteFromOrderButton": "Lieferschein erstellen",
     "createInvoiceFromOrderButton": "Rechnung erstellen",
 }
 
-ORDER_LINE_COLUMNS = ("Produkt", "Menge", "Preis EUR", "Pfand EUR", "Summe EUR")
+ORDER_LINE_COLUMNS = ("Produkt", "Menge", "Preis je Einheit EUR", "Pfand je Einheit EUR", "Summe EUR")
 ASSORTMENT_COLUMNS = ("Artikel", "Letzte Menge", "Preis aktuell", "Preis Excel", "Hinweis")
 DEPOSIT_RETURN_COLUMNS = ("Pfandart", "Menge", "Pfand EUR", "Gutschrift EUR")
 ORDER_COLUMNS = ("Bestellung", "Kunde", "Lieferdatum", "Zeitfenster", "Status")
@@ -186,7 +186,7 @@ class OrderPanel(QWidget):
         customer_form = QFormLayout()
         configure_form_layout(customer_form)
         customer_form.addRow("Kunde", self.customer_select)
-        customer_form.addRow("Beleg-/Bestellnummer", self.order_number)
+        customer_form.addRow("Bestellnummer", self.order_number)
         customer_form.addRow("Lieferdatum", self.delivery_date)
         customer_form.addRow("Zeitfenster", self.delivery_slot)
         customer_layout.addLayout(customer_form)
@@ -216,7 +216,7 @@ class OrderPanel(QWidget):
         position_form.addRow("Produkt", self.product_select)
         position_form.addRow("Menge", self.quantity)
         position_form.addRow("Preis EUR", self.unit_price_eur)
-        position_form.addRow("Pfand EUR", self.deposit_eur)
+        position_form.addRow("Pfand je Einheit EUR", self.deposit_eur)
         position_layout.addLayout(position_form)
         position_actions = QHBoxLayout()
         position_actions.addWidget(self.add_line_button)
@@ -231,7 +231,7 @@ class OrderPanel(QWidget):
         configure_form_layout(deposit_return_form)
         deposit_return_form.addRow("Pfandart", self.deposit_return_select)
         deposit_return_form.addRow("Menge", self.deposit_return_quantity)
-        deposit_return_form.addRow("Pfand EUR", self.deposit_return_eur)
+        deposit_return_form.addRow("Pfandwert EUR", self.deposit_return_eur)
         position_layout.addLayout(deposit_return_form)
         deposit_return_actions = QHBoxLayout()
         deposit_return_actions.addWidget(self.add_deposit_return_button)
@@ -240,7 +240,7 @@ class OrderPanel(QWidget):
         position_layout.addLayout(deposit_return_actions)
         order_entry_splitter.addWidget(position_box)
 
-        line_box, line_layout = self._section("Belegpositionen", "Alle hinzugefuegten Artikel dieses Auftrags.")
+        line_box, line_layout = self._section("Bestellpositionen", "Alle hinzugefuegten Artikel dieser Bestellung.")
         line_layout.addWidget(self.order_lines_table)
         line_layout.addWidget(self.deposit_returns_table)
         total_bar = QWidget()
@@ -256,7 +256,7 @@ class OrderPanel(QWidget):
 
         orders_box, orders_layout = self._section(
             ORDER_PANEL_SECTIONS[2],
-            "Vorhandenen Auftrag doppelt anklicken oder per Rechtsklick weiterbearbeiten.",
+            "Vorhandene Bestellung doppelt anklicken oder per Rechtsklick weiterbearbeiten.",
         )
         orders_actions = QHBoxLayout()
         orders_actions.addWidget(self.new_order_button)
@@ -357,7 +357,26 @@ class OrderPanel(QWidget):
     def close_order_dialog_after_success(self, order_number: str) -> None:
         self.close_order_dialog()
         self.refresh_orders()
-        self.status_label.setText(f"Auftrag {order_number} gespeichert. Auftragsliste wurde aktualisiert.")
+        self.status_label.setText(f"Bestellung {order_number} gespeichert. Liste wurde aktualisiert.")
+
+    def show_saved_order_next_steps(self, order_id: int, order_number: str) -> None:
+        message = QMessageBox(self)
+        message.setIcon(QMessageBox.Icon.Information)
+        message.setWindowTitle("Bestellung gespeichert")
+        message.setText(f"Bestellung {order_number} wurde gespeichert.")
+        message.setInformativeText("Was moechten Sie als Naechstes tun?")
+        delivery_button = message.addButton("Lieferschein erstellen", QMessageBox.ButtonRole.ActionRole)
+        invoice_button = message.addButton("Rechnung erstellen", QMessageBox.ButtonRole.ActionRole)
+        new_order_button = message.addButton("Weitere Bestellung", QMessageBox.ButtonRole.ActionRole)
+        message.addButton("Zur Liste", QMessageBox.ButtonRole.RejectRole)
+        message.exec()
+        selected_button = message.clickedButton()
+        if selected_button == delivery_button:
+            self.delivery_note_requested.emit(order_id)
+        elif selected_button == invoice_button:
+            self.invoice_requested.emit(order_id)
+        elif selected_button == new_order_button:
+            self.open_new_order_dialog()
 
     def reset_order_form(self) -> None:
         self.current_order_id = None
@@ -644,18 +663,16 @@ class OrderPanel(QWidget):
             )
             if self.current_order_id is None:
                 order = create_order(session, payload)
-                self.status_label.setText(
-                    f"Erfolgreich gespeichert: Auftrag gespeichert: {order.order_number}. "
-                    "Lieferschein oder Rechnung im passenden Reiter erstellen."
-                )
+                self.status_label.setText(f"Erfolgreich gespeichert: Bestellung {order.order_number}.")
             else:
                 order = update_order(session, self.current_order_id, payload)
-                self.status_label.setText(f"Erfolgreich aktualisiert: Auftrag aktualisiert: {order.order_number}.")
+                self.status_label.setText(f"Erfolgreich aktualisiert: Bestellung {order.order_number}.")
             self.current_order_id = order.id
             self.current_order_status = order.status
-            self.order_mode_label.setText(f"Auftrag bearbeiten: {order.order_number}")
+            self.order_mode_label.setText(f"Bestellung bearbeiten: {order.order_number}")
             self.show_orders(list_active_orders(session))
             self.close_order_dialog_after_success(order.order_number)
+            self.show_saved_order_next_steps(order.id, order.order_number)
         except Exception as error:
             self.status_label.setText(f"Auftrag konnte nicht gespeichert werden: {error}")
             QMessageBox.warning(
@@ -945,7 +962,7 @@ class OrderPanel(QWidget):
         finally:
             self.order_lines_table.blockSignals(False)
             self.deposit_returns_table.blockSignals(False)
-        self.order_total_label.setText(f"Auftragssumme: {self._format_euro_cents(total_cents)}")
+        self.order_total_label.setText(f"Bestellsumme: {self._format_euro_cents(total_cents)}")
 
     def _line_total_cents_for_row(self, row: int) -> int:
         quantity_item = self.order_lines_table.item(row, 1)

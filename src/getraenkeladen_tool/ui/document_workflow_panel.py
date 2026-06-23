@@ -28,10 +28,10 @@ from .searchable_select import SearchableSelect
 
 DOCUMENT_WORKFLOW_ACTIONS = {
     "removeDocumentLineButton": "Position entfernen",
-    "addDocumentDepositReturnButton": "Pfand zurueck hinzufuegen",
-    "removeDocumentDepositReturnButton": "Pfand zurueck entfernen",
+    "addDocumentDepositReturnButton": "Pfand-Rueckgabe eintragen",
+    "removeDocumentDepositReturnButton": "Pfand-Rueckgabe entfernen",
 }
-DOCUMENT_LINE_COLUMNS = ("Artikel", "Menge", "Preis EUR", "Pfand EUR", "Summe EUR")
+DOCUMENT_LINE_COLUMNS = ("Artikel", "Menge", "Preis je Einheit EUR", "Pfand je Einheit EUR", "Summe EUR")
 DOCUMENT_RETURN_COLUMNS = ("Pfandart", "Menge", "Pfand EUR", "Gutschrift EUR")
 
 class DocumentWorkflowPanel(QWidget):
@@ -121,7 +121,7 @@ class DocumentWorkflowPanel(QWidget):
 
         document_box, document_layout = self._section(
             "2. Beleg pruefen",
-            "Die Positionen gelten nur fuer diesen Beleg. Der urspruengliche Auftrag bleibt als Vorlage erhalten.",
+            "Aendert nur diesen Beleg. Die gespeicherte Bestellung bleibt als Vorlage erhalten.",
         )
         document_layout.addWidget(self.order_summary)
 
@@ -153,7 +153,7 @@ class DocumentWorkflowPanel(QWidget):
         configure_form_layout(return_form)
         return_form.addRow("Pfandart", self.deposit_return_select)
         return_form.addRow("Menge", self.deposit_return_quantity)
-        return_form.addRow("Pfand EUR", self.deposit_return_eur)
+        return_form.addRow("Pfandwert EUR", self.deposit_return_eur)
         deposit_layout.addLayout(return_form)
         return_action_row = QHBoxLayout()
         self.add_return_button = QPushButton(DOCUMENT_WORKFLOW_ACTIONS["addDocumentDepositReturnButton"])
@@ -172,7 +172,7 @@ class DocumentWorkflowPanel(QWidget):
         number_form = QFormLayout()
         configure_form_layout(number_form)
         number_form.addRow(self.number_label, self.document_number)
-        number_form.addRow("Lieferpauschale", self.delivery_fee_choice)
+        number_form.addRow("Lieferpauschale 3,90 EUR", self.delivery_fee_choice)
         number_form.addRow(self.note_label, self.document_note)
         details_layout.addLayout(number_form)
         details_layout.addStretch()

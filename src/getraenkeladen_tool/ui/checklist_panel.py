@@ -53,6 +53,13 @@ class ChecklistPanel(QWidget):
         self.use_folder_value_button = QPushButton(CHECKLIST_ACTIONS["useFolderValueButton"])
         self.product_select = SearchableSelect("Zentralen Artikel suchen")
         self.product_select.setMinimumWidth(360)
+        self.action_help_label = QLabel(
+            "Erklaerung der Aktionen: Aendert Stammdaten oder Kundensortiment dauerhaft. "
+            "Wenn die Artikelliste aktueller ist, zentralen Preis nutzen. "
+            "Wenn die Kunden-Excel die gelebte Wahrheit enthaelt, Kunden-Excel bzw. Excel-Preis behalten."
+        )
+        self.action_help_label.setObjectName("sectionSubtitle")
+        self.action_help_label.setWordWrap(True)
         self.status_label = QLabel("Pruefliste bereit.")
         self.status_label.setObjectName("muted")
 
@@ -78,6 +85,7 @@ class ChecklistPanel(QWidget):
         alias_toolbar.addWidget(self.confirm_product_alias_button)
         alias_toolbar.addStretch()
         card.layout.addWidget(self.summary_label)
+        card.layout.addWidget(self.action_help_label)
         card.layout.addLayout(toolbar)
         card.layout.addLayout(alias_toolbar)
         card.layout.addWidget(self.issue_table)

@@ -46,7 +46,7 @@ def test_document_workflow_panels_make_excel_pdf_generation_flow_visible():
     assert "PDF:" in source
     assert "Nummer vorschlagen" not in source
     assert "suggest_document_number" not in source
-    assert "Lieferpauschale" in source
+    assert "Lieferpauschale 3,90 EUR" in source
     assert "self.delivery_fee_choice = QComboBox()" in source
     assert "self.document_note = QLineEdit()" in source
 
@@ -84,8 +84,8 @@ def test_document_workflow_allows_editing_lines_and_deposit_returns():
     assert "self.deposit_return_select = QComboBox()" in source
     assert "self.deposit_return_select.currentIndexChanged.connect(self.apply_selected_deposit_return)" in source
     assert '"removeDocumentLineButton": "Position entfernen"' in source
-    assert '"addDocumentDepositReturnButton": "Pfand zurueck hinzufuegen"' in source
-    assert '"removeDocumentDepositReturnButton": "Pfand zurueck entfernen"' in source
+    assert '"addDocumentDepositReturnButton": "Pfand-Rueckgabe eintragen"' in source
+    assert '"removeDocumentDepositReturnButton": "Pfand-Rueckgabe entfernen"' in source
     assert "self.remove_line_button.clicked.connect(self.remove_selected_line)" in source
     assert "self.add_return_button.clicked.connect(self.add_deposit_return)" in source
     assert "self.remove_return_button.clicked.connect(self.remove_selected_deposit_return)" in source
@@ -96,6 +96,15 @@ def test_document_workflow_allows_editing_lines_and_deposit_returns():
     assert "def remove_selected_line" in source
 
 
+def test_document_workflow_uses_clearer_deposit_and_delivery_fee_labels():
+    source = Path("src/getraenkeladen_tool/ui/document_workflow_panel.py").read_text(encoding="utf-8")
+
+    assert 'DOCUMENT_LINE_COLUMNS = ("Artikel", "Menge", "Preis je Einheit EUR", "Pfand je Einheit EUR", "Summe EUR")' in source
+    assert '"addDocumentDepositReturnButton": "Pfand-Rueckgabe eintragen"' in source
+    assert "Lieferpauschale 3,90 EUR" in source
+    assert "Aendert nur diesen Beleg" in source
+
+
 def test_order_panel_supports_editing_existing_orders():
     source = Path("src/getraenkeladen_tool/ui/order_panel.py").read_text(encoding="utf-8")
 
@@ -104,7 +113,7 @@ def test_order_panel_supports_editing_existing_orders():
     assert "update_order(" in source
     assert "def populate_order_form" in source
     assert "self.order_lines_table.setRowCount(0)" in source
-    assert "Auftrag aktualisiert" in source
+    assert "Bestellung" in source
 
 
 def test_order_panel_uses_list_page_and_order_dialog_for_editing():
@@ -135,15 +144,15 @@ def test_order_panel_shows_running_order_total():
     assert "self.order_total_label" in source
     assert "itemChanged.connect(self.update_order_total)" in source
     assert "def update_order_total" in source
-    assert "Auftragssumme" in source
+    assert "Bestellsumme" in source
 
 
 def test_order_panel_exposes_deposit_returns_new_order_and_copy_actions():
     source = Path("src/getraenkeladen_tool/ui/order_panel.py").read_text(encoding="utf-8")
 
     assert '"newOrderButton": "Bestellung erfassen"' in source
-    assert '"copyOrderButton": "Aus letzter Bestellung uebernehmen"' in source
-    assert '"addDepositReturnButton": "Pfand zurueck hinzufuegen"' in source
+    assert '"copyOrderButton": "Markierte Bestellung kopieren"' in source
+    assert '"addDepositReturnButton": "Pfand-Rueckgabe eintragen"' in source
     assert "self.deposit_returns_table" in source
     assert "self.deposit_return_select = QComboBox()" in source
     assert "DEPOSIT_RETURN_PRESETS" in source
@@ -171,6 +180,30 @@ def test_order_panel_has_price_mismatch_confirmation_dialog():
     assert "unit_price_cents = product.standard_price_cents" in source
 
 
+def test_order_panel_guides_next_step_after_successful_save():
+    source = Path("src/getraenkeladen_tool/ui/order_panel.py").read_text(encoding="utf-8")
+
+    assert "def show_saved_order_next_steps" in source
+    assert "Bestellung gespeichert" in source
+    assert "Was moechten Sie als Naechstes tun?" in source
+    assert "Lieferschein erstellen" in source
+    assert "Rechnung erstellen" in source
+    assert "Weitere Bestellung" in source
+    assert "self.delivery_note_requested.emit(order_id)" in source
+    assert "self.invoice_requested.emit(order_id)" in source
+
+
+def test_order_panel_uses_clearer_labels_for_less_technical_users():
+    source = Path("src/getraenkeladen_tool/ui/order_panel.py").read_text(encoding="utf-8")
+
+    assert '"copyOrderButton": "Markierte Bestellung kopieren"' in source
+    assert '"addDepositReturnButton": "Pfand-Rueckgabe eintragen"' in source
+    assert '"removeDepositReturnButton": "Pfand-Rueckgabe entfernen"' in source
+    assert 'ORDER_LINE_COLUMNS = ("Produkt", "Menge", "Preis je Einheit EUR", "Pfand je Einheit EUR", "Summe EUR")' in source
+    assert 'customer_form.addRow("Bestellnummer", self.order_number)' in source
+    assert "Auftragssumme" not in source
+
+
 def test_order_panel_loads_customer_assortment_into_order_dialog():
     source = Path("src/getraenkeladen_tool/ui/order_panel.py").read_text(encoding="utf-8")
 
@@ -188,7 +221,7 @@ def test_order_panel_loads_customer_assortment_into_order_dialog():
 def test_order_panel_filters_orders_by_customer_and_can_copy_existing_order():
     source = Path("src/getraenkeladen_tool/ui/order_panel.py").read_text(encoding="utf-8")
 
-    assert '"copyOrderButton": "Aus letzter Bestellung uebernehmen"' in source
+    assert '"copyOrderButton": "Markierte Bestellung kopieren"' in source
     assert "self.order_table_search = QLineEdit()" in source
     assert "self.order_table_search.textChanged.connect(self.apply_order_table_search)" in source
     assert "def apply_order_table_search" in source
