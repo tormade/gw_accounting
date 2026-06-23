@@ -79,6 +79,19 @@ def test_forms_and_tables_have_clean_work_area_treatment():
     assert "QTableWidget QLineEdit" in APP_STYLESHEET
 
 
+def test_theme_modernizes_dropdown_buttons_and_calendar_popups():
+    assert "QComboBox::drop-down" in APP_STYLESHEET
+    assert "QDateEdit::drop-down" in APP_STYLESHEET
+    assert "QComboBox::down-arrow" in APP_STYLESHEET
+    assert "QDateEdit::down-arrow" in APP_STYLESHEET
+    assert "QComboBox:on" in APP_STYLESHEET
+    assert "QDateEdit:on" in APP_STYLESHEET
+    assert "QCalendarWidget" in APP_STYLESHEET
+    assert "QCalendarWidget QToolButton" in APP_STYLESHEET
+    assert "QPushButton:disabled" in APP_STYLESHEET
+    assert "QPushButton#dangerAction" in APP_STYLESHEET
+
+
 def test_shared_layout_widgets_are_available():
     from pathlib import Path
 

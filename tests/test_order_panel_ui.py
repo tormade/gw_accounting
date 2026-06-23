@@ -61,6 +61,8 @@ def test_document_workflow_allows_editing_lines_and_deposit_returns():
     assert "self.remove_line_button.clicked.connect(self.remove_selected_line)" in source
     assert "self.add_return_button.clicked.connect(self.add_deposit_return)" in source
     assert "self.remove_return_button.clicked.connect(self.remove_selected_deposit_return)" in source
+    assert 'self.remove_line_button.setObjectName("dangerAction")' in source
+    assert 'self.remove_return_button.setObjectName("dangerAction")' in source
     assert "def add_deposit_return" in source
     assert "def apply_selected_deposit_return" in source
     assert "def remove_selected_line" in source

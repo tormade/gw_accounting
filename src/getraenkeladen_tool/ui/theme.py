@@ -177,15 +177,20 @@ QLineEdit,
 QComboBox,
 QSpinBox,
 QDateEdit {
-    background: #ffffff;
-    border: 1px solid #cfd7d2;
-    border-radius: 10px;
+    background: #fffdf8;
+    border: 1px solid #d8ded9;
+    border-radius: 12px;
     color: #1f2a24;
     font-size: 14px;
-    min-height: 32px;
-    padding: 7px 10px;
+    min-height: 36px;
+    padding: 8px 12px;
     selection-background-color: #d7ebe2;
     selection-color: #123326;
+}
+
+QComboBox,
+QDateEdit {
+    padding-right: 42px;
 }
 
 QLineEdit:focus,
@@ -194,6 +199,59 @@ QSpinBox:focus,
 QDateEdit:focus {
     background: #ffffff;
     border: 2px solid #116149;
+    padding: 7px 11px;
+}
+
+QComboBox:on,
+QDateEdit:on {
+    background: #f7fbf8;
+    border: 2px solid #116149;
+}
+
+QComboBox:disabled,
+QDateEdit:disabled,
+QLineEdit:disabled,
+QSpinBox:disabled {
+    background: #eeeae2;
+    border-color: #ddd6ca;
+    color: #8a928c;
+}
+
+QComboBox::drop-down,
+QDateEdit::drop-down {
+    subcontrol-origin: padding;
+    subcontrol-position: top right;
+    background: #eef7f2;
+    border-left: 1px solid #d8ded9;
+    border-top-right-radius: 11px;
+    border-bottom-right-radius: 11px;
+    width: 34px;
+}
+
+QComboBox::drop-down:hover,
+QDateEdit::drop-down:hover {
+    background: #dceee6;
+    border-left-color: #bcd7cb;
+}
+
+QComboBox::down-arrow,
+QDateEdit::down-arrow {
+    image: none;
+    border: 0;
+    width: 0;
+    height: 0;
+    margin-top: 4px;
+    margin-right: 12px;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 6px solid #116149;
+}
+
+QComboBox::down-arrow:on,
+QDateEdit::down-arrow:on {
+    margin-top: 0;
+    border-top: 0;
+    border-bottom: 6px solid #116149;
 }
 
 QLineEdit#tableSearchField {
@@ -213,9 +271,65 @@ QLineEdit#tableSearchField:focus {
 QComboBox QAbstractItemView {
     background: #ffffff;
     border: 1px solid #cfd7d2;
+    border-radius: 12px;
     color: #1f2a24;
+    outline: 0;
+    padding: 6px;
     selection-background-color: #d7ebe2;
     selection-color: #123326;
+}
+
+QCalendarWidget {
+    background: #ffffff;
+    border: 1px solid #d8ded9;
+    border-radius: 16px;
+    color: #1f2a24;
+}
+
+QCalendarWidget QWidget#qt_calendar_navigationbar {
+    background: #eef7f2;
+    border-top-left-radius: 16px;
+    border-top-right-radius: 16px;
+    min-height: 42px;
+}
+
+QCalendarWidget QToolButton {
+    background: transparent;
+    border: 0;
+    border-radius: 10px;
+    color: #116149;
+    font-weight: 900;
+    margin: 6px;
+    padding: 6px 10px;
+}
+
+QCalendarWidget QToolButton:hover {
+    background: #dceee6;
+}
+
+QCalendarWidget QMenu {
+    background: #ffffff;
+    border: 1px solid #d8ded9;
+    border-radius: 12px;
+    color: #1f2a24;
+}
+
+QCalendarWidget QSpinBox {
+    background: #ffffff;
+    border: 1px solid #bcd7cb;
+    border-radius: 10px;
+    min-height: 28px;
+    padding: 4px 8px;
+}
+
+QCalendarWidget QAbstractItemView {
+    background: #ffffff;
+    border: 0;
+    border-radius: 0;
+    color: #1f2a24;
+    outline: 0;
+    selection-background-color: #116149;
+    selection-color: #ffffff;
 }
 
 QListWidget {
@@ -281,12 +395,13 @@ QHeaderView::section {
 }
 
 QPushButton {
-    background: #ffffff;
+    background: #fffdf8;
     border: 1px solid #cfd7d2;
-    border-radius: 10px;
+    border-radius: 12px;
     color: #123326;
     font-weight: 800;
-    padding: 10px 14px;
+    min-height: 34px;
+    padding: 9px 16px;
 }
 
 QPushButton:hover {
@@ -296,6 +411,12 @@ QPushButton:hover {
 
 QPushButton:pressed {
     background: #e8f3ee;
+}
+
+QPushButton:disabled {
+    background: #eeeae2;
+    border-color: #ddd6ca;
+    color: #8a928c;
 }
 
 QPushButton#primaryAction,
@@ -344,6 +465,26 @@ QPushButton#createOrderDocumentsButton {
 
 QPushButton#createOrderDocumentsButton:hover {
     background: #a72826;
+}
+
+QPushButton#dangerAction,
+QPushButton#removeOrderLineButton,
+QPushButton#removeDepositReturnButton,
+QPushButton#removeDocumentLineButton,
+QPushButton#removeDocumentDepositReturnButton {
+    background: #fff8f6;
+    border: 1px solid #efc9c3;
+    color: #9e2f28;
+}
+
+QPushButton#dangerAction:hover,
+QPushButton#removeOrderLineButton:hover,
+QPushButton#removeDepositReturnButton:hover,
+QPushButton#removeDocumentLineButton:hover,
+QPushButton#removeDocumentDepositReturnButton:hover {
+    background: #fdecea;
+    border-color: #d98b82;
+    color: #7f241f;
 }
 
 QSplitter#workspaceSplitter::handle {
