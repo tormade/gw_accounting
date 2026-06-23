@@ -85,6 +85,7 @@ def test_customer_folder_panel_enables_actions_from_snapshot_state(tmp_path: Pat
     assert panel.assortment_table.item(0, 0).text() == "Frucade"
     assert panel.open_folder_button.isEnabled() is True
     assert panel.new_order_button.isEnabled() is True
+    assert panel.new_order_button.text() == "Neue Bestellung aus letzten Mengen starten"
     assert panel.seed_file_hint.text() == "Die Vorlage kommt aus den letzten importierten Mengen rechts."
     assert panel.delivery_note_button.isEnabled() is False
     assert panel.invoice_button.isEnabled() is False
@@ -102,6 +103,59 @@ def test_customer_folder_panel_enables_actions_from_snapshot_state(tmp_path: Pat
     panel.update_action_state()
     assert panel.delivery_note_button.isEnabled() is True
     assert panel.invoice_button.isEnabled() is True
+
+
+def test_customer_folder_panel_clears_previous_customer_when_search_is_ambiguous(tmp_path: Path):
+    _app()
+    from getraenkeladen_tool.services.customer_folder_service import CustomerFolderFile
+    from getraenkeladen_tool.ui.customer_folder_panel import CustomerFolderPanel
+
+    folder = tmp_path / "Cafe Nord"
+    folder.mkdir()
+    excel_path = folder / "2026-05-01_RE_Cafe_Nord.xlsx"
+    excel_path.write_text("placeholder", encoding="utf-8")
+    customer = SimpleNamespace(id=7, name="Cafe Nord")
+    snapshot = SimpleNamespace(
+        customer=customer,
+        folder_path=folder,
+        folder_exists=True,
+        files=[CustomerFolderFile(excel_path, "Excel-Rechnung", excel_path.name, True)],
+        orders=[],
+    )
+    panel = CustomerFolderPanel(session_factory=None)
+    panel.show_snapshot(snapshot, [])
+
+    panel.clear_customer_context("Bitte unten einen Kunden aus der Trefferliste anklicken.")
+
+    assert panel.current_customer_id is None
+    assert panel.current_folder_path is None
+    assert panel.files_table.rowCount() == 0
+    assert panel.orders_table.rowCount() == 0
+    assert panel.assortment_table.rowCount() == 0
+    assert panel.new_order_button.isEnabled() is False
+    assert panel.open_file_button.isEnabled() is False
+    assert panel.status_label.text() == "Bitte unten einen Kunden aus der Trefferliste anklicken."
+
+
+def test_customer_folder_panel_names_empty_order_action_when_no_seed_quantities(tmp_path: Path):
+    _app()
+    from getraenkeladen_tool.ui.customer_folder_panel import CustomerFolderPanel
+
+    folder = tmp_path / "ADC Distribution GmbH"
+    customer = SimpleNamespace(id=12, name="ADC Distribution GmbH")
+    snapshot = SimpleNamespace(
+        customer=customer,
+        folder_path=folder,
+        folder_exists=False,
+        files=[],
+        orders=[],
+    )
+    panel = CustomerFolderPanel(session_factory=None)
+
+    panel.show_snapshot(snapshot, [])
+
+    assert panel.new_order_button.isEnabled() is True
+    assert panel.new_order_button.text() == "Neue leere Bestellung starten"
 
 
 def test_customer_folder_panel_uses_clear_customer_folder_language():

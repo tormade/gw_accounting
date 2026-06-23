@@ -40,6 +40,11 @@ Das Produktziel steht in `docs/zielbild.md`: ein schlankes lokales Windows-Buero
 - Suchfelder erklaeren jetzt, dass ein Treffer angeklickt werden muss, und zeigen klar an, wenn nichts gefunden wurde.
 - "Neue Bestellung aus letzten Mengen starten" befuellt jetzt automatisch die Bestellpositionen aus dem Kundensortiment und laesst ungeklaerte Artikel aus.
 - Startseite vereinfacht: die grosse gruene Box erklaert jetzt den Kundenordner-Start statt ein unechtes Suchfeld zu zeigen.
+- Mac-Oberflaechentest als wenig IT-affiner Erstnutzer durchgespielt: Startseite, Kundenordner, Kundensuche und leere Kundenordner geprueft.
+- Kundenkontext wird geloescht, sobald die Suche wieder uneindeutig ist; dadurch koennen keine Aktionen mehr versehentlich auf dem vorherigen Kunden bleiben.
+- Kundensuche klappt Treffer nach Auswahl ein und oeffnet sie beim Tippen wieder, damit die Auswahl nicht wie eine dauerhafte zweite Liste wirkt.
+- App erzwingt eine helle Palette, damit Tabellen, Dropdowns und Eingabefelder auf macOS nicht durch System-Dark-Mode unlesbar werden.
+- Kundenordner unterscheidet jetzt sichtbar zwischen "Neue Bestellung aus letzten Mengen starten" und "Neue leere Bestellung starten".
 
 ## In Arbeit
 

@@ -447,7 +447,7 @@ def test_dashboard_tab_exposes_daily_guidance():
 
     assert DASHBOARD_ACTIONS == {
         "dashboardHelpButton": "?",
-        "newDeliveryButton": "Neue Lieferung erfassen",
+        "newDeliveryButton": "Kundenordner oeffnen",
         "refreshDashboardButton": "Heute aktualisieren",
     }
     assert DASHBOARD_CARDS == ("Heute zu liefern", "Offene Posten", "Faellige Kontakte")

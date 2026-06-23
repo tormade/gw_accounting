@@ -69,3 +69,23 @@ def test_searchable_select_guides_uncertain_users_to_click_a_result():
     assert select.result_list.count() == 1
     assert select.result_list.item(0).text() == "Kein Treffer gefunden"
     assert select.result_list.item(0).flags().value & 1 == 0
+
+
+def test_searchable_select_collapses_results_after_selection_and_reopens_while_typing():
+    _app()
+    from getraenkeladen_tool.ui.searchable_select import SearchableSelect
+
+    select = SearchableSelect("Kunde suchen")
+    select.set_items([("Cafe Nord", 1, "Muenchen"), ("Hotel Sued", 2, "Rosenheim")])
+
+    select.select_value(1)
+
+    assert select.search_input.text() == "Cafe Nord"
+    assert select.help_label.text() == "Ausgewaehlt. Zum Aendern einfach neuen Namen tippen."
+    assert select.result_list.maximumHeight() == 0
+
+    select.set_search_text("Hotel")
+
+    assert select.help_label.text() == "Namen tippen und unten einen Treffer anklicken."
+    assert select.result_list.maximumHeight() == 130
+    assert select.visible_labels() == ["Hotel Sued"]

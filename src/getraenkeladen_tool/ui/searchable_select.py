@@ -21,6 +21,7 @@ def filter_searchable_items(items: Iterable[SearchableSelectItem], search_text: 
 
 class SearchableSelect(QWidget):
     selection_changed = Signal()
+    DEFAULT_LIST_HEIGHT = 130
 
     def __init__(self, placeholder: str = "Suchen") -> None:
         super().__init__()
@@ -31,7 +32,7 @@ class SearchableSelect(QWidget):
         self.help_label = QLabel("Namen tippen und unten einen Treffer anklicken.")
         self.help_label.setObjectName("sectionSubtitle")
         self.result_list = QListWidget()
-        self.result_list.setMaximumHeight(130)
+        self.result_list.setMaximumHeight(self.DEFAULT_LIST_HEIGHT)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -72,6 +73,8 @@ class SearchableSelect(QWidget):
         self.selection_changed.emit()
 
     def _filter_items(self, text: str) -> None:
+        self.result_list.setMaximumHeight(self.DEFAULT_LIST_HEIGHT)
+        self.help_label.setText("Namen tippen und unten einen Treffer anklicken.")
         self.result_list.clear()
         matches = filter_searchable_items(self._items, text)
         for item in matches:
@@ -92,4 +95,6 @@ class SearchableSelect(QWidget):
         self.search_input.blockSignals(True)
         self.search_input.setText(item.text())
         self.search_input.blockSignals(False)
+        self.result_list.setMaximumHeight(0)
+        self.help_label.setText("Ausgewaehlt. Zum Aendern einfach neuen Namen tippen.")
         self.selection_changed.emit()

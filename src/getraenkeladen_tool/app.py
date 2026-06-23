@@ -4,6 +4,7 @@ from pathlib import Path
 
 from PySide6.QtCore import QCoreApplication, QTimer
 from PySide6.QtCore import QLibraryInfo
+from PySide6.QtGui import QColor, QPalette
 from PySide6.QtWidgets import QApplication
 
 from .config import AppConfig
@@ -39,10 +40,26 @@ def configure_qt_plugin_path() -> Path | None:
     return None
 
 
+def apply_light_palette(app: QApplication) -> None:
+    app.setStyle("Fusion")
+    palette = QPalette()
+    palette.setColor(QPalette.ColorRole.Window, QColor("#f4f1ea"))
+    palette.setColor(QPalette.ColorRole.WindowText, QColor("#1f2a24"))
+    palette.setColor(QPalette.ColorRole.Base, QColor("#ffffff"))
+    palette.setColor(QPalette.ColorRole.AlternateBase, QColor("#f4f1ea"))
+    palette.setColor(QPalette.ColorRole.Text, QColor("#1f2a24"))
+    palette.setColor(QPalette.ColorRole.Button, QColor("#ffffff"))
+    palette.setColor(QPalette.ColorRole.ButtonText, QColor("#123326"))
+    palette.setColor(QPalette.ColorRole.Highlight, QColor("#d7ebe2"))
+    palette.setColor(QPalette.ColorRole.HighlightedText, QColor("#123326"))
+    app.setPalette(palette)
+
+
 def create_app() -> QApplication:
     configure_qt_plugin_path()
     app = QApplication.instance() or QApplication([])
     app.setApplicationName("Getraenkeladen Tool")
+    apply_light_palette(app)
     app.setStyleSheet(APP_STYLESHEET)
     return app
 

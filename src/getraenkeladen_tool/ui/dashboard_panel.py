@@ -9,7 +9,7 @@ from .layouts import ActionCard, ContentSurface, PageHeader
 
 DASHBOARD_ACTIONS = {
     "dashboardHelpButton": "?",
-    "newDeliveryButton": "Neue Lieferung erfassen",
+    "newDeliveryButton": "Kundenordner oeffnen",
     "refreshDashboardButton": "Heute aktualisieren",
 }
 DASHBOARD_CARDS = ("Heute zu liefern", "Offene Posten", "Faellige Kontakte")

@@ -41,6 +41,7 @@ class CustomerFolderPanel(QWidget):
         self.order_ids_by_row: dict[int, int] = {}
         self.current_customer_id: int | None = None
         self.current_folder_path: Path | None = None
+        self.has_seed_quantities = False
 
         root_layout = QVBoxLayout(self)
         root_layout.setContentsMargins(0, 0, 0, 0)
@@ -155,6 +156,7 @@ class CustomerFolderPanel(QWidget):
     def load_selected_customer(self) -> None:
         customer_id = self.customer_select.current_value()
         if customer_id is None:
+            self.clear_customer_context("Bitte unten einen Kunden aus der Trefferliste anklicken.")
             return
         if self.session_factory is None:
             self.status_label.setText("Keine Datenbankverbindung vorhanden.")
@@ -169,10 +171,23 @@ class CustomerFolderPanel(QWidget):
         finally:
             session.close()
 
+    def clear_customer_context(self, message: str) -> None:
+        self.current_customer_id = None
+        self.current_folder_path = None
+        self.has_seed_quantities = False
+        self.files_by_row.clear()
+        self.order_ids_by_row.clear()
+        self.files_table.setRowCount(0)
+        self.orders_table.setRowCount(0)
+        self.assortment_table.setRowCount(0)
+        self.status_label.setText(message)
+        self.update_action_state()
+
     def show_snapshot(self, snapshot, assortment_rows=None) -> None:
         self.current_customer_id = snapshot.customer.id
         self.current_folder_path = snapshot.folder_path
         assortment_rows = assortment_rows or []
+        self.has_seed_quantities = bool(assortment_rows)
 
         self.files_by_row.clear()
         self.files_table.setRowCount(len(snapshot.files))
@@ -265,6 +280,10 @@ class CustomerFolderPanel(QWidget):
         self.open_folder_button.setEnabled(has_folder)
         self.open_file_button.setEnabled(has_file)
         self.new_order_button.setEnabled(has_customer)
+        if self.has_seed_quantities:
+            self.new_order_button.setText("Neue Bestellung aus letzten Mengen starten")
+        else:
+            self.new_order_button.setText("Neue leere Bestellung starten")
         self.delivery_note_button.setEnabled(has_order)
         self.invoice_button.setEnabled(has_order)
         if selected_file is None:
