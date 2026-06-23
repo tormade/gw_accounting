@@ -339,6 +339,20 @@ def test_main_window_embeds_customer_folder_as_second_page_and_wires_actions():
     assert '"Rechnungen"' not in source
 
 
+def test_main_window_opens_document_workflows_as_visible_dialogs_from_customer_folder():
+    from pathlib import Path
+
+    source = Path("src/getraenkeladen_tool/ui/main_window.py").read_text(encoding="utf-8")
+
+    assert "QDialog" in source
+    assert "self.document_dialogs" in source
+    assert "def _open_document_dialog" in source
+    assert "dialog.show()" in source
+    assert "panel.select_order(order_id)" in source
+    assert "self._open_document_dialog(DeliveryNotePanel, order_id, \"Lieferschein erstellen\")" in source
+    assert "self._open_document_dialog(InvoicePanel, order_id, \"Rechnung erstellen\")" in source
+
+
 def test_customer_tab_exposes_master_data_actions():
     from getraenkeladen_tool.ui.customer_panel import (
         CUSTOMER_COLUMNS,

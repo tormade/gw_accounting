@@ -2,7 +2,18 @@ from pathlib import Path
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
-from PySide6.QtWidgets import QHBoxLayout, QLabel, QMainWindow, QPushButton, QScrollArea, QStackedWidget, QTabWidget, QVBoxLayout, QWidget
+from PySide6.QtWidgets import (
+    QDialog,
+    QHBoxLayout,
+    QLabel,
+    QMainWindow,
+    QPushButton,
+    QScrollArea,
+    QStackedWidget,
+    QTabWidget,
+    QVBoxLayout,
+    QWidget,
+)
 
 from .checklist_panel import ChecklistPanel
 from .customer_folder_panel import CustomerFolderPanel
@@ -39,6 +50,7 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Getraenke Winklmeier")
         self.resize(*MAIN_WINDOW_INITIAL_SIZE)
         self.setMinimumSize(*MAIN_WINDOW_MINIMUM_SIZE)
+        self.document_dialogs: list[QDialog] = []
 
         root = QWidget()
         root_layout = QVBoxLayout(root)
@@ -121,11 +133,28 @@ class MainWindow(QMainWindow):
 
     def open_delivery_note_for_order(self, order_id: int) -> None:
         self.open_customer_folder_tab()
-        self.delivery_note_panel.select_order(order_id)
+        self._open_document_dialog(DeliveryNotePanel, order_id, "Lieferschein erstellen")
 
     def open_invoice_for_order(self, order_id: int) -> None:
         self.open_customer_folder_tab()
-        self.invoice_panel.select_order(order_id)
+        self._open_document_dialog(InvoicePanel, order_id, "Rechnung erstellen")
+
+    def _open_document_dialog(self, panel_class, order_id: int, title: str) -> None:
+        dialog = QDialog(self)
+        dialog.setWindowTitle(title)
+        dialog.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
+        dialog.resize(1120, 760)
+        layout = QVBoxLayout(dialog)
+        panel = panel_class(session_factory=self.session_factory)
+        layout.addWidget(panel)
+        panel.select_order(order_id)
+        dialog.finished.connect(lambda _result, active_dialog=dialog: self._forget_document_dialog(active_dialog))
+        self.document_dialogs.append(dialog)
+        dialog.show()
+
+    def _forget_document_dialog(self, dialog: QDialog) -> None:
+        if dialog in self.document_dialogs:
+            self.document_dialogs.remove(dialog)
 
     def open_document_from_archive(self, document_type: str, order_id: int) -> None:
         if document_type == "Rechnung":
