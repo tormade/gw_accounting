@@ -6,6 +6,7 @@ from getraenkeladen_tool.services.checklist_service import (
     list_checklist_issues,
     mark_issue_resolved,
     reopen_issue,
+    resolve_customer_conflict,
     resolve_price_mismatch,
 )
 
@@ -112,3 +113,47 @@ def test_confirm_product_alias_links_unmatched_assortment_and_alias(session):
     assert alias is not None
     assert alias.product_id == product.id
     assert alias.status == "bestaetigt"
+
+
+def test_resolve_customer_conflict_applies_selected_source_value(session):
+    customer = Customer(
+        name="Metzgerei Karl",
+        folder_path="Kunden/Metzgerei Karl",
+        address="Moosburger Str 5, 85406 Zolling",
+        phone="08167 1111",
+    )
+    issue = OnboardingIssue(
+        customer_name="Metzgerei Karl",
+        source_file="Input/_ RE 0525 Metzgerei Karl .xlsx",
+        issue_type="merge_conflict",
+        field_name="address",
+        list_value="Moosburger Str 5, 85406 Zolling",
+        folder_value="Moosburger Str. 55, 85406 Zolling",
+        message="address unterscheidet sich.",
+        status="offen",
+        created_at="2026-06-23T10:00:00",
+    )
+    phone_issue = OnboardingIssue(
+        customer_name="Metzgerei Karl",
+        source_file="Input/_ RE 0525 Metzgerei Karl .xlsx",
+        issue_type="merge_conflict",
+        field_name="phone",
+        list_value="08167 1111",
+        folder_value="08167 9890720",
+        message="phone unterscheidet sich.",
+        status="offen",
+        created_at="2026-06-23T10:01:00",
+    )
+    session.add_all([customer, issue, phone_issue])
+    session.commit()
+
+    resolve_customer_conflict(session, issue.id, "folder")
+    resolve_customer_conflict(session, phone_issue.id, "folder")
+
+    session.refresh(customer)
+    session.refresh(issue)
+    session.refresh(phone_issue)
+    assert customer.address == "Moosburger Str. 55, 85406 Zolling"
+    assert customer.phone == "08167 9890720"
+    assert issue.status == "erledigt"
+    assert phone_issue.status == "erledigt"

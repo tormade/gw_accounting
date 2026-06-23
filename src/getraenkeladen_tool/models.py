@@ -13,6 +13,7 @@ class Customer(Base):
     name: Mapped[str] = mapped_column(String(200))
     folder_path: Mapped[str] = mapped_column(String(500))
     address: Mapped[str | None] = mapped_column(Text(), nullable=True)
+    phone: Mapped[str | None] = mapped_column(String(100), nullable=True)
     contact_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
     contact_email: Mapped[str | None] = mapped_column(String(200), nullable=True)
     payment_method: Mapped[str | None] = mapped_column(String(50), nullable=True)

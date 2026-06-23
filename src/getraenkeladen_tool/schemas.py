@@ -5,6 +5,7 @@ class CustomerCreate(BaseModel):
     name: str = Field(min_length=1)
     folder_path: str = Field(min_length=1)
     address: str | None = None
+    phone: str | None = None
     contact_name: str | None = None
     contact_email: str | None = None
     payment_method: str | None = None

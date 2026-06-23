@@ -75,6 +75,23 @@ def confirm_product_alias(session: Session, issue_id: int, product_id: int) -> O
     return issue
 
 
+def resolve_customer_conflict(session: Session, issue_id: int, source: str) -> OnboardingIssue:
+    if source not in {"list", "folder"}:
+        raise ValueError("Quelle fuer Kundendaten ist ungueltig.")
+    issue = _issue_or_error(session, issue_id)
+    if issue.issue_type != "merge_conflict":
+        raise ValueError("Dieser Pruefpunkt ist kein Kundendaten-Konflikt.")
+    if issue.field_name not in _CUSTOMER_CONFLICT_FIELDS:
+        raise ValueError("Dieses Kundenfeld kann noch nicht automatisch uebernommen werden.")
+    customer = _customer_for_issue(session, issue)
+    value = issue.list_value if source == "list" else issue.folder_value
+    setattr(customer, issue.field_name, value)
+    issue.status = "erledigt"
+    session.commit()
+    session.refresh(issue)
+    return issue
+
+
 def _set_issue_status(session: Session, issue_id: int, status: str) -> OnboardingIssue:
     issue = _issue_or_error(session, issue_id)
     issue.status = status
@@ -90,10 +107,25 @@ def _issue_or_error(session: Session, issue_id: int) -> OnboardingIssue:
     return issue
 
 
-def _assortment_item_for_issue(session: Session, issue: OnboardingIssue) -> CustomerAssortmentItem:
+_CUSTOMER_CONFLICT_FIELDS = {
+    "address",
+    "phone",
+    "contact_email",
+    "delivery_notes",
+    "opening_hours",
+    "internal_notes",
+}
+
+
+def _customer_for_issue(session: Session, issue: OnboardingIssue) -> Customer:
     customer = session.scalar(select(Customer).where(Customer.name == issue.customer_name).limit(1))
     if customer is None:
         raise ValueError("Kunde zum Pruefpunkt wurde nicht gefunden.")
+    return customer
+
+
+def _assortment_item_for_issue(session: Session, issue: OnboardingIssue) -> CustomerAssortmentItem:
+    customer = _customer_for_issue(session, issue)
     source_name = _source_product_name(issue)
     item = session.scalar(
         select(CustomerAssortmentItem)

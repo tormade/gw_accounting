@@ -6,6 +6,7 @@ from ..services.checklist_service import (
     list_checklist_issues,
     mark_issue_resolved,
     reopen_issue,
+    resolve_customer_conflict,
     resolve_price_mismatch,
 )
 from ..services.product_service import list_active_products
@@ -21,6 +22,8 @@ CHECKLIST_ACTIONS = {
     "useCentralPriceButton": "Zentralen Preis nutzen",
     "keepExcelPriceButton": "Excel-Preis behalten",
     "confirmProductAliasButton": "Artikel zuordnen",
+    "useListValueButton": "Zentrale Liste nutzen",
+    "useFolderValueButton": "Kunden-Excel nutzen",
 }
 
 
@@ -46,6 +49,8 @@ class ChecklistPanel(QWidget):
         self.use_central_price_button = QPushButton(CHECKLIST_ACTIONS["useCentralPriceButton"])
         self.keep_excel_price_button = QPushButton(CHECKLIST_ACTIONS["keepExcelPriceButton"])
         self.confirm_product_alias_button = QPushButton(CHECKLIST_ACTIONS["confirmProductAliasButton"])
+        self.use_list_value_button = QPushButton(CHECKLIST_ACTIONS["useListValueButton"])
+        self.use_folder_value_button = QPushButton(CHECKLIST_ACTIONS["useFolderValueButton"])
         self.product_select = SearchableSelect("Zentralen Artikel suchen")
         self.product_select.setMinimumWidth(360)
         self.status_label = QLabel("Pruefliste bereit.")
@@ -65,6 +70,8 @@ class ChecklistPanel(QWidget):
         toolbar.addWidget(self.reopen_button)
         toolbar.addWidget(self.use_central_price_button)
         toolbar.addWidget(self.keep_excel_price_button)
+        toolbar.addWidget(self.use_list_value_button)
+        toolbar.addWidget(self.use_folder_value_button)
         toolbar.addStretch()
         alias_toolbar = QHBoxLayout()
         alias_toolbar.addWidget(self.product_select)
@@ -83,6 +90,8 @@ class ChecklistPanel(QWidget):
         self.use_central_price_button.clicked.connect(self.use_central_price_for_selected_issue)
         self.keep_excel_price_button.clicked.connect(self.keep_excel_price_for_selected_issue)
         self.confirm_product_alias_button.clicked.connect(self.confirm_product_alias_for_selected_issue)
+        self.use_list_value_button.clicked.connect(self.use_list_value_for_selected_issue)
+        self.use_folder_value_button.clicked.connect(self.use_folder_value_for_selected_issue)
         self.refresh_products()
         self.refresh_issues()
 
@@ -159,6 +168,12 @@ class ChecklistPanel(QWidget):
     def keep_excel_price_for_selected_issue(self) -> None:
         self._resolve_price_decision("excel_preis", "Excel-Preis wurde fuer diesen Artikel gespeichert.")
 
+    def use_list_value_for_selected_issue(self) -> None:
+        self._resolve_customer_conflict("list", "Wert aus zentraler Liste wurde uebernommen.")
+
+    def use_folder_value_for_selected_issue(self) -> None:
+        self._resolve_customer_conflict("folder", "Wert aus Kunden-Excel wurde uebernommen.")
+
     def confirm_product_alias_for_selected_issue(self) -> None:
         issue_id = self._selected_issue_id()
         product_id = self.product_select.current_value()
@@ -197,6 +212,26 @@ class ChecklistPanel(QWidget):
             rows = list_checklist_issues(session, include_done=True)
         except Exception as error:
             QMessageBox.warning(self, "Preisentscheidung nicht gespeichert", f"Die Preisentscheidung konnte nicht gespeichert werden.\n\nGrund: {error}")
+            return
+        finally:
+            session.close()
+        self.show_issues(rows)
+        self.status_label.setText(status_message)
+
+    def _resolve_customer_conflict(self, source: str, status_message: str) -> None:
+        issue_id = self._selected_issue_id()
+        if issue_id is None:
+            QMessageBox.warning(self, "Pruefpunkt auswaehlen", "Bitte zuerst einen Kundendaten-Pruefpunkt auswaehlen.")
+            return
+        if self.session_factory is None:
+            self.status_label.setText("Keine Datenbankverbindung vorhanden.")
+            return
+        session = self.session_factory()
+        try:
+            resolve_customer_conflict(session, issue_id, source)
+            rows = list_checklist_issues(session, include_done=True)
+        except Exception as error:
+            QMessageBox.warning(self, "Kundendaten nicht uebernommen", f"Die Kundendaten konnten nicht uebernommen werden.\n\nGrund: {error}")
             return
         finally:
             session.close()

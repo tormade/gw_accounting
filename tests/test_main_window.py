@@ -219,9 +219,13 @@ def test_checklist_panel_exposes_concrete_resolution_actions():
     assert '"useCentralPriceButton": "Zentralen Preis nutzen"' in source
     assert '"keepExcelPriceButton": "Excel-Preis behalten"' in source
     assert '"confirmProductAliasButton": "Artikel zuordnen"' in source
+    assert '"useListValueButton": "Zentrale Liste nutzen"' in source
+    assert '"useFolderValueButton": "Kunden-Excel nutzen"' in source
     assert "def use_central_price_for_selected_issue" in source
     assert "def keep_excel_price_for_selected_issue" in source
     assert "def confirm_product_alias_for_selected_issue" in source
+    assert "def use_list_value_for_selected_issue" in source
+    assert "def use_folder_value_for_selected_issue" in source
 
 
 def test_date_fields_use_calendar_input():

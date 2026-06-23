@@ -164,6 +164,7 @@ def onboard_customer_from_sources(
         name=list_snapshot.name,
         folder_path=f"Kunden/{list_snapshot.name}",
         address=list_snapshot.address,
+        phone=folder_snapshot.phone or list_snapshot.phone,
         contact_email=folder_snapshot.contact_email or list_snapshot.invoice_email or list_snapshot.contact_email,
         payment_method=folder_snapshot.payment_method,
         next_contact_date=list_snapshot.next_contact_date,

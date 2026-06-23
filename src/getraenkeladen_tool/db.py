@@ -55,6 +55,8 @@ def _add_missing_columns(engine) -> None:
                 connection.execute(text("ALTER TABLE customers ADD COLUMN source_file VARCHAR(500)"))
             if "source_row" not in customer_columns:
                 connection.execute(text("ALTER TABLE customers ADD COLUMN source_row INTEGER"))
+            if "phone" not in customer_columns:
+                connection.execute(text("ALTER TABLE customers ADD COLUMN phone VARCHAR(100)"))
         if "products" in table_names:
             product_columns = {column["name"] for column in inspector.get_columns("products")}
             if "default_deposit_cents" not in product_columns:
