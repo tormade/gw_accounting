@@ -60,6 +60,7 @@ def test_import_master_data_reads_excel_sources_without_modifying_files(session,
     assert customer.address == "Moosburger Str. 55, 85406 Zolling"
     assert customer.next_contact_date == "2026-07-20"
     assert customer.contact_email == "info@metzgerei-karl.de"
+    assert customer.payment_method is None
     assert "bis13Uhr" in customer.delivery_notes
 
 

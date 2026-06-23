@@ -49,6 +49,9 @@ class DocumentCreate(BaseModel):
     delivery_slot: str | None = None
     line_items: list[DocumentLineItem] = Field(min_length=1)
     deposit_returns: list[DepositReturnCreate] = Field(default_factory=list)
+    delivery_fee_enabled: bool = False
+    delivery_comment: str | None = None
+    footer_text: str | None = None
     order_id: int | None = Field(default=None, gt=0)
 
 

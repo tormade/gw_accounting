@@ -76,6 +76,9 @@ class Document(Base):
     datev_export_path: Mapped[str | None] = mapped_column(String(500), nullable=True)
     delivery_date: Mapped[str | None] = mapped_column(String(20), nullable=True)
     delivery_slot: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    delivery_fee_enabled: Mapped[bool] = mapped_column(Boolean(), default=False)
+    delivery_comment: Mapped[str | None] = mapped_column(Text(), nullable=True)
+    footer_text: Mapped[str | None] = mapped_column(Text(), nullable=True)
     number_released: Mapped[bool] = mapped_column(Boolean(), default=False)
 
     customer: Mapped[Customer] = relationship()

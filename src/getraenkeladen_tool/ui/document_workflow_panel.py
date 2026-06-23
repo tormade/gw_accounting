@@ -36,6 +36,8 @@ DOCUMENT_ORDER_COLUMNS = ("Auftrag", "Kunde", "Lieferdatum", "Zeitfenster", "Sta
 class DocumentWorkflowPanel(QWidget):
     document_type = ""
     number_label = ""
+    note_label = "Freitext"
+    default_note_text = ""
     create_excel_button_text = ""
     create_pdf_button_text = ""
 
@@ -60,6 +62,11 @@ class DocumentWorkflowPanel(QWidget):
         self.order_summary.setWordWrap(True)
         self.document_number = QLineEdit()
         self.document_number.setPlaceholderText(self.number_label)
+        self.delivery_fee_choice = QComboBox()
+        self.delivery_fee_choice.addItem("Nein", False)
+        self.delivery_fee_choice.addItem("Ja", True)
+        self.document_note = QLineEdit()
+        self.document_note.setPlaceholderText(self.default_note_text)
         self.lines_table = QTableWidget(0, len(DOCUMENT_LINE_COLUMNS))
         self.lines_table.setHorizontalHeaderLabels(DOCUMENT_LINE_COLUMNS)
         self.lines_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
@@ -120,6 +127,8 @@ class DocumentWorkflowPanel(QWidget):
         number_form = QFormLayout()
         configure_form_layout(number_form)
         number_form.addRow(self.number_label, self.document_number)
+        number_form.addRow("Lieferpauschale", self.delivery_fee_choice)
+        number_form.addRow(self.note_label, self.document_note)
         number_row.addLayout(number_form)
         document_layout.addLayout(number_row)
         document_layout.addWidget(self.lines_table)
@@ -255,6 +264,7 @@ class DocumentWorkflowPanel(QWidget):
             )
             self.lines_table.setRowCount(0)
             self.returns_table.setRowCount(0)
+            self.document_note.setText(self.default_note_text)
             for line in order.lines:
                 self._append_line(line.product_name, line.quantity, line.unit_price_cents, line.deposit_cents)
             for deposit_return in order.deposit_returns:
@@ -474,10 +484,15 @@ class DocumentWorkflowPanel(QWidget):
     def _format_euro_cents(self, cents: int) -> str:
         return f"{cents / 100:.2f} EUR".replace(".", ",")
 
+    def _delivery_fee_enabled(self) -> bool:
+        return bool(self.delivery_fee_choice.currentData())
+
 
 class DeliveryNotePanel(DocumentWorkflowPanel):
     document_type = "Lieferscheine"
     number_label = "LS-Nummer"
+    note_label = "Kommentar oben rechts"
+    default_note_text = ""
     create_excel_button_text = "Lieferschein Excel erstellen"
     create_pdf_button_text = "Lieferschein PDF erstellen"
 
@@ -488,6 +503,9 @@ class DeliveryNotePanel(DocumentWorkflowPanel):
             self.document_number.text().strip(),
             line_items=self._line_items_from_table(),
             deposit_returns=self._deposit_returns_from_table(),
+            delivery_fee_enabled=self._delivery_fee_enabled(),
+            delivery_comment=self.document_note.text().strip() or None,
+            footer_text=None,
             assets=assets,
         )
 
@@ -495,6 +513,8 @@ class DeliveryNotePanel(DocumentWorkflowPanel):
 class InvoicePanel(DocumentWorkflowPanel):
     document_type = "Rechnungen"
     number_label = "Rechnungsnummer"
+    note_label = "Rechnungstext unten"
+    default_note_text = "Rechnungsbetrag wird per Sepa Basis Lastschrift Mandat eingezogen."
     create_excel_button_text = "Rechnung Excel erstellen"
     create_pdf_button_text = "Rechnung PDF erstellen"
 
@@ -505,6 +525,8 @@ class InvoicePanel(DocumentWorkflowPanel):
             self.document_number.text().strip(),
             line_items=self._line_items_from_table(),
             deposit_returns=self._deposit_returns_from_table(),
+            delivery_fee_enabled=self._delivery_fee_enabled(),
+            footer_text=self.document_note.text().strip() or None,
             datev_upload_dir=Path.cwd() / "outputs" / "datev_upload",
             assets=assets,
         )

@@ -48,7 +48,7 @@ CUSTOMER_HELP_TEXT = (
     "Archivieren blendet Kunden aus dem Alltag aus, loescht sie aber nicht endgueltig."
 )
 
-CUSTOMER_COLUMNS = ("Name", "Adresse", "Zahlungsart", "Naechster Kontakt", "Status")
+CUSTOMER_COLUMNS = ("Name", "Adresse", "Naechster Kontakt", "Status")
 CUSTOMER_PANEL_SECTIONS = ("1. Kunden erfassen", "2. Bestehende Kunden pruefen")
 CUSTOMER_GUIDANCE_STEPS = (
     "Neuen Kunden links eintragen oder unten einen Kunden auswaehlen.",
@@ -76,8 +76,6 @@ class CustomerPanel(QWidget):
         self.folder_path = QLineEdit()
         self.folder_path.setPlaceholderText("Kundenordner")
         self.address = QLineEdit()
-        self.payment_method = QLineEdit()
-        self.payment_method.setPlaceholderText("SEPA oder Ueberweisung")
         self.next_contact_date = DateInput()
         self.delivery_notes = QLineEdit()
         self.status_label = QLabel("Noch kein Kunde gespeichert.")
@@ -101,14 +99,13 @@ class CustomerPanel(QWidget):
 
         edit_box, edit_layout = self._section(
             CUSTOMER_PANEL_SECTIONS[0],
-            "Pflicht ist der Kundenname. Ordner, Zahlungsart und Kontakttermin helfen spaeter beim Tagesablauf.",
+            "Pflicht ist der Kundenname. Ordner, Lieferhinweise und Kontakttermin helfen spaeter beim Tagesablauf.",
         )
         form = QFormLayout()
         configure_form_layout(form)
         form.addRow("Kunde", self.customer_name)
         form.addRow("Kundenordner", self._folder_row())
         form.addRow("Adresse", self.address)
-        form.addRow("Zahlungsart", self.payment_method)
         form.addRow("Naechster Kontakt", self.next_contact_date)
         form.addRow("Lieferhinweise", self.delivery_notes)
         edit_layout.addLayout(form)
@@ -243,7 +240,6 @@ class CustomerPanel(QWidget):
             values = (
                 customer.name,
                 customer.address or "",
-                customer.payment_method or "",
                 to_display_date(customer.next_contact_date),
                 "aktiv" if customer.is_active else "archiviert",
             )
@@ -267,7 +263,6 @@ class CustomerPanel(QWidget):
             self.customer_name.setText(customer.name)
             self.folder_path.setText(customer.folder_path)
             self.address.setText(customer.address or "")
-            self.payment_method.setText(customer.payment_method or "")
             self.next_contact_date.set_iso_date(customer.next_contact_date)
             self.delivery_notes.setText(customer.delivery_notes or "")
             self.loaded_form_snapshot = self._snapshot_from_customer(customer)
@@ -326,7 +321,6 @@ class CustomerPanel(QWidget):
             name=self.customer_name.text().strip(),
             folder_path=self.folder_path.text().strip(),
             address=self.address.text().strip() or None,
-            payment_method=self.payment_method.text().strip() or None,
             next_contact_date=self.next_contact_date.iso_date() or None,
             delivery_notes=self.delivery_notes.text().strip() or None,
         )
@@ -336,7 +330,6 @@ class CustomerPanel(QWidget):
         self.customer_name.clear()
         self.folder_path.clear()
         self.address.clear()
-        self.payment_method.clear()
         self.next_contact_date.set_iso_date(None)
         self.delivery_notes.clear()
         self.loaded_form_snapshot = self._form_snapshot()
@@ -370,7 +363,6 @@ class CustomerPanel(QWidget):
             "name": self.customer_name.text(),
             "folder_path": self.folder_path.text(),
             "address": self.address.text(),
-            "payment_method": self.payment_method.text(),
             "next_contact_date": self.next_contact_date.iso_date(),
             "delivery_notes": self.delivery_notes.text(),
         }
@@ -381,7 +373,6 @@ class CustomerPanel(QWidget):
             "name": customer.name,
             "folder_path": customer.folder_path,
             "address": customer.address or "",
-            "payment_method": customer.payment_method or "",
             "next_contact_date": customer.next_contact_date or "",
             "delivery_notes": customer.delivery_notes or "",
         }
@@ -391,6 +382,5 @@ class CustomerPanel(QWidget):
         self.customer_name.setText(snapshot["name"])
         self.folder_path.setText(snapshot["folder_path"])
         self.address.setText(snapshot["address"])
-        self.payment_method.setText(snapshot["payment_method"])
         self.next_contact_date.set_iso_date(snapshot["next_contact_date"])
         self.delivery_notes.setText(snapshot["delivery_notes"])

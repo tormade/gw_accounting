@@ -240,6 +240,7 @@ def test_main_window_has_dedicated_delivery_and_invoice_tabs():
 
 def test_customer_tab_exposes_master_data_actions():
     from getraenkeladen_tool.ui.customer_panel import (
+        CUSTOMER_COLUMNS,
         CUSTOMER_CONTEXT_ACTIONS,
         CUSTOMER_GUIDANCE_STEPS,
         CUSTOMER_PANEL_ACTIONS,
@@ -269,6 +270,7 @@ def test_customer_tab_exposes_master_data_actions():
         "archive": "Kunde archivieren",
         "restore": "Kunde wiederherstellen",
     }
+    assert CUSTOMER_COLUMNS == ("Name", "Adresse", "Naechster Kontakt", "Status")
 
 
 def test_product_tab_exposes_price_list_actions():

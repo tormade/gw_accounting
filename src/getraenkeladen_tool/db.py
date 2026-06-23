@@ -34,6 +34,12 @@ def _add_missing_columns(engine) -> None:
                 connection.execute(text("ALTER TABLE documents ADD COLUMN order_id INTEGER"))
             if "number_released" not in document_columns:
                 connection.execute(text("ALTER TABLE documents ADD COLUMN number_released BOOLEAN DEFAULT 0 NOT NULL"))
+            if "delivery_fee_enabled" not in document_columns:
+                connection.execute(text("ALTER TABLE documents ADD COLUMN delivery_fee_enabled BOOLEAN DEFAULT 0 NOT NULL"))
+            if "delivery_comment" not in document_columns:
+                connection.execute(text("ALTER TABLE documents ADD COLUMN delivery_comment TEXT"))
+            if "footer_text" not in document_columns:
+                connection.execute(text("ALTER TABLE documents ADD COLUMN footer_text TEXT"))
             connection.execute(
                 text("UPDATE documents SET document_type = 'Lieferschein' WHERE document_type = 'Lieferauftrag'")
             )

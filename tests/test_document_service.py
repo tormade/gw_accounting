@@ -56,6 +56,35 @@ def test_create_invoice_writes_excel_pdf_file_and_open_item(session, tmp_path: P
     assert open_item.status == "offen"
 
 
+def test_create_invoice_includes_optional_delivery_fee_and_document_texts(session, tmp_path: Path):
+    customer = create_customer(
+        session,
+        CustomerCreate(name="Metzgerei Karl", folder_path=str(tmp_path / "Kunden" / "Metzgerei Karl")),
+    )
+
+    document = create_document(
+        session,
+        DocumentCreate(
+            customer_id=customer.id,
+            document_type="Rechnung",
+            document_number="RG-2001",
+            delivery_date="2026-06-22",
+            line_items=[DocumentLineItem(name="Frucade Colamix 20x0,5", quantity=3, unit_price_cents=1048, deposit_cents=310)],
+            delivery_fee_enabled=True,
+            footer_text="Rechnungsbetrag wird per Sepa Basis Lastschrift Mandat eingezogen.",
+        ),
+    )
+
+    assert document.delivery_fee_enabled is True
+    assert document.footer_text == "Rechnungsbetrag wird per Sepa Basis Lastschrift Mandat eingezogen."
+    assert session.query(OpenItem).one().amount_cents == 4464
+
+    sheet = load_workbook(document.excel_path, data_only=True).active
+    assert sheet["A31"].value == 1
+    assert sheet["E31"].value == 3.9
+    assert sheet["F43"].value == 44.64
+
+
 def test_create_invoice_supports_multiple_line_items(session, tmp_path: Path):
     customer = create_customer(
         session,
@@ -254,4 +283,3 @@ def test_create_document_can_generate_pdf_later_without_duplicate_invoice(sessio
     assert Path(pdf_document.excel_path).exists()
     assert Path(pdf_document.pdf_path).exists()
     assert session.query(OpenItem).count() == 1
-

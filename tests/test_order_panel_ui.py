@@ -37,6 +37,9 @@ def test_document_workflow_panels_make_excel_pdf_generation_flow_visible():
     assert "PDF:" in source
     assert "Nummer vorschlagen" not in source
     assert "suggest_document_number" not in source
+    assert "Lieferpauschale" in source
+    assert "self.delivery_fee_choice = QComboBox()" in source
+    assert "self.document_note = QLineEdit()" in source
 
 
 def test_document_workflow_allows_editing_lines_and_deposit_returns():

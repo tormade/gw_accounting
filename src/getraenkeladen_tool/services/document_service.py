@@ -59,6 +59,8 @@ def create_document(
                 line_items,
                 document_date=document_date,
                 deposit_returns=deposit_returns,
+                delivery_fee_enabled=payload.delivery_fee_enabled,
+                invoice_footer_text=payload.footer_text,
             )
         else:
             build_delivery_note_workbook(
@@ -68,6 +70,9 @@ def create_document(
                 line_items,
                 document_date=document_date,
                 deposit_returns=deposit_returns,
+                delivery_fee_enabled=payload.delivery_fee_enabled,
+                delivery_comment=payload.delivery_comment,
+                footer_text=payload.footer_text,
             )
 
     if "pdf" in requested_assets:
@@ -80,6 +85,9 @@ def create_document(
             deposit_returns=deposit_returns,
             document_date=document_date,
             customer_address=customer.address,
+            delivery_fee_enabled=payload.delivery_fee_enabled,
+            note_text=payload.delivery_comment,
+            footer_text=payload.footer_text,
         )
 
     if document_type == "Rechnung" and datev_upload_dir is not None and "pdf" in requested_assets:
@@ -96,6 +104,9 @@ def create_document(
             datev_export_path=str(datev_export_path) if datev_export_path is not None else None,
             delivery_date=payload.delivery_date,
             delivery_slot=payload.delivery_slot,
+            delivery_fee_enabled=payload.delivery_fee_enabled,
+            delivery_comment=payload.delivery_comment,
+            footer_text=payload.footer_text,
         )
         session.add(document)
         session.flush()
@@ -106,15 +117,12 @@ def create_document(
             document.datev_export_path = str(datev_export_path)
         document.delivery_date = payload.delivery_date
         document.delivery_slot = payload.delivery_slot
+        document.delivery_fee_enabled = payload.delivery_fee_enabled
+        document.delivery_comment = payload.delivery_comment
+        document.footer_text = payload.footer_text
 
     if document_type == "Rechnung":
-        amount_cents = sum(
-            (item.unit_price_cents + item.deposit_cents) * item.quantity
-            for item in payload.line_items
-        ) - sum(
-            item.deposit_cents * item.quantity
-            for item in payload.deposit_returns
-        )
+        amount_cents = _document_total_cents(payload)
         open_item = session.scalar(select(OpenItem).where(OpenItem.document_id == document.id).limit(1))
         if open_item is None:
             session.add(
@@ -163,3 +171,16 @@ def _copy_invoice_pdf_to_datev(pdf_path: Path, datev_upload_dir: Path, document_
     ensure_parent_folder(target_path)
     copy2(pdf_path, target_path)
     return target_path
+
+
+def _document_total_cents(payload: DocumentCreate) -> int:
+    total_cents = sum(
+        (item.unit_price_cents + item.deposit_cents) * item.quantity
+        for item in payload.line_items
+    ) - sum(
+        item.deposit_cents * item.quantity
+        for item in payload.deposit_returns
+    )
+    if payload.delivery_fee_enabled:
+        total_cents += 390
+    return total_cents

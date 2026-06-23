@@ -74,14 +74,13 @@ def list_daily_deliveries(session: Session, target_date: str) -> list[Document]:
 
 
 def export_open_items_csv(session: Session, output_path: Path) -> Path:
-    rows = [["Kunde", "Rechnungsnr.", "Betrag EUR", "Zahlungsart", "Status"]]
+    rows = [["Kunde", "Rechnungsnr.", "Betrag EUR", "Status"]]
     for item in list_open_items(session):
         rows.append(
             [
                 item.customer_name,
                 item.document_number,
                 _format_cents(item.amount_cents),
-                item.payment_method,
                 item.status,
             ]
         )

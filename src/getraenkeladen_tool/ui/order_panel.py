@@ -372,7 +372,6 @@ class OrderPanel(QWidget):
                         for value in (
                             customer.address or "",
                             customer.delivery_notes or "",
-                            customer.payment_method or "",
                         )
                         if value
                     ),
@@ -409,7 +408,6 @@ class OrderPanel(QWidget):
             return
         details = [
             f"Adresse: {customer.address or 'nicht gepflegt'}",
-            f"Zahlungsart: {customer.payment_method or 'nicht gepflegt'}",
             f"Hinweis: {customer.delivery_notes or 'kein Lieferhinweis'}",
         ]
         self.customer_summary.setText(" | ".join(details))

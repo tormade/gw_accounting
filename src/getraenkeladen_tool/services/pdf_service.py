@@ -36,6 +36,9 @@ def build_document_pdf(
     deposit_returns: list[dict] | None = None,
     document_date: str | None = None,
     customer_address: str | None = None,
+    delivery_fee_enabled: bool = False,
+    note_text: str | None = None,
+    footer_text: str | None = None,
 ) -> None:
     ensure_parent_folder(output_path)
     letterhead = _load_letterhead()
@@ -48,6 +51,9 @@ def build_document_pdf(
         line_items=line_items,
         deposit_returns=deposit_returns or [],
         document_date=document_date,
+        delivery_fee_enabled=delivery_fee_enabled,
+        note_text=note_text,
+        footer_text=footer_text,
     )
     document = SimpleDocTemplate(
         str(output_path),
@@ -72,6 +78,9 @@ def _build_story(
     line_items: list[dict],
     deposit_returns: list[dict],
     document_date: str | None,
+    delivery_fee_enabled: bool,
+    note_text: str | None,
+    footer_text: str | None,
 ) -> list:
     styles = getSampleStyleSheet()
     normal = ParagraphStyle(
@@ -127,7 +136,8 @@ def _build_story(
                 Paragraph(
                     f"<b>{_display_title(document_title)}</b><br/>"
                     f"Belegnummer: {document_number}<br/>"
-                    f"Datum: {_display_date(document_date)}",
+                    f"Datum: {_display_date(document_date)}"
+                    + (f"<br/>{note_text}" if note_text else ""),
                     normal,
                 ),
             ]
@@ -147,7 +157,7 @@ def _build_story(
     )
     story.extend([meta_table, Spacer(1, 8 * mm), Paragraph(_display_title(document_title).upper(), title), Spacer(1, 5 * mm)])
 
-    rows, gross_total_cents = _line_rows(line_items, deposit_returns)
+    rows, gross_total_cents = _line_rows(line_items, deposit_returns, delivery_fee_enabled)
     table = Table(rows, colWidths=[18 * mm, 72 * mm, 24 * mm, 24 * mm, 25 * mm], repeatRows=1)
     table.setStyle(
         TableStyle(
@@ -192,11 +202,13 @@ def _build_story(
         )
     )
     story.extend([totals, Spacer(1, 7 * mm)])
-    story.append(Paragraph("Vielen Dank fuer Ihren Auftrag.", muted))
+    if footer_text:
+        story.extend([Paragraph(footer_text, muted), Spacer(1, 3 * mm)])
+    story.append(Paragraph("Vielen Dank fuer Ihren Einkauf", muted))
     return story
 
 
-def _line_rows(line_items: list[dict], deposit_returns: list[dict]) -> tuple[list[list[str]], int]:
+def _line_rows(line_items: list[dict], deposit_returns: list[dict], delivery_fee_enabled: bool) -> tuple[list[list[str]], int]:
     rows = [["Menge", "Artikel", "Preis", "Pfand", "Summe"]]
     total_cents = 0
     for item in line_items:
@@ -212,6 +224,9 @@ def _line_rows(line_items: list[dict], deposit_returns: list[dict]) -> tuple[lis
                 _format_euro(line_total),
             ]
         )
+    if delivery_fee_enabled:
+        total_cents += 390
+        rows.append(["1", "Lieferpauschale (entf. ab 6 Traeger)", "", _format_euro(390), _format_euro(390)])
     if deposit_returns:
         rows.append(["", "Pfandrueckgabe:", "", "", ""])
         for deposit_return in deposit_returns:

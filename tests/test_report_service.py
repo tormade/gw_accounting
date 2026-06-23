@@ -172,8 +172,8 @@ def test_export_open_items_csv_writes_payment_overview(session, tmp_path: Path):
 
     assert output_path.exists()
     assert output_path.read_text(encoding="utf-8").splitlines() == [
-        "Kunde;Rechnungsnr.;Betrag EUR;Zahlungsart;Status",
-        "Cafe Nord;RG-1005;32,58;SEPA;offen",
+        "Kunde;Rechnungsnr.;Betrag EUR;Status",
+        "Cafe Nord;RG-1005;32,58;offen",
     ]
 
 

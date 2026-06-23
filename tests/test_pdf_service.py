@@ -61,6 +61,28 @@ def test_build_document_pdf_reduces_total_by_deposit_returns(tmp_path: Path):
     assert "10,30 EUR" in pdf_text
 
 
+def test_build_document_pdf_includes_delivery_fee_note_and_footer_text(tmp_path: Path):
+    output_path = tmp_path / "RG-1005.pdf"
+
+    build_document_pdf(
+        output_path=output_path,
+        document_title="Rechnung",
+        customer_name="Metzgerei Karl",
+        document_number="RG-1005",
+        line_items=[{"name": "Frucade Colamix 20x0,5", "quantity": 3, "unit_price_cents": 1048, "deposit_cents": 310}],
+        delivery_fee_enabled=True,
+        note_text="bis13Uhr und ab 15 Uhr",
+        footer_text="Rechnungsbetrag wird per Sepa Basis Lastschrift Mandat eingezogen.",
+    )
+
+    pdf_text = output_path.read_bytes().decode("latin-1")
+    assert "Lieferpauschale" in pdf_text
+    assert "3,90 EUR" in pdf_text
+    assert "44,64 EUR" in pdf_text
+    assert "bis13Uhr und ab 15 Uhr" in pdf_text
+    assert "Rechnungsbetrag wird per Sepa Basis Lastschrift Mandat eingezogen." in pdf_text
+
+
 def test_build_document_pdf_includes_customer_document_date_and_table_headers(tmp_path: Path):
     output_path = tmp_path / "RG-1004.pdf"
 

@@ -39,7 +39,7 @@ REPORT_PANEL_ACTIONS = {
     "exportContactsButton": "Kontaktliste exportieren",
 }
 
-OPEN_ITEMS_COLUMNS = ("Kunde", "Rechnungsnr.", "Betrag", "Zahlungsart", "Status")
+OPEN_ITEMS_COLUMNS = ("Kunde", "Rechnungsnr.", "Betrag", "Status")
 DELIVERY_COLUMNS = ("Datum", "Zeitfenster", "Belegnr.", "Kunde", "Adresse", "Hinweise")
 CONTACT_COLUMNS = ("Kontakttermin", "Kunde", "E-Mail", "Hinweise")
 DATE_FIELD_WIDGETS = ("target_date",)
@@ -163,7 +163,6 @@ class ReportPanel(QWidget):
                 item.customer_name,
                 item.document_number,
                 amount,
-                item.payment_method,
                 item.status,
             )
             self._set_row(self.open_items_table, row, values)

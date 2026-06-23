@@ -14,6 +14,9 @@ FIRST_ITEM_ROW = 13
 MAX_ITEM_ROW = 30
 FIRST_RETURN_ROW = 34
 MAX_RETURN_ROW = 39
+DELIVERY_FEE_CENTS = 390
+DELIVERY_NOTE_FOOTER = "Die Ware bleibt bis zur vollstaendigen Bezahlung Eigentum von Getraenke Winklmeier."
+THANK_YOU_TEXT = "Vielen Dank fuer Ihren Einkauf"
 
 
 def build_invoice_workbook(
@@ -23,6 +26,8 @@ def build_invoice_workbook(
     line_items: list[dict],
     document_date: str | None = None,
     deposit_returns: list[dict] | None = None,
+    delivery_fee_enabled: bool = False,
+    invoice_footer_text: str | None = None,
 ) -> None:
     _build_document_workbook(
         output_path,
@@ -32,6 +37,9 @@ def build_invoice_workbook(
         line_items,
         document_date,
         deposit_returns or [],
+        delivery_fee_enabled,
+        None,
+        invoice_footer_text,
     )
 
 
@@ -42,6 +50,9 @@ def build_delivery_note_workbook(
     line_items: list[dict],
     document_date: str | None = None,
     deposit_returns: list[dict] | None = None,
+    delivery_fee_enabled: bool = False,
+    delivery_comment: str | None = None,
+    footer_text: str | None = None,
 ) -> None:
     _build_document_workbook(
         output_path,
@@ -51,6 +62,9 @@ def build_delivery_note_workbook(
         line_items,
         document_date,
         deposit_returns or [],
+        delivery_fee_enabled,
+        delivery_comment,
+        footer_text or DELIVERY_NOTE_FOOTER,
     )
 
 
@@ -62,6 +76,9 @@ def _build_document_workbook(
     line_items: list[dict],
     document_date: str | None,
     deposit_returns: list[dict],
+    delivery_fee_enabled: bool,
+    delivery_comment: str | None,
+    footer_text: str | None,
 ) -> None:
     ensure_parent_folder(output_path)
 
@@ -76,6 +93,9 @@ def _build_document_workbook(
     sheet["F8"] = document_number
     sheet["B10"] = customer_name
     sheet["C5"] = _document_date_value(document_date)
+    sheet["D1"] = delivery_comment or None
+    sheet["A45"] = footer_text or None
+    sheet["B48"] = THANK_YOU_TEXT
 
     if len(line_items) > MAX_ITEM_ROW - FIRST_ITEM_ROW + 1:
         raise ValueError("Die Winklmeier-Vorlage erlaubt maximal 18 Positionszeilen.")
@@ -116,6 +136,14 @@ def _build_document_workbook(
         sheet.cell(row=target_row, column=5, value=f"=(C{target_row}+D{target_row})*A{target_row}")
         cached_formula_values[f"E{target_row}"] = _cents_to_euro(line_total_cents)
 
+    delivery_fee_cents = DELIVERY_FEE_CENTS if delivery_fee_enabled else 0
+    sheet["A31"] = 1 if delivery_fee_enabled else 0
+    sheet["B31"] = "Lieferpauschale (entf. ab 6 Traeger)"
+    sheet["C31"] = None
+    sheet["D31"] = _cents_to_euro(DELIVERY_FEE_CENTS)
+    sheet["E31"] = "=(C31+D31)*A31"
+    cached_formula_values["E31"] = _cents_to_euro(delivery_fee_cents)
+
     pfand_return_total_cents = 0
     for index, deposit_return in enumerate(deposit_returns):
         target_row = FIRST_RETURN_ROW + index
@@ -131,19 +159,20 @@ def _build_document_workbook(
         cached_formula_values[f"E{target_row}"] = _cents_to_euro(line_total_cents)
 
     sheet["A32"] = f"=SUM(A{FIRST_ITEM_ROW}:A{MAX_ITEM_ROW})"
-    sheet["F32"] = f"=SUM(E{FIRST_ITEM_ROW}:E{MAX_ITEM_ROW})"
+    sheet["F32"] = f"=SUM(E{FIRST_ITEM_ROW}:E31)"
     sheet["F40"] = f"=SUM(E{FIRST_RETURN_ROW}:E{MAX_RETURN_ROW})"
     sheet["F41"] = "=ROUND(F43/1.19,2)"
     sheet["F42"] = "=F43-F41"
     sheet["F43"] = "=F32+F40"
 
-    gross_total_cents = delivery_total_cents + pfand_return_total_cents
+    delivery_total_with_fee_cents = delivery_total_cents + delivery_fee_cents
+    gross_total_cents = delivery_total_with_fee_cents + pfand_return_total_cents
     net_total_cents = round(gross_total_cents / 1.19)
     tax_total_cents = gross_total_cents - net_total_cents
     cached_formula_values.update(
         {
             "A32": quantity_total,
-            "F32": _cents_to_euro(delivery_total_cents),
+            "F32": _cents_to_euro(delivery_total_with_fee_cents),
             "F40": _cents_to_euro(pfand_return_total_cents),
             "F41": _cents_to_euro(net_total_cents),
             "F42": _cents_to_euro(tax_total_cents),

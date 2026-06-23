@@ -140,6 +140,9 @@ def create_order_delivery_order(
     delivery_order_number: str,
     line_items: list[DocumentLineItem] | None = None,
     deposit_returns: list[DepositReturnCreate] | None = None,
+    delivery_fee_enabled: bool = False,
+    delivery_comment: str | None = None,
+    footer_text: str | None = None,
     assets: set[str] | None = None,
 ) -> Document:
     order = get_order(session, order_id)
@@ -154,6 +157,9 @@ def create_order_delivery_order(
             delivery_slot=order.delivery_slot,
             line_items=line_items if line_items is not None else _document_line_items(order),
             deposit_returns=deposit_returns if deposit_returns is not None else _document_deposit_returns(order),
+            delivery_fee_enabled=delivery_fee_enabled,
+            delivery_comment=delivery_comment,
+            footer_text=footer_text,
         ),
         assets=assets,
     )
@@ -170,6 +176,8 @@ def create_order_invoice(
     invoice_number: str,
     line_items: list[DocumentLineItem] | None = None,
     deposit_returns: list[DepositReturnCreate] | None = None,
+    delivery_fee_enabled: bool = False,
+    footer_text: str | None = None,
     datev_upload_dir: Path | None = None,
     assets: set[str] | None = None,
 ) -> Document:
@@ -185,6 +193,8 @@ def create_order_invoice(
             delivery_slot=order.delivery_slot,
             line_items=line_items if line_items is not None else _document_line_items(order),
             deposit_returns=deposit_returns if deposit_returns is not None else _document_deposit_returns(order),
+            delivery_fee_enabled=delivery_fee_enabled,
+            footer_text=footer_text,
         ),
         datev_upload_dir=datev_upload_dir,
         assets=assets,
