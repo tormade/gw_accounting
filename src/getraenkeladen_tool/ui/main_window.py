@@ -108,9 +108,9 @@ class MainWindow(QMainWindow):
         self.open_orders_tab()
         self.order_panel.open_new_order_dialog()
 
-    def open_new_order_for_customer(self, _customer_id: int) -> None:
+    def open_new_order_for_customer(self, customer_id: int) -> None:
         self.open_customer_folder_tab()
-        self.order_panel.open_new_order_dialog()
+        self.order_panel.open_new_order_for_customer(customer_id)
 
     def open_order_for_id(self, order_id: int) -> None:
         self.open_orders_tab()

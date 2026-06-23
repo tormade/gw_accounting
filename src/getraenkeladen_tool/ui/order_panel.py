@@ -332,6 +332,13 @@ class OrderPanel(QWidget):
         self.reset_order_form()
         self.open_order_dialog("Neuen Auftrag anlegen")
 
+    def open_new_order_for_customer(self, customer_id: int) -> None:
+        self.reset_order_form()
+        self.customer_select.select_value(customer_id)
+        self.apply_selected_customer()
+        self.order_mode_label.setText("Neue Bestellung aus Kundenordner")
+        self.open_order_dialog("Neue Bestellung aus Kundenordner")
+
     def open_order_dialog(self, title: str = "Auftrag bearbeiten") -> None:
         if self.order_dialog is not None:
             self.order_dialog.close()

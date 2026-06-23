@@ -332,6 +332,7 @@ def test_main_window_embeds_customer_folder_as_second_page_and_wires_actions():
     assert "self.customer_folder_panel = CustomerFolderPanel(session_factory=session_factory)" in source
     assert "self.pages.addWidget(self._scrollable_tab(self.customer_folder_panel))" in source
     assert "self.customer_folder_panel.new_order_requested.connect(self.open_new_order_for_customer)" in source
+    assert "self.order_panel.open_new_order_for_customer(customer_id)" in source
     assert "self.customer_folder_panel.delivery_note_requested.connect(self.open_delivery_note_for_order)" in source
     assert "self.customer_folder_panel.invoice_requested.connect(self.open_invoice_for_order)" in source
     assert '"Lieferscheine"' not in source

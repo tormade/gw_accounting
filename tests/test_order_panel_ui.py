@@ -9,6 +9,14 @@ def test_order_panel_loads_master_data_and_orders_on_open():
     assert "suggest_order_number" not in source
 
 
+def test_order_panel_can_start_new_order_for_preselected_customer():
+    source = Path("src/getraenkeladen_tool/ui/order_panel.py").read_text(encoding="utf-8")
+
+    assert "def open_new_order_for_customer" in source
+    assert "self.customer_select.select_value(customer_id)" in source
+    assert "Neue Bestellung aus Kundenordner" in source
+
+
 def test_order_panel_uses_searchable_customer_and_product_selects():
     source = Path("src/getraenkeladen_tool/ui/order_panel.py").read_text(encoding="utf-8")
 
