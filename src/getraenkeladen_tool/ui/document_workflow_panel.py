@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QMessageBox,
     QPushButton,
+    QTabWidget,
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
@@ -123,27 +124,37 @@ class DocumentWorkflowPanel(QWidget):
             "Die Positionen gelten nur fuer diesen Beleg. Der urspruengliche Auftrag bleibt als Vorlage erhalten.",
         )
         document_layout.addWidget(self.order_summary)
-        number_row = QHBoxLayout()
-        number_form = QFormLayout()
-        configure_form_layout(number_form)
-        number_form.addRow(self.number_label, self.document_number)
-        number_form.addRow("Lieferpauschale", self.delivery_fee_choice)
-        number_form.addRow(self.note_label, self.document_note)
-        number_row.addLayout(number_form)
-        document_layout.addLayout(number_row)
-        document_layout.addWidget(self.lines_table)
+
+        self.document_tabs = QTabWidget()
+        document_layout.addWidget(self.document_tabs, 1)
+
+        positions_tab = QWidget()
+        positions_layout = QVBoxLayout(positions_tab)
+        positions_layout.setContentsMargins(10, 10, 10, 10)
+        positions_layout.addWidget(self.lines_table)
         line_action_row = QHBoxLayout()
         self.remove_line_button = QPushButton(DOCUMENT_WORKFLOW_ACTIONS["removeDocumentLineButton"])
         self.remove_line_button.setObjectName("dangerAction")
         line_action_row.addWidget(self.remove_line_button)
         line_action_row.addStretch()
-        document_layout.addLayout(line_action_row)
+        positions_layout.addLayout(line_action_row)
+        total_bar = QWidget()
+        total_bar.setObjectName("totalBar")
+        total_layout = QHBoxLayout(total_bar)
+        total_layout.setContentsMargins(0, 0, 0, 0)
+        total_layout.addStretch()
+        total_layout.addWidget(self.total_label)
+        self.document_tabs.addTab(positions_tab, "1 Positionen")
+
+        deposit_tab = QWidget()
+        deposit_layout = QVBoxLayout(deposit_tab)
+        deposit_layout.setContentsMargins(10, 10, 10, 10)
         return_form = QFormLayout()
         configure_form_layout(return_form)
         return_form.addRow("Pfandart", self.deposit_return_select)
         return_form.addRow("Menge", self.deposit_return_quantity)
         return_form.addRow("Pfand EUR", self.deposit_return_eur)
-        document_layout.addLayout(return_form)
+        deposit_layout.addLayout(return_form)
         return_action_row = QHBoxLayout()
         self.add_return_button = QPushButton(DOCUMENT_WORKFLOW_ACTIONS["addDocumentDepositReturnButton"])
         self.remove_return_button = QPushButton(DOCUMENT_WORKFLOW_ACTIONS["removeDocumentDepositReturnButton"])
@@ -151,15 +162,25 @@ class DocumentWorkflowPanel(QWidget):
         return_action_row.addWidget(self.add_return_button)
         return_action_row.addWidget(self.remove_return_button)
         return_action_row.addStretch()
-        document_layout.addLayout(return_action_row)
-        document_layout.addWidget(self.returns_table)
-        total_bar = QWidget()
-        total_bar.setObjectName("totalBar")
-        total_layout = QHBoxLayout(total_bar)
-        total_layout.setContentsMargins(0, 0, 0, 0)
-        total_layout.addStretch()
-        total_layout.addWidget(self.total_label)
-        document_layout.addWidget(total_bar)
+        deposit_layout.addLayout(return_action_row)
+        deposit_layout.addWidget(self.returns_table)
+        self.document_tabs.addTab(deposit_tab, "2 Pfand")
+
+        details_tab = QWidget()
+        details_layout = QVBoxLayout(details_tab)
+        details_layout.setContentsMargins(10, 10, 10, 10)
+        number_form = QFormLayout()
+        configure_form_layout(number_form)
+        number_form.addRow(self.number_label, self.document_number)
+        number_form.addRow("Lieferpauschale", self.delivery_fee_choice)
+        number_form.addRow(self.note_label, self.document_note)
+        details_layout.addLayout(number_form)
+        details_layout.addStretch()
+        self.document_tabs.addTab(details_tab, "3 Belegdaten")
+
+        output_tab = QWidget()
+        output_layout = QVBoxLayout(output_tab)
+        output_layout.setContentsMargins(10, 10, 10, 10)
         action_row = QHBoxLayout()
         self.create_excel_button = QPushButton(self.create_excel_button_text)
         self.create_pdf_button = QPushButton(self.create_pdf_button_text)
@@ -172,8 +193,12 @@ class DocumentWorkflowPanel(QWidget):
         action_row.addWidget(self.open_excel_button)
         action_row.addWidget(self.open_pdf_button)
         action_row.addStretch()
-        document_layout.addLayout(action_row)
-        document_layout.addWidget(self.result_label)
+        output_layout.addLayout(action_row)
+        output_layout.addWidget(self.result_label)
+        output_layout.addStretch()
+        self.document_tabs.addTab(output_tab, "4 Ausgabe")
+        document_layout.addWidget(total_bar)
+
         body.addWidget(document_box)
         body.setStretchFactor(0, 1)
         body.setStretchFactor(1, 2)
@@ -509,8 +534,8 @@ class DeliveryNotePanel(DocumentWorkflowPanel):
     number_label = "LS-Nummer"
     note_label = "Kommentar oben rechts"
     default_note_text = ""
-    create_excel_button_text = "Lieferschein Excel erstellen"
-    create_pdf_button_text = "Lieferschein PDF erstellen"
+    create_excel_button_text = "Excel-Lieferschein erstellen"
+    create_pdf_button_text = "PDF-Lieferschein erstellen"
 
     def _create_document_for_order(self, session, assets: set[str]):
         return create_order_delivery_order(
@@ -531,8 +556,8 @@ class InvoicePanel(DocumentWorkflowPanel):
     number_label = "Rechnungsnummer"
     note_label = "Rechnungstext unten"
     default_note_text = "Rechnungsbetrag wird per Sepa Basis Lastschrift Mandat eingezogen."
-    create_excel_button_text = "Rechnung Excel erstellen"
-    create_pdf_button_text = "Rechnung PDF erstellen"
+    create_excel_button_text = "Excel-Rechnung erstellen"
+    create_pdf_button_text = "PDF-Rechnung erstellen"
 
     def _create_document_for_order(self, session, assets: set[str]):
         return create_order_invoice(

@@ -25,10 +25,10 @@ def test_document_workflow_panels_make_excel_pdf_generation_flow_visible():
 
     assert "class DeliveryNotePanel" in source
     assert "class InvoicePanel" in source
-    assert "Lieferschein Excel erstellen" in source
-    assert "Lieferschein PDF erstellen" in source
-    assert "Rechnung Excel erstellen" in source
-    assert "Rechnung PDF erstellen" in source
+    assert "Excel-Lieferschein erstellen" in source
+    assert "PDF-Lieferschein erstellen" in source
+    assert "Excel-Rechnung erstellen" in source
+    assert "PDF-Rechnung erstellen" in source
     assert "self.create_excel_button.clicked.connect(self.create_excel_document)" in source
     assert "self.create_pdf_button.clicked.connect(self.create_pdf_document)" in source
     assert "self._created_asset_label(assets)" in source
@@ -59,6 +59,19 @@ def test_document_workflow_uses_compact_order_search_instead_of_large_order_list
     assert "Suche zuruecksetzen" in source
     assert "Ausgewaehlter Auftrag" in source
     assert "Kunde, Auftragsnummer oder Lieferdatum suchen" in source
+
+
+def test_document_workflow_uses_rounded_tabs_for_document_steps():
+    source = Path("src/getraenkeladen_tool/ui/document_workflow_panel.py").read_text(encoding="utf-8")
+
+    assert "self.document_tabs = QTabWidget()" in source
+    assert 'addTab(positions_tab, "1 Positionen")' in source
+    assert 'addTab(deposit_tab, "2 Pfand")' in source
+    assert 'addTab(details_tab, "3 Belegdaten")' in source
+    assert 'addTab(output_tab, "4 Ausgabe")' in source
+    assert "document_layout.addWidget(total_bar)" in source
+    assert "PDF-Rechnung erstellen" in source
+    assert "PDF-Lieferschein erstellen" in source
 
 
 def test_document_workflow_allows_editing_lines_and_deposit_returns():
@@ -94,6 +107,20 @@ def test_order_panel_supports_editing_existing_orders():
     assert "Auftrag aktualisiert" in source
 
 
+def test_order_panel_uses_list_page_and_order_dialog_for_editing():
+    source = Path("src/getraenkeladen_tool/ui/order_panel.py").read_text(encoding="utf-8")
+
+    assert "QDialog" in source
+    assert "self.order_dialog" in source
+    assert "def open_order_dialog" in source
+    assert "def close_order_dialog_after_success" in source
+    assert "Neuen Auftrag anlegen" in source
+    assert "Auftrag speichern" in source
+    assert "WA_DeleteOnClose" in source
+    assert "self.order_workspace_tabs = QTabWidget()" not in source
+    assert "self.order_editor_widget" in source
+
+
 def test_order_panel_keeps_product_ids_when_existing_orders_are_loaded():
     source = Path("src/getraenkeladen_tool/ui/order_panel.py").read_text(encoding="utf-8")
 
@@ -114,7 +141,7 @@ def test_order_panel_shows_running_order_total():
 def test_order_panel_exposes_deposit_returns_new_order_and_copy_actions():
     source = Path("src/getraenkeladen_tool/ui/order_panel.py").read_text(encoding="utf-8")
 
-    assert '"newOrderButton": "Neuer Auftrag"' in source
+    assert '"newOrderButton": "Neuen Auftrag anlegen"' in source
     assert '"copyOrderButton": "Aus Auftrag kopieren"' in source
     assert '"addDepositReturnButton": "Pfand zurueck hinzufuegen"' in source
     assert "self.deposit_returns_table" in source
@@ -143,7 +170,7 @@ def test_order_panel_filters_orders_by_customer_and_can_copy_existing_order():
     assert "self.current_order_id = None" in source
     assert "Kopie aus Auftrag" in source
     assert "list_active_orders(session)" in source
-    assert "self.order_workspace_tabs.setCurrentIndex(0)" in source
+    assert "open_order_dialog" in source
 
 
 def test_order_panel_focuses_on_order_management_not_document_creation():
@@ -155,14 +182,14 @@ def test_order_panel_focuses_on_order_management_not_document_creation():
     assert "Excel/PDF aus Auftrag erstellen" not in source
 
 
-def test_order_panel_splits_creation_and_management_into_resize_friendly_workspaces():
+def test_order_panel_splits_list_and_dialog_into_resize_friendly_workspaces():
     source = Path("src/getraenkeladen_tool/ui/order_panel.py").read_text(encoding="utf-8")
 
-    assert "QTabWidget" in source
+    assert "QDialog" in source
     assert "ResponsiveSplitter" in source
     assert "PageHeader" in source
-    assert 'addTab(new_order_tab, "Neuer Auftrag")' in source
-    assert 'addTab(manage_orders_tab, "Auftraege verwalten")' in source
+    assert "self.order_editor_widget" in source
+    assert "layout.addWidget(orders_box, 1)" in source
     assert "setStretchFactor(0, 1)" in source
     assert "setStretchFactor(1, 3)" in source
     assert "setMaximumHeight(180)" not in source
@@ -202,3 +229,11 @@ def test_order_context_menu_offers_copy_delivery_note_and_invoice_actions():
     assert '"create_invoice": "Rechnung erstellen"' in source
     assert "self.request_delivery_note_for_selected_order()" in source
     assert "self.request_invoice_for_selected_order()" in source
+
+
+def test_order_context_archive_does_not_open_edit_dialog():
+    source = Path("src/getraenkeladen_tool/ui/order_panel.py").read_text(encoding="utf-8")
+
+    assert "elif selected == archive_action:" in source
+    assert "self.current_order_id = self._selected_order_id()" in source
+    assert "self.load_selected_order_id()\n            self.archive_selected_order()" not in source

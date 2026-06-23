@@ -421,6 +421,7 @@ QPushButton:disabled {
 
 QPushButton#primaryAction,
 QPushButton#newDeliveryButton,
+QPushButton#newOrderButton,
 QPushButton#actionCardButton,
 QPushButton#addOrderLineButton,
 QPushButton#saveOrderButton {
@@ -432,6 +433,7 @@ QPushButton#saveOrderButton {
 
 QPushButton#primaryAction:hover,
 QPushButton#newDeliveryButton:hover,
+QPushButton#newOrderButton:hover,
 QPushButton#actionCardButton:hover,
 QPushButton#addOrderLineButton:hover,
 QPushButton#saveOrderButton:hover {

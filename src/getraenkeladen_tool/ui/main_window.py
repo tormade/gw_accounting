@@ -68,7 +68,7 @@ class MainWindow(QMainWindow):
             "Einstellungen": (),
         }
 
-        self.dashboard_panel.new_delivery_requested.connect(self.open_orders_tab)
+        self.dashboard_panel.new_delivery_requested.connect(self.open_new_order_dialog)
         self.dashboard_panel.manage_orders_requested.connect(self.open_orders_tab)
         self.dashboard_panel.invoice_requested.connect(self.open_invoices_tab)
         self.order_panel.delivery_note_requested.connect(self.open_delivery_note_for_order)
@@ -101,6 +101,10 @@ class MainWindow(QMainWindow):
 
     def open_orders_tab(self) -> None:
         self.navigation.setCurrentRow(MAIN_TABS.index("Auftraege"))
+
+    def open_new_order_dialog(self) -> None:
+        self.open_orders_tab()
+        self.order_panel.open_new_order_dialog()
 
     def open_order_for_id(self, order_id: int) -> None:
         self.open_orders_tab()

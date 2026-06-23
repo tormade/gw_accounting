@@ -2,6 +2,7 @@ from datetime import date
 
 from PySide6.QtWidgets import (
     QComboBox,
+    QDialog,
     QFormLayout,
     QHBoxLayout,
     QLabel,
@@ -10,7 +11,6 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QPushButton,
     QHeaderView,
-    QTabWidget,
     QSpinBox,
     QTableWidget,
     QTableWidgetItem,
@@ -37,7 +37,7 @@ from .searchable_select import SearchableSelect
 
 ORDER_PANEL_ACTIONS = {
     "orderHelpButton": "?",
-    "newOrderButton": "Neuer Auftrag",
+    "newOrderButton": "Neuen Auftrag anlegen",
     "copyOrderButton": "Aus Auftrag kopieren",
     "refreshOrderDataButton": "Stammdaten laden",
     "addOrderLineButton": "Position hinzufuegen",
@@ -154,17 +154,17 @@ class OrderPanel(QWidget):
         self.add_deposit_return_button = self._button("addDepositReturnButton")
         self.remove_deposit_return_button = self._button("removeDepositReturnButton")
         self.save_order_button = self._button("saveOrderButton")
+        self.cancel_order_dialog_button = QPushButton("Abbrechen")
         self.refresh_orders_button = self._button("refreshOrdersButton")
         self.new_order_button = self._button("newOrderButton")
         self.copy_order_button = self._button("copyOrderButton")
         self.create_delivery_note_button = self._button("createDeliveryNoteFromOrderButton")
         self.create_invoice_button = self._button("createInvoiceFromOrderButton")
 
-        self.order_workspace_tabs = QTabWidget()
-        layout.addWidget(self.order_workspace_tabs, 1)
-
-        new_order_tab = QWidget()
-        new_order_layout = QVBoxLayout(new_order_tab)
+        self.order_dialog: QDialog | None = None
+        self.order_editor_widget = QWidget()
+        self.order_editor_widget.setObjectName("orderEditorDialogBody")
+        new_order_layout = QVBoxLayout(self.order_editor_widget)
         new_order_layout.setContentsMargins(0, 0, 0, 0)
         new_order_layout.setSpacing(14)
 
@@ -182,9 +182,9 @@ class OrderPanel(QWidget):
         customer_layout.addLayout(customer_form)
         customer_layout.addWidget(self.customer_summary)
         customer_actions = QHBoxLayout()
-        customer_actions.addWidget(self.new_order_button)
         customer_actions.addWidget(self.refresh_data_button)
         customer_actions.addWidget(self.save_order_button)
+        customer_actions.addWidget(self.cancel_order_dialog_button)
         customer_actions.addStretch()
         customer_layout.addLayout(customer_actions)
         new_order_layout.addWidget(customer_box)
@@ -239,16 +239,12 @@ class OrderPanel(QWidget):
         order_entry_splitter.setStretchFactor(0, 1)
         order_entry_splitter.setStretchFactor(1, 3)
 
-        manage_orders_tab = QWidget()
-        manage_orders_layout = QVBoxLayout(manage_orders_tab)
-        manage_orders_layout.setContentsMargins(0, 0, 0, 0)
-        manage_orders_layout.setSpacing(14)
-
         orders_box, orders_layout = self._section(
             ORDER_PANEL_SECTIONS[2],
             "Vorhandenen Auftrag doppelt anklicken oder per Rechtsklick weiterbearbeiten.",
         )
         orders_actions = QHBoxLayout()
+        orders_actions.addWidget(self.new_order_button)
         orders_actions.addWidget(self.refresh_orders_button)
         orders_actions.addWidget(self.copy_order_button)
         orders_actions.addWidget(self.create_delivery_note_button)
@@ -257,16 +253,14 @@ class OrderPanel(QWidget):
         orders_layout.addLayout(orders_actions)
         orders_layout.addWidget(self.order_table_search)
         orders_layout.addWidget(self.orders_table)
-        manage_orders_layout.addWidget(orders_box, 1)
-
-        self.order_workspace_tabs.addTab(new_order_tab, "Neuer Auftrag")
-        self.order_workspace_tabs.addTab(manage_orders_tab, "Auftraege verwalten")
+        layout.addWidget(orders_box, 1)
 
         layout.addWidget(self.status_label)
 
         self.help_button.clicked.connect(self.show_help)
         self.refresh_data_button.clicked.connect(self.refresh_master_data)
-        self.new_order_button.clicked.connect(self.reset_order_form)
+        self.new_order_button.clicked.connect(self.open_new_order_dialog)
+        self.cancel_order_dialog_button.clicked.connect(self.close_order_dialog)
         self.copy_order_button.clicked.connect(self.copy_selected_order_as_new)
         self.create_delivery_note_button.clicked.connect(self.request_delivery_note_for_selected_order)
         self.create_invoice_button.clicked.connect(self.request_invoice_for_selected_order)
@@ -317,6 +311,37 @@ class OrderPanel(QWidget):
 
     def show_help(self) -> None:
         QMessageBox.information(self, "Hilfe: Auftrag erfassen", ORDER_HELP_TEXT)
+
+    def open_new_order_dialog(self) -> None:
+        self.reset_order_form()
+        self.open_order_dialog("Neuen Auftrag anlegen")
+
+    def open_order_dialog(self, title: str = "Auftrag bearbeiten") -> None:
+        if self.order_dialog is not None:
+            self.order_dialog.close()
+        self.order_dialog = QDialog(self)
+        self.order_dialog.setWindowTitle(title)
+        self.order_dialog.setModal(True)
+        self.order_dialog.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
+        self.order_dialog.resize(1100, 760)
+        dialog_layout = QVBoxLayout(self.order_dialog)
+        dialog_layout.setContentsMargins(18, 18, 18, 18)
+        dialog_layout.addWidget(self.order_editor_widget)
+        self.order_dialog.finished.connect(lambda _result: self._restore_order_editor_parent())
+        self.order_dialog.show()
+
+    def _restore_order_editor_parent(self) -> None:
+        self.order_editor_widget.setParent(self)
+        self.order_dialog = None
+
+    def close_order_dialog(self) -> None:
+        if self.order_dialog is not None:
+            self.order_dialog.close()
+
+    def close_order_dialog_after_success(self, order_number: str) -> None:
+        self.close_order_dialog()
+        self.refresh_orders()
+        self.status_label.setText(f"Auftrag {order_number} gespeichert. Auftragsliste wurde aktualisiert.")
 
     def reset_order_form(self) -> None:
         self.current_order_id = None
@@ -510,6 +535,14 @@ class OrderPanel(QWidget):
             self.current_order_status = order.status
             self.order_mode_label.setText(f"Auftrag bearbeiten: {order.order_number}")
             self.show_orders(list_active_orders(session))
+            self.close_order_dialog_after_success(order.order_number)
+        except Exception as error:
+            self.status_label.setText(f"Auftrag konnte nicht gespeichert werden: {error}")
+            QMessageBox.warning(
+                self,
+                "Auftrag nicht gespeichert",
+                f"Der Auftrag konnte nicht gespeichert werden.\n\nGrund: {error}",
+            )
         finally:
             session.close()
 
@@ -569,6 +602,7 @@ class OrderPanel(QWidget):
             order = get_order(session, order_id)
             self.current_order_id = order.id
             self.populate_order_form(order)
+            self.open_order_dialog(f"Auftrag bearbeiten: {order.order_number}")
             self.status_label.setText("Auftrag geladen. Positionen anpassen und Auftrag speichern.")
         finally:
             session.close()
@@ -610,7 +644,7 @@ class OrderPanel(QWidget):
         self.order_mode_label.setText(f"Kopie aus Auftrag {original_number}")
         self.order_number.clear()
         self.delivery_date.set_iso_date(date.today().isoformat())
-        self.order_workspace_tabs.setCurrentIndex(0)
+        self.open_order_dialog(f"Auftrag aus {original_number} kopieren")
         self.status_label.setText("Auftrag kopiert. Bitte neue Auftragsnummer und Datum pruefen.")
 
     def request_delivery_note_for_selected_order(self) -> None:
@@ -632,7 +666,7 @@ class OrderPanel(QWidget):
             self.status_label.setText("Keine Datenbankverbindung vorhanden.")
             return
         if self.current_order_id is None:
-            self.load_selected_order_id()
+            self.current_order_id = self._selected_order_id()
         if self.current_order_id is None:
             self.status_label.setText("Bitte zuerst einen Auftrag auswaehlen.")
             return
@@ -666,7 +700,7 @@ class OrderPanel(QWidget):
         elif selected == invoice_action:
             self.request_invoice_for_selected_order()
         elif selected == archive_action:
-            self.load_selected_order_id()
+            self.current_order_id = self._selected_order_id()
             self.archive_selected_order()
 
     def _selected_order_id(self) -> int | None:

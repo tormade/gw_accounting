@@ -44,6 +44,16 @@ def test_main_window_uses_sidebar_app_shell_instead_of_top_tabs():
     assert "self.tabs = QTabWidget()" not in source
 
 
+def test_dashboard_new_delivery_opens_order_dialog():
+    from pathlib import Path
+
+    source = Path("src/getraenkeladen_tool/ui/main_window.py").read_text(encoding="utf-8")
+
+    assert "self.dashboard_panel.new_delivery_requested.connect(self.open_new_order_dialog)" in source
+    assert "def open_new_order_dialog" in source
+    assert "self.order_panel.open_new_order_dialog()" in source
+
+
 def test_theme_uses_winklmeier_work_tool_direction():
     assert "#f4f1ea" in APP_STYLESHEET
     assert "#116149" in APP_STYLESHEET
@@ -53,6 +63,7 @@ def test_theme_uses_winklmeier_work_tool_direction():
     assert "helpButton" in APP_STYLESHEET
     assert "sectionTitle" in APP_STYLESHEET
     assert "documentHeaderCard" in APP_STYLESHEET
+    assert "QPushButton#newOrderButton" in APP_STYLESHEET
     assert "pageHeader" in APP_STYLESHEET
     assert "actionCard" in APP_STYLESHEET
     assert "workspaceSplitter" in APP_STYLESHEET
@@ -206,7 +217,7 @@ def test_order_tab_exposes_guided_order_actions():
 
     assert ORDER_PANEL_ACTIONS == {
         "orderHelpButton": "?",
-        "newOrderButton": "Neuer Auftrag",
+        "newOrderButton": "Neuen Auftrag anlegen",
         "copyOrderButton": "Aus Auftrag kopieren",
         "refreshOrderDataButton": "Stammdaten laden",
         "addOrderLineButton": "Position hinzufuegen",
@@ -367,13 +378,14 @@ def test_dashboard_uses_cockpit_quick_actions_without_calendar():
     assert "Rechnung erstellen" in source
 
 
-def test_dashboard_primary_action_opens_order_tab():
+def test_dashboard_primary_action_opens_new_order_dialog():
     from pathlib import Path
 
     source = Path("src/getraenkeladen_tool/ui/main_window.py").read_text(encoding="utf-8")
 
-    assert "new_delivery_requested.connect(self.open_orders_tab)" in source
+    assert "new_delivery_requested.connect(self.open_new_order_dialog)" in source
     assert 'MAIN_TABS.index("Auftraege")' in source
+    assert "self.order_panel.open_new_order_dialog()" in source
 
 
 def test_dashboard_quick_actions_open_order_and_invoice_workspaces():
