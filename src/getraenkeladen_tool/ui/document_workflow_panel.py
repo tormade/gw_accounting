@@ -111,6 +111,7 @@ class DocumentWorkflowPanel(QWidget):
             "1. Kundenbestellung suchen",
             "Kunde, Bestellnummer oder Lieferdatum eingeben. Danach diese Bestellung verwenden.",
         )
+        self.order_box = order_box
         order_layout.addWidget(self.order_select)
         refresh_row = QHBoxLayout()
         self.refresh_button = QPushButton("Liste aktualisieren")
@@ -130,6 +131,7 @@ class DocumentWorkflowPanel(QWidget):
         document_layout.addWidget(self.order_summary)
 
         self.document_tabs = QTabWidget()
+        self.document_tabs.setUsesScrollButtons(False)
         document_layout.addWidget(self.document_tabs, 1)
 
         positions_tab = QWidget()
@@ -148,7 +150,7 @@ class DocumentWorkflowPanel(QWidget):
         total_layout.setContentsMargins(0, 0, 0, 0)
         total_layout.addStretch()
         total_layout.addWidget(self.total_label)
-        self.document_tabs.addTab(positions_tab, "1 Artikel pruefen")
+        self.document_tabs.addTab(positions_tab, "1 Artikel")
 
         deposit_tab = QWidget()
         deposit_layout = QVBoxLayout(deposit_tab)
@@ -168,7 +170,7 @@ class DocumentWorkflowPanel(QWidget):
         return_action_row.addStretch()
         deposit_layout.addLayout(return_action_row)
         deposit_layout.addWidget(self.returns_table)
-        self.document_tabs.addTab(deposit_tab, "2 Leergut/Pfand zurueck")
+        self.document_tabs.addTab(deposit_tab, "2 Pfand")
 
         details_tab = QWidget()
         details_layout = QVBoxLayout(details_tab)
@@ -180,7 +182,7 @@ class DocumentWorkflowPanel(QWidget):
         number_form.addRow(self.note_label, self.document_note)
         details_layout.addLayout(number_form)
         details_layout.addStretch()
-        self.document_tabs.addTab(details_tab, "3 Nummer und Text")
+        self.document_tabs.addTab(details_tab, "3 Nummer/Text")
 
         output_tab = QWidget()
         output_layout = QVBoxLayout(output_tab)
@@ -210,7 +212,7 @@ class DocumentWorkflowPanel(QWidget):
         output_layout.addLayout(secondary_action_row)
         output_layout.addWidget(self.result_label)
         output_layout.addStretch()
-        self.document_tabs.addTab(output_tab, "4 Excel/PDF erstellen")
+        self.document_tabs.addTab(output_tab, "4 Excel/PDF")
         document_layout.addWidget(total_bar)
 
         body.addWidget(document_box)
@@ -277,6 +279,7 @@ class DocumentWorkflowPanel(QWidget):
 
     def reset_order_selection(self) -> None:
         self.current_order_id = None
+        self.order_box.setVisible(True)
         self.order_select.set_search_text("")
         self.order_summary.setText("Noch keine Bestellung ausgewaehlt.")
         self.status_label.setText("Bitte Kundenbestellung suchen und verwenden.")
@@ -288,6 +291,7 @@ class DocumentWorkflowPanel(QWidget):
         try:
             order = get_order(session, order_id)
             self.current_order_id = order.id
+            self.order_box.setVisible(False)
             self.order_summary.setText(
                 "Ausgewaehlte Bestellung: "
                 f"{order.order_number} | {order.customer.name} | Lieferung {to_display_date(order.delivery_date)} | "

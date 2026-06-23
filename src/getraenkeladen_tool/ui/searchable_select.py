@@ -115,6 +115,8 @@ class SearchableSelect(QWidget):
             self.result_list.addItem(empty_item)
 
         self._current_value = matches[0].value if len(matches) == 1 else None
+        if len(matches) == 1:
+            self.help_label.setText("Eindeutiger Treffer. Sie koennen direkt weiterarbeiten.")
         self.selection_changed.emit()
 
     def _select_item(self, item: QListWidgetItem) -> None:

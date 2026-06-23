@@ -99,7 +99,7 @@ def test_searchable_select_collapses_results_after_selection_and_reopens_while_t
 
     select.set_search_text("Hotel")
 
-    assert select.help_label.text() == "Treffer in der Liste anklicken."
+    assert select.help_label.text() == "Eindeutiger Treffer. Sie koennen direkt weiterarbeiten."
     assert select.result_list.maximumHeight() == 130
     assert select.visible_labels() == ["Hotel Sued"]
 
@@ -118,3 +118,16 @@ def test_searchable_select_enter_accepts_first_visible_result():
     assert select.search_input.text() == "Cafe Nord"
     assert select.result_list.maximumHeight() == 0
     assert select.help_label.text() == "Ausgewaehlt. Zum Aendern einfach neuen Namen tippen."
+
+
+def test_searchable_select_explains_single_match_is_ready_to_use():
+    _app()
+    from getraenkeladen_tool.ui.searchable_select import SearchableSelect
+
+    select = SearchableSelect("Produkt suchen")
+    select.set_items([("Adelholzener Classic 12x0,5 PET", 1, "7,90 EUR")])
+
+    select.set_search_text("Classic")
+
+    assert select.current_value() == 1
+    assert select.help_label.text() == "Eindeutiger Treffer. Sie koennen direkt weiterarbeiten."

@@ -197,13 +197,23 @@ def test_document_workflow_uses_rounded_tabs_for_document_steps():
     source = Path("src/getraenkeladen_tool/ui/document_workflow_panel.py").read_text(encoding="utf-8")
 
     assert "self.document_tabs = QTabWidget()" in source
-    assert 'addTab(positions_tab, "1 Artikel pruefen")' in source
-    assert 'addTab(deposit_tab, "2 Leergut/Pfand zurueck")' in source
-    assert 'addTab(details_tab, "3 Nummer und Text")' in source
-    assert 'addTab(output_tab, "4 Excel/PDF erstellen")' in source
+    assert "self.document_tabs.setUsesScrollButtons(False)" in source
+    assert 'addTab(positions_tab, "1 Artikel")' in source
+    assert 'addTab(deposit_tab, "2 Pfand")' in source
+    assert 'addTab(details_tab, "3 Nummer/Text")' in source
+    assert 'addTab(output_tab, "4 Excel/PDF")' in source
     assert "document_layout.addWidget(total_bar)" in source
     assert "Nur PDF-Rechnung" in source
     assert "Nur PDF-Lieferschein" in source
+
+
+def test_document_workflow_hides_order_search_after_preselected_order_is_loaded():
+    source = Path("src/getraenkeladen_tool/ui/document_workflow_panel.py").read_text(encoding="utf-8")
+
+    assert "self.order_box = order_box" in source
+    assert "self.order_box.setVisible(False)" in source
+    assert "self.order_box.setVisible(True)" in source
+    assert 'self.status_label.setText("Bestellung verwendet. Artikel pruefen und danach Excel oder PDF erstellen.")' in source
 
 
 def test_document_workflow_allows_editing_lines_and_deposit_returns():

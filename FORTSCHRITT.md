@@ -58,6 +58,10 @@ Das Produktziel steht in `docs/zielbild.md`: ein schlankes lokales Windows-Buero
 - Suchfelder sind sprachlich kuerzer und fehlertoleranter: klare Trefferliste, Doppelklick/Enter-Unterstuetzung als Bonus und kein technisches "unten"-Wording mehr.
 - Hauptnavigation ist als "Hauptnavigation" benannt und fokussierbar, damit Tastatur- und Assistenzbedienung verlaesslicher werden.
 - Startseite kennzeichnet Beispielkontakte jetzt eindeutig als Demo-Beispiele, damit sie nicht mit echten Tagesaufgaben verwechselt werden.
+- Voller Mac-Oberflaechen-Haupttest abgeschlossen: Kunde Cafe Nord gesucht, Bestellung TEST-UI-230623-1 angelegt und daraus Lieferschein LS-UI-230623-1 sowie Rechnung RE-UI-230623-1 erzeugt.
+- Lieferschein und Rechnung wurden jeweils als Excel und PDF im Kundenordner erzeugt und die Excel-Dateien enthalten Summenformeln fuer Positionen und Gesamtbetrag.
+- Belegdialoge nach 60+-Erstnutzer-Test vereinfacht: Bei vorausgewaehlter Bestellung wird die Suchspalte ausgeblendet, alle Schritte sind als kurze Reiter sichtbar und die Summe bleibt prominent.
+- Suchfelder zeigen bei eindeutigem Treffer jetzt, dass direkt weitergearbeitet werden kann, statt irrefuehrend noch einen Pflicht-Klick zu suggerieren.
 
 ## In Arbeit
 
