@@ -53,7 +53,7 @@ class CustomerFolderPanel(QWidget):
         self.refresh_button = QPushButton("Kunden laden")
         self.open_folder_button = QPushButton("Kundenordner oeffnen")
         self.open_file_button = QPushButton("Datei oeffnen")
-        self.new_order_button = QPushButton("Neue Bestellung aus letzter Datei")
+        self.new_order_button = QPushButton("Neue Bestellung fuer Kunden")
         self.delivery_note_button = QPushButton("Lieferschein erstellen")
         self.invoice_button = QPushButton("Rechnung erstellen")
         self.status_label = QLabel("Noch kein Kunde ausgewaehlt.")
@@ -98,6 +98,8 @@ class CustomerFolderPanel(QWidget):
         layout.addWidget(self.status_label)
 
         self.customer_select.selection_changed.connect(self.load_selected_customer)
+        self.files_table.itemSelectionChanged.connect(self.update_action_state)
+        self.orders_table.itemSelectionChanged.connect(self.update_action_state)
         self.refresh_button.clicked.connect(self.refresh_customers)
         self.open_folder_button.clicked.connect(self.open_customer_folder)
         self.open_file_button.clicked.connect(self.open_selected_file)
@@ -106,6 +108,7 @@ class CustomerFolderPanel(QWidget):
         self.invoice_button.clicked.connect(self.request_invoice_for_selected_order)
 
         self.refresh_customers()
+        self.update_action_state()
 
     def _table(self, columns: tuple[str, ...], minimum_height: int) -> QTableWidget:
         table = QTableWidget(0, len(columns))
@@ -189,11 +192,13 @@ class CustomerFolderPanel(QWidget):
             f"{snapshot.customer.name}: Kundenordner {folder_status}, "
             f"{len(snapshot.files)} Dateien, {len(snapshot.orders)} Bestellungen."
         )
+        self.update_action_state()
 
     def open_customer_folder(self) -> None:
         if self.current_folder_path is None:
+            self.status_label.setText("Bitte zuerst einen Kunden auswaehlen.")
             return
-        if not self.current_folder_path.exists():
+        if not self.current_folder_path.is_dir():
             self._show_missing_file("Der Kundenordner wurde nicht gefunden.")
             return
         self._open_url(self.current_folder_path)
@@ -202,6 +207,7 @@ class CustomerFolderPanel(QWidget):
         row = self.files_table.currentRow()
         path = self.files_by_row.get(row)
         if path is None:
+            self.status_label.setText("Bitte zuerst eine Datei im Kundenordner auswaehlen.")
             return
         if not path.exists():
             self._show_missing_file("Die Datei wurde nicht gefunden.")
@@ -209,21 +215,38 @@ class CustomerFolderPanel(QWidget):
         self._open_url(path)
 
     def request_new_order_for_customer(self) -> None:
-        if self.current_customer_id is not None:
-            self.new_order_requested.emit(self.current_customer_id)
+        if self.current_customer_id is None:
+            self.status_label.setText("Bitte zuerst einen Kunden auswaehlen.")
+            return
+        self.new_order_requested.emit(self.current_customer_id)
 
     def _selected_order_id(self) -> int | None:
         return self.order_ids_by_row.get(self.orders_table.currentRow())
 
     def request_delivery_note_for_selected_order(self) -> None:
         order_id = self._selected_order_id()
-        if order_id is not None:
-            self.delivery_note_requested.emit(order_id)
+        if order_id is None:
+            self.status_label.setText("Bitte zuerst eine Bestellung dieses Kunden auswaehlen.")
+            return
+        self.delivery_note_requested.emit(order_id)
 
     def request_invoice_for_selected_order(self) -> None:
         order_id = self._selected_order_id()
-        if order_id is not None:
-            self.invoice_requested.emit(order_id)
+        if order_id is None:
+            self.status_label.setText("Bitte zuerst eine Bestellung dieses Kunden auswaehlen.")
+            return
+        self.invoice_requested.emit(order_id)
+
+    def update_action_state(self) -> None:
+        has_customer = self.current_customer_id is not None
+        has_folder = self.current_folder_path is not None and self.current_folder_path.is_dir()
+        has_file = self.files_by_row.get(self.files_table.currentRow()) is not None
+        has_order = self._selected_order_id() is not None
+        self.open_folder_button.setEnabled(has_folder)
+        self.open_file_button.setEnabled(has_file)
+        self.new_order_button.setEnabled(has_customer)
+        self.delivery_note_button.setEnabled(has_order)
+        self.invoice_button.setEnabled(has_order)
 
     def _set_row(self, table: QTableWidget, row: int, values: tuple[str, ...]) -> None:
         for column, value in enumerate(values):
