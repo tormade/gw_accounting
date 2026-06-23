@@ -4,6 +4,10 @@
 
 Onboarding-/Migrations-Tool als belastbare Datenbasis.
 
+## Zielbild
+
+Das Produktziel steht in `docs/zielbild.md`: ein schlankes lokales Windows-Buerowerkzeug fuer Kundenkontakt, Bestellung, Lieferschein, Rechnung, offene Posten, Tagesliste und Auswertung. Der wichtigste Hauptweg ist Kunde oeffnen -> letzte Mengen sehen -> neue Mengen erfassen -> Beleg erzeugen.
+
 ## Erledigt
 
 - UI-Prototyp mit Auftragsverwaltung, Rechnungs-/Lieferschein-Erzeugung, Belegarchiv und Stammdatenpflege.
@@ -26,6 +30,10 @@ Onboarding-/Migrations-Tool als belastbare Datenbasis.
 - Importlauf mit einem echten kompletten Windows-Kundenordner testen.
 - Hauptweg nach Migration: Kunde oeffnen -> letzte Mengen sehen -> Mengen anpassen -> Beleg erzeugen.
 - Offene Posten, Tagesliste und spaetere Windows-Verpackung.
+- Startbildschirm mit Kennzahlen: heutige Lieferungen, offene Posten, faellige Kontakte.
+- Tagesliste fuer Fahrer mit Adresse, Zeitfenster und Kundenhinweisen.
+- Kontakt-/Wiedervorlage ohne Kunden, die sich selbst melden.
+- Auswertung fuer Stopps, Mengen und Umsatz mit Excel-Export.
 
 ## Naechste Aufgabe
 
