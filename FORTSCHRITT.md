@@ -22,6 +22,7 @@ Das Produktziel steht in `docs/zielbild.md`: ein schlankes lokales Windows-Buero
 - Kundensortiment-Datenmodell mit letzter Menge, alter Quelle und aktuellem zentralem Preis.
 - Preisabweichungen zwischen Kunden-Excel und zentralem Artikelstamm werden als offene Prueffaelle erkannt.
 - Prueflisten-UI fuer offene Kunden-/Artikel-/Preiskonflikte mit Erledigt/Wieder-oeffnen-Aktion.
+- Pruefliste mit konkreten Aktionen: zentraler Preis, Excel-Preis oder Artikelalias bestaetigen.
 - Kundensortiment im Auftragsdialog: letzte Artikel sehen und direkt als Position uebernehmen.
 
 ## In Arbeit
@@ -31,7 +32,7 @@ Das Produktziel steht in `docs/zielbild.md`: ein schlankes lokales Windows-Buero
 ## Offen
 
 - Importlauf mit einem echten kompletten Windows-Kundenordner testen.
-- Pruefliste fachlich vertiefen: konkrete Korrekturaktionen fuer Adresse, Artikelalias und Preisentscheidung.
+- Pruefliste fachlich weiter vertiefen: konkrete Korrekturaktionen fuer Kundendaten wie Adresse und Telefon.
 - Offene Posten, Tagesliste und spaetere Windows-Verpackung.
 - Startbildschirm mit Kennzahlen: heutige Lieferungen, offene Posten, faellige Kontakte.
 - Tagesliste fuer Fahrer mit Adresse, Zeitfenster und Kundenhinweisen.

@@ -208,6 +208,22 @@ def test_main_window_uses_real_checklist_panel_for_migration_conflicts():
     assert 'self._panel(\n            "Pruefliste"' not in source
 
 
+def test_checklist_panel_exposes_concrete_resolution_actions():
+    from pathlib import Path
+
+    source = Path("src/getraenkeladen_tool/ui/checklist_panel.py").read_text(encoding="utf-8")
+
+    assert "resolve_price_mismatch" in source
+    assert "confirm_product_alias" in source
+    assert "self.product_select = SearchableSelect" in source
+    assert '"useCentralPriceButton": "Zentralen Preis nutzen"' in source
+    assert '"keepExcelPriceButton": "Excel-Preis behalten"' in source
+    assert '"confirmProductAliasButton": "Artikel zuordnen"' in source
+    assert "def use_central_price_for_selected_issue" in source
+    assert "def keep_excel_price_for_selected_issue" in source
+    assert "def confirm_product_alias_for_selected_issue" in source
+
+
 def test_date_fields_use_calendar_input():
     from getraenkeladen_tool.ui.customer_panel import DATE_FIELD_WIDGETS as CUSTOMER_DATE_FIELDS
     from getraenkeladen_tool.ui.document_panel import DATE_FIELD_WIDGETS as DOCUMENT_DATE_FIELDS
