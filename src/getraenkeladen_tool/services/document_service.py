@@ -4,6 +4,7 @@ from shutil import copy2
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from ..kern.regeln.beleg import BelegParameter, PfandRueckgabe, Position, berechne_beleg
 from ..models import Customer, Document, OpenItem
 from ..schemas import DocumentCreate
 from .excel_service import build_delivery_note_workbook, build_invoice_workbook
@@ -174,13 +175,15 @@ def _copy_invoice_pdf_to_datev(pdf_path: Path, datev_upload_dir: Path, document_
 
 
 def _document_total_cents(payload: DocumentCreate) -> int:
-    total_cents = sum(
-        (item.unit_price_cents + item.deposit_cents) * item.quantity
-        for item in payload.line_items
-    ) - sum(
-        item.deposit_cents * item.quantity
-        for item in payload.deposit_returns
+    result = berechne_beleg(
+        positionen=[
+            Position(item.name, item.quantity, item.unit_price_cents, item.deposit_cents)
+            for item in payload.line_items
+        ],
+        ruecknahmen=[
+            PfandRueckgabe(item.name, item.quantity, item.deposit_cents)
+            for item in payload.deposit_returns
+        ],
+        parameter=BelegParameter(lieferpauschale_aktiv=payload.delivery_fee_enabled),
     )
-    if payload.delivery_fee_enabled:
-        total_cents += 390
-    return total_cents
+    return result.brutto_cents

@@ -8,6 +8,16 @@ from getraenkeladen_tool.services.customer_service import create_customer
 from getraenkeladen_tool.services.document_service import create_document, latest_invoice_number
 
 
+def test_document_outputs_use_shared_core_calculation():
+    document_source = Path("src/getraenkeladen_tool/services/document_service.py").read_text(encoding="utf-8")
+    excel_source = Path("src/getraenkeladen_tool/services/excel_service.py").read_text(encoding="utf-8")
+    pdf_source = Path("src/getraenkeladen_tool/services/pdf_service.py").read_text(encoding="utf-8")
+
+    assert "berechne_beleg" in document_source
+    assert "berechne_beleg" in excel_source
+    assert "berechne_beleg" in pdf_source
+
+
 def test_create_invoice_writes_excel_pdf_file_and_open_item(session, tmp_path: Path):
     customer_folder = tmp_path / "Kunden" / "Cafe Nord"
     customer = create_customer(

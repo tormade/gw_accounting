@@ -15,6 +15,7 @@ from reportlab.platypus import (
     TableStyle,
 )
 
+from ..kern.regeln.beleg import BelegParameter, PfandRueckgabe, Position, berechne_beleg
 from .file_service import ensure_parent_folder
 
 
@@ -210,11 +211,29 @@ def _build_story(
 
 def _line_rows(line_items: list[dict], deposit_returns: list[dict], delivery_fee_enabled: bool) -> tuple[list[list[str]], int]:
     rows = [["Menge", "Artikel", "Preis", "Pfand", "Summe"]]
-    total_cents = 0
-    for item in line_items:
+    beleg_summen = berechne_beleg(
+        positionen=[
+            Position(
+                bezeichnung=item["name"],
+                menge=item["quantity"],
+                preis_cents=item["unit_price_cents"],
+                pfand_cents=item.get("deposit_cents", 0),
+            )
+            for item in line_items
+        ],
+        ruecknahmen=[
+            PfandRueckgabe(
+                bezeichnung=deposit_return["name"],
+                menge=deposit_return["quantity"],
+                pfand_cents=deposit_return["deposit_cents"],
+            )
+            for deposit_return in deposit_returns
+        ],
+        parameter=BelegParameter(lieferpauschale_aktiv=delivery_fee_enabled),
+    )
+    for index, item in enumerate(line_items):
         deposit_cents = item.get("deposit_cents", 0)
-        line_total = (item["unit_price_cents"] + deposit_cents) * item["quantity"]
-        total_cents += line_total
+        line_total = beleg_summen.positionssummen_cents[index]
         rows.append(
             [
                 str(item["quantity"]),
@@ -225,13 +244,19 @@ def _line_rows(line_items: list[dict], deposit_returns: list[dict], delivery_fee
             ]
         )
     if delivery_fee_enabled:
-        total_cents += 390
-        rows.append(["1", "Lieferpauschale", "", _format_euro(390), _format_euro(390)])
+        rows.append(
+            [
+                "1",
+                "Lieferpauschale",
+                "",
+                _format_euro(beleg_summen.lieferpauschale_cents),
+                _format_euro(beleg_summen.lieferpauschale_cents),
+            ]
+        )
     if deposit_returns:
         rows.append(["", "Pfandrueckgabe:", "", "", ""])
-        for deposit_return in deposit_returns:
-            line_total = -deposit_return["deposit_cents"] * deposit_return["quantity"]
-            total_cents += line_total
+        for index, deposit_return in enumerate(deposit_returns):
+            line_total = beleg_summen.ruecknahme_summen_cents[index]
             rows.append(
                 [
                     str(deposit_return["quantity"]),
@@ -241,7 +266,7 @@ def _line_rows(line_items: list[dict], deposit_returns: list[dict], delivery_fee
                     _format_euro(line_total),
                 ]
             )
-    return rows, total_cents
+    return rows, beleg_summen.brutto_cents
 
 
 def _draw_footer(canvas, document) -> None:

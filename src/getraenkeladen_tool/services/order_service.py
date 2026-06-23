@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session, selectinload
 
 from ..models import Customer, Document, Order, OrderDepositReturn, OrderLine, Product
 from ..schemas import DepositReturnCreate, DocumentCreate, DocumentLineItem, OrderCreate
-from .document_service import create_document
+from ..vorgaenge.beleg_erzeugen import beleg_erzeugen
 
 
 def create_order(session: Session, payload: OrderCreate) -> Order:
@@ -146,7 +146,7 @@ def create_order_delivery_order(
     assets: set[str] | None = None,
 ) -> Document:
     order = get_order(session, order_id)
-    delivery_order = create_document(
+    delivery_order = beleg_erzeugen(
         session,
         DocumentCreate(
             customer_id=order.customer_id,
@@ -182,7 +182,7 @@ def create_order_invoice(
     assets: set[str] | None = None,
 ) -> Document:
     order = get_order(session, order_id)
-    invoice = create_document(
+    invoice = beleg_erzeugen(
         session,
         DocumentCreate(
             customer_id=order.customer_id,

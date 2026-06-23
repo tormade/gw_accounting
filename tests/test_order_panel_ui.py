@@ -228,6 +228,13 @@ def test_document_workflow_allows_editing_lines_and_deposit_returns():
     assert "def remove_selected_line" in source
 
 
+def test_document_workflow_preview_uses_shared_core_calculation():
+    source = Path("src/getraenkeladen_tool/ui/document_workflow_panel.py").read_text(encoding="utf-8")
+
+    assert "berechne_beleg" in source
+    assert "BelegParameter(lieferpauschale_aktiv=self._delivery_fee_enabled())" in source
+
+
 def test_document_workflow_uses_clearer_deposit_and_delivery_fee_labels():
     source = Path("src/getraenkeladen_tool/ui/document_workflow_panel.py").read_text(encoding="utf-8")
 

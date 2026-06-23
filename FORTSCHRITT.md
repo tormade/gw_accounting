@@ -47,14 +47,18 @@ Das Produktziel steht in `docs/zielbild.md`: ein schlankes lokales Windows-Buero
 - Kundenordner unterscheidet jetzt sichtbar zwischen "Neue Bestellung aus letzten Mengen starten" und "Neue leere Bestellung starten".
 - Technische Zielarchitektur aus neuem Input uebernommen: Clean-Architecture-Richtung mit Kern, Vorgaengen, Adapter und UI-Schale.
 - Architektur-Invarianten in `AGENTS.md` verankert und Roadmap um schrittweise technische Migration ergaenzt.
+- Belegberechnung als UI- und DB-freie Kernregel umgesetzt und mit Golden-Werten fuer Metzgerei Karl abgesichert.
+- Offene Posten, Excel, PDF und Belegvorschau nutzen dieselbe Kernberechnung.
+- Erster Anwendungsvorgang `beleg_erzeugen` angelegt und im Bestell-Hauptweg fuer Lieferschein/Rechnung genutzt.
 
 ## In Arbeit
 
-- Kundenordner-Arbeitsplatz weiter abrunden und Beleglogik schrittweise in Kern/Vorgaenge/Adapter trennen.
+- Kundenordner-Arbeitsplatz weiter abrunden und Beleg-Snapshots/Adapter schrittweise aus den alten Services trennen.
 
 ## Offen
 
 - Importlauf mit einem echten kompletten Windows-Kundenordner testen.
+- Belegpositionen langfristig als eigenen Snapshot persistieren, damit alte Belege voll reproduzierbar bleiben.
 - Offene Posten, Tagesliste und spaetere Windows-Verpackung.
 - Startbildschirm mit Kennzahlen: heutige Lieferungen, offene Posten, faellige Kontakte.
 - Tagesliste fuer Fahrer mit Adresse, Zeitfenster und Kundenhinweisen.
@@ -63,4 +67,4 @@ Das Produktziel steht in `docs/zielbild.md`: ein schlankes lokales Windows-Buero
 
 ## Naechste Aufgabe
 
-Bedienprobe mit einem echten kompletten Kundenordner durchspielen und daraus die naechsten UI-Korrekturen fuer den Hauptweg ableiten.
+Beleg-Snapshot-Datenmodell und Adapter-Grenze vorbereiten, danach Bedienprobe mit einem echten kompletten Kundenordner durchspielen.

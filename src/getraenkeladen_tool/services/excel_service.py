@@ -6,6 +6,7 @@ from xml.etree import ElementTree as ET
 
 from openpyxl import load_workbook
 
+from ..kern.regeln.beleg import BelegParameter, PfandRueckgabe, Position, berechne_beleg
 from .file_service import ensure_parent_folder
 
 
@@ -102,6 +103,27 @@ def _build_document_workbook(
     if len(deposit_returns) > MAX_RETURN_ROW - FIRST_RETURN_ROW + 1:
         raise ValueError("Die Winklmeier-Vorlage erlaubt maximal 6 Pfandrueckgabe-Zeilen.")
 
+    beleg_summen = berechne_beleg(
+        positionen=[
+            Position(
+                bezeichnung=item["name"],
+                menge=item["quantity"],
+                preis_cents=item["unit_price_cents"],
+                pfand_cents=item.get("deposit_cents", 0),
+            )
+            for item in line_items
+        ],
+        ruecknahmen=[
+            PfandRueckgabe(
+                bezeichnung=deposit_return["name"],
+                menge=deposit_return["quantity"],
+                pfand_cents=deposit_return["deposit_cents"],
+            )
+            for deposit_return in deposit_returns
+        ],
+        parameter=BelegParameter(lieferpauschale_aktiv=delivery_fee_enabled),
+    )
+
     cached_formula_values = {}
     for row in range(FIRST_ITEM_ROW, MAX_ITEM_ROW + 1):
         sheet.cell(row=row, column=1, value=None)
@@ -119,16 +141,12 @@ def _build_document_workbook(
         sheet.cell(row=row, column=5, value=f"=(C{row}+D{row})*A{row}")
         cached_formula_values[f"E{row}"] = 0
 
-    quantity_total = 0
-    delivery_total_cents = 0
     for row, item in enumerate(line_items, start=6):
         target_row = FIRST_ITEM_ROW + row - 6
         quantity = item["quantity"]
         unit_price = item["unit_price_cents"] / 100
         deposit = item.get("deposit_cents", 0) / 100
-        line_total_cents = (item["unit_price_cents"] + item.get("deposit_cents", 0)) * quantity
-        quantity_total += quantity
-        delivery_total_cents += line_total_cents
+        line_total_cents = beleg_summen.positionssummen_cents[row - 6]
         sheet.cell(row=target_row, column=1, value=quantity)
         sheet.cell(row=target_row, column=2, value=item["name"])
         sheet.cell(row=target_row, column=3, value=deposit)
@@ -136,21 +154,18 @@ def _build_document_workbook(
         sheet.cell(row=target_row, column=5, value=f"=(C{target_row}+D{target_row})*A{target_row}")
         cached_formula_values[f"E{target_row}"] = _cents_to_euro(line_total_cents)
 
-    delivery_fee_cents = DELIVERY_FEE_CENTS if delivery_fee_enabled else 0
     sheet["A31"] = 1 if delivery_fee_enabled else 0
     sheet["B31"] = "Lieferpauschale"
     sheet["C31"] = None
     sheet["D31"] = _cents_to_euro(DELIVERY_FEE_CENTS)
     sheet["E31"] = "=(C31+D31)*A31"
-    cached_formula_values["E31"] = _cents_to_euro(delivery_fee_cents)
+    cached_formula_values["E31"] = _cents_to_euro(beleg_summen.lieferpauschale_cents)
 
-    pfand_return_total_cents = 0
     for index, deposit_return in enumerate(deposit_returns):
         target_row = FIRST_RETURN_ROW + index
         quantity = deposit_return["quantity"]
         deposit_cents = deposit_return["deposit_cents"]
-        line_total_cents = -deposit_cents * quantity
-        pfand_return_total_cents += line_total_cents
+        line_total_cents = beleg_summen.ruecknahme_summen_cents[index]
         sheet.cell(row=target_row, column=1, value=quantity)
         sheet.cell(row=target_row, column=2, value=deposit_return["name"])
         sheet.cell(row=target_row, column=3, value=-deposit_cents / 100)
@@ -165,18 +180,14 @@ def _build_document_workbook(
     sheet["F42"] = "=F43-F41"
     sheet["F43"] = "=F32+F40"
 
-    delivery_total_with_fee_cents = delivery_total_cents + delivery_fee_cents
-    gross_total_cents = delivery_total_with_fee_cents + pfand_return_total_cents
-    net_total_cents = round(gross_total_cents / 1.19)
-    tax_total_cents = gross_total_cents - net_total_cents
     cached_formula_values.update(
         {
-            "A32": quantity_total,
-            "F32": _cents_to_euro(delivery_total_with_fee_cents),
-            "F40": _cents_to_euro(pfand_return_total_cents),
-            "F41": _cents_to_euro(net_total_cents),
-            "F42": _cents_to_euro(tax_total_cents),
-            "F43": _cents_to_euro(gross_total_cents),
+            "A32": beleg_summen.mengen_summe,
+            "F32": _cents_to_euro(beleg_summen.lieferwert_cents + beleg_summen.lieferpauschale_cents),
+            "F40": _cents_to_euro(beleg_summen.pfand_rueckgabe_cents),
+            "F41": _cents_to_euro(beleg_summen.netto_cents),
+            "F42": _cents_to_euro(beleg_summen.mwst_cents),
+            "F43": _cents_to_euro(beleg_summen.brutto_cents),
         }
     )
 

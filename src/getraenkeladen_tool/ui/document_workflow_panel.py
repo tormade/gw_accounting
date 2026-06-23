@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from ..kern.regeln.beleg import BelegParameter, PfandRueckgabe, Position, berechne_beleg
 from ..schemas import DepositReturnCreate, DocumentLineItem
 from ..services.order_service import create_order_delivery_order, create_order_invoice, get_order, list_active_orders
 from .date_input import to_display_date
@@ -483,22 +484,41 @@ class DocumentWorkflowPanel(QWidget):
         self.update_total()
 
     def update_total(self, _item=None) -> None:
-        total_cents = 0
         self.lines_table.blockSignals(True)
         self.returns_table.blockSignals(True)
         try:
+            result = berechne_beleg(
+                positionen=[
+                    Position(
+                        self._item_text(self.lines_table.item(row, 0)),
+                        self._parse_int(self.lines_table.item(row, 1)),
+                        self._parse_euro_cents_or_zero(self._item_text(self.lines_table.item(row, 2))),
+                        self._parse_euro_cents_or_zero(self._item_text(self.lines_table.item(row, 3))),
+                    )
+                    for row in range(self.lines_table.rowCount())
+                    if self._item_text(self.lines_table.item(row, 0)).strip()
+                ],
+                ruecknahmen=[
+                    PfandRueckgabe(
+                        self._item_text(self.returns_table.item(row, 0)),
+                        self._parse_int(self.returns_table.item(row, 1)),
+                        self._parse_euro_cents_or_zero(self._item_text(self.returns_table.item(row, 2))),
+                    )
+                    for row in range(self.returns_table.rowCount())
+                    if self._item_text(self.returns_table.item(row, 0)).strip()
+                ],
+                parameter=BelegParameter(lieferpauschale_aktiv=self._delivery_fee_enabled()),
+            )
             for row in range(self.lines_table.rowCount()):
-                line_total = self._line_total_cents(row)
-                total_cents += line_total
-                self._set_total_item(self.lines_table, row, 4, line_total)
+                total = result.positionssummen_cents[row] if row < len(result.positionssummen_cents) else 0
+                self._set_total_item(self.lines_table, row, 4, total)
             for row in range(self.returns_table.rowCount()):
-                return_total = self._return_total_cents(row)
-                total_cents -= return_total
-                self._set_total_item(self.returns_table, row, 3, -return_total)
+                total = result.ruecknahme_summen_cents[row] if row < len(result.ruecknahme_summen_cents) else 0
+                self._set_total_item(self.returns_table, row, 3, total)
         finally:
             self.lines_table.blockSignals(False)
             self.returns_table.blockSignals(False)
-        self.total_label.setText(f"Gesamtsumme: {self._format_euro_cents(total_cents)}")
+        self.total_label.setText(f"Gesamtsumme: {self._format_euro_cents(result.brutto_cents)}")
 
     def _set_total_item(self, table: QTableWidget, row: int, column: int, cents: int) -> None:
         item = table.item(row, column)
