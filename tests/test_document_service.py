@@ -6,7 +6,6 @@ from getraenkeladen_tool.models import OpenItem
 from getraenkeladen_tool.schemas import CustomerCreate, DepositReturnCreate, DocumentCreate, DocumentLineItem
 from getraenkeladen_tool.services.customer_service import create_customer
 from getraenkeladen_tool.services.document_service import create_document, latest_invoice_number
-from getraenkeladen_tool.services.numbering_service import release_number
 
 
 def test_create_invoice_writes_excel_pdf_file_and_open_item(session, tmp_path: Path):
@@ -256,38 +255,3 @@ def test_create_document_can_generate_pdf_later_without_duplicate_invoice(sessio
     assert Path(pdf_document.pdf_path).exists()
     assert session.query(OpenItem).count() == 1
 
-
-def test_create_invoice_allows_reusing_number_after_internal_release(session, tmp_path: Path):
-    old_customer = create_customer(
-        session,
-        CustomerCreate(name="Alter Kunde", folder_path=str(tmp_path / "Kunden" / "Alter Kunde")),
-    )
-    new_customer = create_customer(
-        session,
-        CustomerCreate(name="Neuer Kunde", folder_path=str(tmp_path / "Kunden" / "Neuer Kunde")),
-    )
-    create_document(
-        session,
-        DocumentCreate(
-            customer_id=old_customer.id,
-            document_type="Rechnung",
-            document_number="RG-3001",
-            delivery_date="2026-06-21",
-            line_items=[DocumentLineItem(name="Wasser", quantity=1, unit_price_cents=1299)],
-        ),
-    )
-
-    release_number(session, sequence_key="invoice", value="RG-3001")
-    document = create_document(
-        session,
-        DocumentCreate(
-            customer_id=new_customer.id,
-            document_type="Rechnung",
-            document_number="RG-3001",
-            delivery_date="2026-06-22",
-            line_items=[DocumentLineItem(name="Spezi", quantity=1, unit_price_cents=1599)],
-        ),
-    )
-
-    assert document.customer_id == new_customer.id
-    assert document.document_number == "RG-3001"

@@ -21,7 +21,6 @@ from PySide6.QtCore import Qt, Signal
 
 from ..schemas import DepositReturnCreate, OrderCreate, OrderLineCreate
 from ..services.customer_service import list_active_customers
-from ..services.numbering_service import suggest_next_numbers
 from ..services.order_service import (
     archive_order,
     create_order,
@@ -41,7 +40,6 @@ ORDER_PANEL_ACTIONS = {
     "newOrderButton": "Neuer Auftrag",
     "copyOrderButton": "Aus Auftrag kopieren",
     "refreshOrderDataButton": "Stammdaten laden",
-    "suggestOrderNumberButton": "Auftragsnummer vorschlagen",
     "addOrderLineButton": "Position hinzufuegen",
     "removeOrderLineButton": "Position entfernen",
     "addDepositReturnButton": "Pfand zurueck hinzufuegen",
@@ -151,7 +149,6 @@ class OrderPanel(QWidget):
         layout.addWidget(PageHeader("Auftraege", "Auftrag neu erfassen oder vorhandene Auftraege verwalten.", self.help_button))
 
         self.refresh_data_button = self._button("refreshOrderDataButton")
-        self.suggest_order_number_button = self._button("suggestOrderNumberButton")
         self.add_line_button = self._button("addOrderLineButton")
         self.remove_line_button = self._button("removeOrderLineButton")
         self.add_deposit_return_button = self._button("addDepositReturnButton")
@@ -179,7 +176,7 @@ class OrderPanel(QWidget):
         customer_form = QFormLayout()
         configure_form_layout(customer_form)
         customer_form.addRow("Kunde", self.customer_select)
-        customer_form.addRow("Auftragsnummer", self._number_row(self.order_number, self.suggest_order_number_button))
+        customer_form.addRow("Auftragsnummer", self.order_number)
         customer_form.addRow("Lieferdatum", self.delivery_date)
         customer_form.addRow("Zeitfenster", self.delivery_slot)
         customer_layout.addLayout(customer_form)
@@ -269,7 +266,6 @@ class OrderPanel(QWidget):
 
         self.help_button.clicked.connect(self.show_help)
         self.refresh_data_button.clicked.connect(self.refresh_master_data)
-        self.suggest_order_number_button.clicked.connect(self.suggest_order_number)
         self.new_order_button.clicked.connect(self.reset_order_form)
         self.copy_order_button.clicked.connect(self.copy_selected_order_as_new)
         self.create_delivery_note_button.clicked.connect(self.request_delivery_note_for_selected_order)
@@ -291,39 +287,12 @@ class OrderPanel(QWidget):
         self.orders_table.customContextMenuRequested.connect(self.show_order_context_menu)
         self.refresh_master_data()
         self.refresh_orders()
-        self.suggest_order_number()
         self.apply_selected_deposit_return()
 
     def _button(self, object_name: str) -> QPushButton:
         button = QPushButton(ORDER_PANEL_ACTIONS[object_name])
         button.setObjectName(object_name)
         return button
-
-    def _number_row(self, field: QLineEdit, button: QPushButton) -> QWidget:
-        row = QWidget()
-        layout = QHBoxLayout(row)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.addWidget(field)
-        layout.addWidget(button)
-        return row
-
-    def _number_suggestions(self):
-        if self.session_factory is None:
-            self.status_label.setText("Keine Datenbankverbindung vorhanden.")
-            return None
-
-        session = self.session_factory()
-        try:
-            return suggest_next_numbers(session)
-        finally:
-            session.close()
-
-    def suggest_order_number(self) -> None:
-        suggestions = self._number_suggestions()
-        if suggestions is None:
-            return
-        self.order_number.setText(suggestions.order_number)
-        self.status_label.setText("Auftragsnummer vorgeschlagen. Sie kann manuell ueberschrieben werden.")
 
     def _guidance_box(self) -> QWidget:
         box = QWidget()
@@ -362,8 +331,7 @@ class OrderPanel(QWidget):
         self.deposit_return_eur.clear()
         self.apply_selected_deposit_return()
         self.update_order_total()
-        self.suggest_order_number()
-        self.status_label.setText("Neuer Auftrag gestartet.")
+        self.status_label.setText("Neuer Auftrag gestartet. Bitte Auftragsnummer eintragen.")
 
     def confirm_documented_order_change(self) -> bool:
         if self.current_order_status == "geplant":
@@ -642,10 +610,10 @@ class OrderPanel(QWidget):
         self.current_order_id = None
         self.current_order_status = "geplant"
         self.order_mode_label.setText(f"Kopie aus Auftrag {original_number}")
+        self.order_number.clear()
         self.delivery_date.set_iso_date(date.today().isoformat())
-        self.suggest_order_number()
         self.order_workspace_tabs.setCurrentIndex(0)
-        self.status_label.setText("Auftrag kopiert. Bitte Datum pruefen und als neuen Auftrag speichern.")
+        self.status_label.setText("Auftrag kopiert. Bitte neue Auftragsnummer und Datum pruefen.")
 
     def request_delivery_note_for_selected_order(self) -> None:
         order_id = self._selected_order_id()

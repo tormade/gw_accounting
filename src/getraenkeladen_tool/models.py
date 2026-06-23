@@ -63,15 +63,6 @@ class DropdownOption(Base):
     is_active: Mapped[bool] = mapped_column(Boolean(), default=True)
 
 
-class NumberSequence(Base):
-    __tablename__ = "number_sequences"
-
-    id: Mapped[int] = mapped_column(primary_key=True)
-    sequence_key: Mapped[str] = mapped_column(String(50), unique=True)
-    prefix: Mapped[str] = mapped_column(String(10))
-    next_number: Mapped[int] = mapped_column(Integer())
-
-
 class Document(Base):
     __tablename__ = "documents"
 

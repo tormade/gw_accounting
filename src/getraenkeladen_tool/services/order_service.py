@@ -46,9 +46,7 @@ def create_order(session: Session, payload: OrderCreate) -> Order:
 
     session.add(order)
     session.commit()
-    saved_order = get_order(session, order.id)
-    _sync_number_sequence_workbook(session)
-    return saved_order
+    return get_order(session, order.id)
 
 
 def update_order(session: Session, order_id: int, payload: OrderCreate) -> Order:
@@ -91,9 +89,7 @@ def update_order(session: Session, order_id: int, payload: OrderCreate) -> Order
     _append_deposit_returns(order, payload.deposit_returns)
 
     session.commit()
-    saved_order = get_order(session, order.id)
-    _sync_number_sequence_workbook(session)
-    return saved_order
+    return get_order(session, order.id)
 
 
 def get_order(session: Session, order_id: int) -> Order:
@@ -123,9 +119,7 @@ def archive_order(session: Session, order_id: int) -> Order:
     order = get_order(session, order_id)
     order.status = "archiviert"
     session.commit()
-    archived_order = get_order(session, order_id)
-    _sync_number_sequence_workbook(session)
-    return archived_order
+    return get_order(session, order_id)
 
 
 def create_order_documents(
@@ -246,9 +240,3 @@ def _blocking_order_number_exists(session: Session, order_number: str, exclude_o
     if exclude_order_id is not None:
         query = query.where(Order.id != exclude_order_id)
     return session.scalar(query) is not None
-
-
-def _sync_number_sequence_workbook(session: Session) -> None:
-    from .numbering_service import write_number_sequences_to_workbook
-
-    write_number_sequences_to_workbook(session)

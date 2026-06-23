@@ -17,7 +17,6 @@ from PySide6.QtWidgets import (
 )
 
 from ..schemas import DepositReturnCreate, DocumentLineItem
-from ..services.numbering_service import suggest_next_numbers
 from ..services.order_service import create_order_delivery_order, create_order_invoice, get_order, list_active_orders
 from .date_input import to_display_date
 from .deposit_return_presets import DEPOSIT_RETURN_PRESETS
@@ -122,8 +121,6 @@ class DocumentWorkflowPanel(QWidget):
         configure_form_layout(number_form)
         number_form.addRow(self.number_label, self.document_number)
         number_row.addLayout(number_form)
-        self.suggest_number_button = QPushButton("Nummer vorschlagen")
-        number_row.addWidget(self.suggest_number_button)
         document_layout.addLayout(number_row)
         document_layout.addWidget(self.lines_table)
         line_action_row = QHBoxLayout()
@@ -173,7 +170,6 @@ class DocumentWorkflowPanel(QWidget):
 
         self.refresh_button.clicked.connect(self.refresh_orders)
         self.load_button.clicked.connect(self.load_selected_order)
-        self.suggest_number_button.clicked.connect(self.suggest_document_number)
         self.remove_line_button.clicked.connect(self.remove_selected_line)
         self.add_return_button.clicked.connect(self.add_deposit_return)
         self.remove_return_button.clicked.connect(self.remove_selected_deposit_return)
@@ -188,7 +184,6 @@ class DocumentWorkflowPanel(QWidget):
         self.returns_table.itemChanged.connect(self.update_total)
         self.refresh_master_data()
         self.refresh_orders()
-        self.suggest_document_number()
         self.apply_selected_deposit_return()
 
     def _button(self, object_name: str) -> QPushButton:
@@ -268,16 +263,6 @@ class DocumentWorkflowPanel(QWidget):
         finally:
             session.close()
 
-    def suggest_document_number(self) -> None:
-        if self.session_factory is None:
-            return
-        session = self.session_factory()
-        try:
-            suggestions = suggest_next_numbers(session)
-        finally:
-            session.close()
-        self.document_number.setText(self._number_from_suggestions(suggestions))
-
     def create_excel_document(self) -> None:
         self.create_document({"excel"})
 
@@ -314,9 +299,6 @@ class DocumentWorkflowPanel(QWidget):
         return f"PDF erstellt:\nPDF: {self.last_pdf_path}"
 
     def _create_document_for_order(self, session, assets: set[str]):
-        raise NotImplementedError
-
-    def _number_from_suggestions(self, suggestions) -> str:
         raise NotImplementedError
 
     def _line_items_from_table(self) -> list[DocumentLineItem]:
@@ -499,9 +481,6 @@ class DeliveryNotePanel(DocumentWorkflowPanel):
     create_excel_button_text = "Lieferschein Excel erstellen"
     create_pdf_button_text = "Lieferschein PDF erstellen"
 
-    def _number_from_suggestions(self, suggestions) -> str:
-        return suggestions.delivery_note_number
-
     def _create_document_for_order(self, session, assets: set[str]):
         return create_order_delivery_order(
             session,
@@ -518,9 +497,6 @@ class InvoicePanel(DocumentWorkflowPanel):
     number_label = "Rechnungsnummer"
     create_excel_button_text = "Rechnung Excel erstellen"
     create_pdf_button_text = "Rechnung PDF erstellen"
-
-    def _number_from_suggestions(self, suggestions) -> str:
-        return suggestions.invoice_number
 
     def _create_document_for_order(self, session, assets: set[str]):
         return create_order_invoice(

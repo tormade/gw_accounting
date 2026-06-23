@@ -61,7 +61,7 @@ class MainWindow(QMainWindow):
             "Kunden": (self.customer_panel.refresh_customers,),
             "Produkte": (self.product_panel.refresh_products,),
             "Listen": (self.report_panel.refresh_all_lists,),
-            "Einstellungen": (self.settings_panel.refresh_number_sequences,),
+            "Einstellungen": (),
         }
 
         self.dashboard_panel.new_delivery_requested.connect(self.open_orders_tab)

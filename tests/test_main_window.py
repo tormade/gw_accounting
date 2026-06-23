@@ -195,7 +195,6 @@ def test_order_tab_exposes_guided_order_actions():
         "newOrderButton": "Neuer Auftrag",
         "copyOrderButton": "Aus Auftrag kopieren",
         "refreshOrderDataButton": "Stammdaten laden",
-        "suggestOrderNumberButton": "Auftragsnummer vorschlagen",
         "addOrderLineButton": "Position hinzufuegen",
         "removeOrderLineButton": "Position entfernen",
         "addDepositReturnButton": "Pfand zurueck hinzufuegen",
@@ -304,20 +303,15 @@ def test_product_tab_exposes_price_list_actions():
     }
 
 
-def test_settings_tab_exposes_number_sequence_actions_without_product_units():
+def test_settings_tab_focuses_on_master_data_import_without_number_sequences():
     from getraenkeladen_tool.ui.settings_panel import SETTINGS_PANEL_ACTIONS, SETTINGS_PANEL_SECTIONS
 
     assert SETTINGS_PANEL_ACTIONS == {
         "settingsHelpButton": "?",
-        "refreshNumberSequencesButton": "Nummernkreise laden",
-        "saveNumberSequencesButton": "Nummernkreise speichern",
-        "checkNumberSequencesButton": "Eingetragene Nummern pruefen",
-        "releaseBlockedNumberButton": "Blockierte Nummer freigeben",
-        "resetNumberSequencesButton": "Nummernkreise zuruecksetzen",
         "chooseInputFolderButton": "Input-Ordner waehlen",
         "importMasterDataButton": "Stammdaten importieren",
     }
-    assert SETTINGS_PANEL_SECTIONS == ("Nummernkreise bearbeiten", "Stammdaten aus Excel importieren")
+    assert SETTINGS_PANEL_SECTIONS == ("Stammdaten aus Excel importieren",)
 
 
 def test_product_panel_hides_unit_maintenance_from_user():
