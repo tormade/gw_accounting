@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from datetime import date, datetime
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from pathlib import Path
 import re
 
@@ -46,6 +46,7 @@ class CustomerWorkbookSnapshot:
     payment_method: str | None
     document_number: str | None
     document_date: str | None
+    due_date: str | None
     delivery_comment: str | None
     footer_text: str | None
     lines: list[OnboardingLine] = field(default_factory=list)
@@ -92,6 +93,19 @@ class OnboardingResult:
     issues: list[OnboardingIssue]
 
 
+@dataclass(slots=True)
+class SkippedOnboardingFile:
+    path: Path
+    message: str
+
+
+@dataclass(slots=True)
+class FolderOnboardingResult:
+    report: OnboardingReport
+    results: list[OnboardingResult] = field(default_factory=list)
+    skipped_files: list[SkippedOnboardingFile] = field(default_factory=list)
+
+
 def analyze_customer_workbook(path: Path) -> CustomerWorkbookSnapshot:
     workbook = load_workbook(path, data_only=True)
     sheet = workbook.active
@@ -104,11 +118,13 @@ def analyze_customer_workbook(path: Path) -> CustomerWorkbookSnapshot:
     phone = _first_phone(text_cells, exclude={contact_email, name, address})
     footer_text = _footer_text(sheet)
     payment_method = _payment_method_from_footer(footer_text)
+    due_date = _due_date_from_footer(sheet, payment_method)
     delivery_comment = _delivery_comment(sheet, {name, address, contact_email, phone})
 
     lines = _item_lines(sheet)
     deposit_returns = _deposit_returns(sheet)
     delivery_fee_cents = _money_to_cents(sheet["E31"].value)
+    totals = _document_totals(sheet)
 
     return CustomerWorkbookSnapshot(
         source_file=str(path),
@@ -119,17 +135,18 @@ def analyze_customer_workbook(path: Path) -> CustomerWorkbookSnapshot:
         payment_method=payment_method,
         document_number=document_number,
         document_date=document_date,
+        due_date=due_date,
         delivery_comment=delivery_comment,
         footer_text=footer_text,
         lines=lines,
         deposit_returns=deposit_returns,
-        quantity_total=_int_value(sheet["A32"].value),
+        quantity_total=totals["quantity_total"],
         delivery_fee_cents=delivery_fee_cents,
-        delivery_total_cents=_money_to_cents(sheet["F32"].value),
-        deposit_return_total_cents=_money_to_cents(sheet["F40"].value),
-        net_total_cents=_money_to_cents(sheet["E41"].value),
-        tax_total_cents=_money_to_cents(sheet["E42"].value),
-        gross_total_cents=_money_to_cents(sheet["F43"].value),
+        delivery_total_cents=totals["delivery_total_cents"],
+        deposit_return_total_cents=totals["deposit_return_total_cents"],
+        net_total_cents=totals["net_total_cents"],
+        tax_total_cents=totals["tax_total_cents"],
+        gross_total_cents=totals["gross_total_cents"],
     )
 
 
@@ -181,6 +198,35 @@ def onboard_customer_from_sources(
         ),
         issues=persisted_issues,
     )
+
+
+def onboard_customer_workbook_folder(
+    session: Session,
+    customer_list_path: Path,
+    folder_path: Path,
+) -> FolderOnboardingResult:
+    folder_result = FolderOnboardingResult(report=OnboardingReport())
+    for workbook_path in sorted(folder_path.rglob("*.xlsx")):
+        try:
+            snapshot = analyze_customer_workbook(workbook_path)
+            result = onboard_customer_from_sources(
+                session,
+                customer_name=snapshot.customer_name,
+                customer_list_path=customer_list_path,
+                workbook_path=workbook_path,
+            )
+        except Exception as error:
+            folder_result.report.unreadable_files += 1
+            folder_result.skipped_files.append(
+                SkippedOnboardingFile(path=workbook_path, message=f"{workbook_path.name}: {error}")
+            )
+            continue
+        folder_result.results.append(result)
+        folder_result.report.customers_read += result.report.customers_read
+        folder_result.report.assortment_lines += result.report.assortment_lines
+        folder_result.report.conflicts += result.report.conflicts
+        folder_result.report.unreadable_files += result.report.unreadable_files
+    return folder_result
 
 
 def read_customer_list_snapshot(path: Path, customer_name: str) -> CustomerListSnapshot:
@@ -276,7 +322,12 @@ def _footer_text(sheet) -> str | None:
     for row in sheet.iter_rows(min_row=40, max_row=48, values_only=True):
         for value in row:
             text = _clean_text(value)
-            if text and ("sepa" in text.lower() or "überweisen" in text.lower() or "ueberweisen" in text.lower()):
+            if text and (
+                "sepa" in text.lower()
+                or "überweisen" in text.lower()
+                or "ueberweisen" in text.lower()
+                or "ware bleibt" in text.lower()
+            ):
                 footer_values.append(text)
     return " ".join(footer_values) or None
 
@@ -287,6 +338,25 @@ def _payment_method_from_footer(footer_text: str | None) -> str | None:
         return "SEPA"
     if "überweisen" in lowered or "ueberweisen" in lowered:
         return "Überweisung"
+    return None
+
+
+def _due_date_from_footer(sheet, payment_method: str | None) -> str | None:
+    if payment_method != "Überweisung":
+        return None
+    for row in sheet.iter_rows(min_row=40, max_row=48):
+        for cell in row:
+            text = _clean_text(cell.value)
+            if not text:
+                continue
+            lowered = text.lower()
+            if "überweisen" not in lowered and "ueberweisen" not in lowered:
+                continue
+            for candidate in row:
+                if isinstance(candidate.value, datetime):
+                    return candidate.value.date().isoformat()
+                if isinstance(candidate.value, date):
+                    return candidate.value.isoformat()
     return None
 
 
@@ -326,6 +396,47 @@ def _deposit_returns(sheet) -> list[OnboardingDepositReturn]:
             continue
         returns.append(OnboardingDepositReturn(quantity=quantity, deposit_cents=deposit_cents, total_cents=total_cents))
     return returns
+
+
+def _document_totals(sheet) -> dict[str, int]:
+    totals = {
+        "quantity_total": 0,
+        "delivery_total_cents": 0,
+        "deposit_return_total_cents": 0,
+        "net_total_cents": 0,
+        "tax_total_cents": 0,
+        "gross_total_cents": 0,
+    }
+    for row in range(25, 45):
+        row_values = [sheet.cell(row=row, column=column).value for column in range(1, 7)]
+        row_text = " ".join(_clean_text(value) or "" for value in row_values).lower()
+        if "lieferwert" in row_text:
+            totals["quantity_total"] = _first_int_in_values(row_values)
+            totals["delivery_total_cents"] = _last_money_in_values(row_values)
+        elif "pfand" in row_text and "rückgabe" in row_text:
+            totals["deposit_return_total_cents"] = _last_money_in_values(row_values)
+        elif "netto" in row_text:
+            totals["net_total_cents"] = _last_money_in_values(row_values)
+        elif "mehrwertsteuer" in row_text:
+            totals["tax_total_cents"] = _last_money_in_values(row_values)
+        elif "brutto" in row_text:
+            totals["gross_total_cents"] = _last_money_in_values(row_values)
+    return totals
+
+
+def _first_int_in_values(values: list) -> int:
+    for value in values:
+        if isinstance(value, int | float) and not isinstance(value, bool):
+            return int(value)
+    return 0
+
+
+def _last_money_in_values(values: list) -> int:
+    for value in reversed(values):
+        cents = _money_to_cents(value)
+        if cents != 0:
+            return cents
+    return 0
 
 
 def _address_from_customer_list_row(row: dict) -> str | None:
@@ -395,5 +506,8 @@ def _int_value(value) -> int:
 def _money_to_cents(value) -> int:
     if value in (None, "", "€"):
         return 0
-    amount = Decimal(str(value)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    try:
+        amount = Decimal(str(value)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    except InvalidOperation:
+        return 0
     return int((amount * 100).to_integral_value(rounding=ROUND_HALF_UP))

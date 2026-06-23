@@ -6,6 +6,7 @@ from getraenkeladen_tool.models import OnboardingIssue
 from getraenkeladen_tool.services.onboarding_service import (
     analyze_customer_workbook,
     onboard_customer_from_sources,
+    onboard_customer_workbook_folder,
 )
 
 
@@ -47,6 +48,33 @@ def test_customer_workbook_parser_reads_metzgerei_karl_by_content_not_position()
     assert snapshot.lines[1].total_cents == 4074
 
 
+def test_customer_workbook_parser_reads_lieferschein_comment_and_footer_text():
+    snapshot = analyze_customer_workbook(INPUT_DIR / "_ LS 0525 Metzgerei Karl .xlsx")
+
+    assert snapshot.customer_name == "Metzgerei Karl"
+    assert snapshot.document_date == "2026-06-22"
+    assert snapshot.delivery_comment == "bis13Uhr und ab 15 Uhr"
+    assert snapshot.footer_text == "Die Ware bleibt bis zur vollständigen Bezahlung Eigentum von Getränke Winklmeier."
+    assert snapshot.payment_method is None
+    assert snapshot.quantity_total == 15
+    assert snapshot.delivery_total_cents == 19870
+
+
+def test_customer_workbook_parser_reads_overweisung_due_date_from_footer():
+    snapshot = analyze_customer_workbook(INPUT_DIR / "Privat Rechnung überweiser.xlsx")
+
+    assert snapshot.customer_name == "Max Huber"
+    assert snapshot.address == "Max-Planck-Straße 13, 85716 Unterschleißheim"
+    assert snapshot.contact_email == "linas.civinskas@adc-distribution.de"
+    assert snapshot.phone == "089 552 634 0"
+    assert snapshot.payment_method == "Überweisung"
+    assert snapshot.document_number == "2606298"
+    assert snapshot.document_date == "2026-06-11"
+    assert snapshot.due_date == "2026-06-18"
+    assert snapshot.quantity_total == 10
+    assert snapshot.delivery_total_cents == 15720
+
+
 def test_onboarding_merges_folder_operational_truth_with_customer_list_and_keeps_conflicts(session):
     result = onboard_customer_from_sources(
         session,
@@ -71,3 +99,26 @@ def test_onboarding_merges_folder_operational_truth_with_customer_list_and_keeps
     assert "address" in issue_fields
     assert "phone" in issue_fields
     assert all(issue.status == "offen" for issue in issues)
+
+
+def test_folder_onboarding_reports_readable_customers_and_skips_outliers(session, tmp_path):
+    customer_dir = tmp_path / "Kundenordner"
+    customer_dir.mkdir()
+    readable = customer_dir / "_ RE 0525 Metzgerei Karl .xlsx"
+    readable.write_bytes((INPUT_DIR / "_ RE 0525 Metzgerei Karl .xlsx").read_bytes())
+    unreadable = customer_dir / "defekt.xlsx"
+    unreadable.write_text("keine echte Excel-Datei", encoding="utf-8")
+
+    result = onboard_customer_workbook_folder(
+        session,
+        customer_list_path=INPUT_DIR / "Lieferkunden Liste.xlsx",
+        folder_path=customer_dir,
+    )
+
+    assert result.report.customers_read == 1
+    assert result.report.assortment_lines == 16
+    assert result.report.conflicts >= 2
+    assert result.report.unreadable_files == 1
+    assert result.results[0].customer.name == "Metzgerei Karl"
+    assert result.skipped_files[0].path == unreadable
+    assert "defekt.xlsx" in result.skipped_files[0].message
