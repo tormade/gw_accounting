@@ -1,6 +1,14 @@
 from pathlib import Path
 
-from getraenkeladen_tool.schemas import CustomerCreate, DocumentCreate, DocumentLineItem, OrderCreate, OrderLineCreate, ProductCreate
+from getraenkeladen_tool.schemas import (
+    CustomerCreate,
+    DepositReturnCreate,
+    DocumentCreate,
+    DocumentLineItem,
+    OrderCreate,
+    OrderLineCreate,
+    ProductCreate,
+)
 from getraenkeladen_tool.services.customer_service import create_customer
 from getraenkeladen_tool.services.document_archive_service import list_documents_by_type
 from getraenkeladen_tool.services.document_archive_service import regenerate_document_asset
@@ -161,6 +169,38 @@ def test_regenerate_document_asset_uses_existing_excel_snapshot_not_changed_orde
     pdf_text = Path(document.pdf_path).read_bytes().decode("latin-1")
     assert "Wasser Original" in pdf_text
     assert "Nachtraeglich geaendert" not in pdf_text
+
+
+def test_regenerate_document_asset_reads_first_deposit_return_row_from_excel_snapshot(session, tmp_path: Path):
+    customer = create_customer(
+        session,
+        CustomerCreate(
+            name="Cafe Nord",
+            folder_path=str(tmp_path / "Kunden" / "Cafe Nord"),
+        ),
+    )
+    product = create_product(
+        session,
+        ProductCreate(name="Wasser Original", unit="Kiste", standard_price_cents=1299),
+    )
+    order = create_order(
+        session,
+        OrderCreate(
+            customer_id=customer.id,
+            order_number="AUF-2003",
+            order_date="2026-06-21",
+            delivery_date="2026-06-22",
+            lines=[OrderLineCreate(product_id=product.id, quantity=1, unit_price_cents=1299, deposit_cents=330)],
+            deposit_returns=[DepositReturnCreate(name="Leergut Kiste 3,30", quantity=1, deposit_cents=330)],
+        ),
+    )
+    document = create_order_invoice(session, order.id, "RG-2003", assets={"excel"})
+
+    regenerate_document_asset(session, document.id, "pdf")
+
+    pdf_text = Path(document.pdf_path).read_bytes().decode("latin-1")
+    assert "Leergut Kiste 3,30" in pdf_text
+    assert "-3,30 EUR" in pdf_text
 
 
 def test_regenerate_document_asset_refuses_excel_recreation_without_safe_snapshot(session, tmp_path: Path):

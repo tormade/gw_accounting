@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session, selectinload
 from openpyxl import load_workbook
 
 from ..models import Document
+from .excel_service import FIRST_RETURN_ROW, MAX_RETURN_ROW
 from .pdf_service import build_document_pdf
 
 
@@ -77,7 +78,7 @@ def _line_items_from_workbook(sheet) -> list[dict]:
 
 def _deposit_returns_from_workbook(sheet) -> list[dict]:
     returns = []
-    for row in range(35, 43):
+    for row in range(FIRST_RETURN_ROW, MAX_RETURN_ROW + 1):
         name = sheet.cell(row=row, column=2).value
         quantity = sheet.cell(row=row, column=1).value
         deposit_value = sheet.cell(row=row, column=3).value

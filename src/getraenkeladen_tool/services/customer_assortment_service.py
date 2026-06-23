@@ -46,6 +46,12 @@ def _row_from_item(item: CustomerAssortmentItem) -> CustomerAssortmentRow:
             or product.default_deposit_cents != item.last_deposit_cents
         )
     )
+    price_decision = item.price_decision or "offen"
+    current_price_cents = product.standard_price_cents if product is not None else item.last_unit_price_cents
+    current_deposit_cents = product.default_deposit_cents if product is not None else item.last_deposit_cents
+    if product is not None and price_decision == "excel_preis":
+        current_price_cents = item.last_unit_price_cents
+        current_deposit_cents = item.last_deposit_cents
     return CustomerAssortmentRow(
         id=item.id,
         product_id=item.product_id,
@@ -54,13 +60,13 @@ def _row_from_item(item: CustomerAssortmentItem) -> CustomerAssortmentRow:
         last_quantity=item.last_quantity,
         excel_price_cents=item.last_unit_price_cents,
         excel_deposit_cents=item.last_deposit_cents,
-        current_price_cents=product.standard_price_cents if product is not None else item.last_unit_price_cents,
-        current_deposit_cents=product.default_deposit_cents if product is not None else item.last_deposit_cents,
-        price_decision=item.price_decision or "offen",
+        current_price_cents=current_price_cents,
+        current_deposit_cents=current_deposit_cents,
+        price_decision=price_decision,
         price_differs_from_central=price_differs,
         price_warning_text=_price_warning_text(item) if price_differs else None,
         sort_order=item.sort_order,
-        needs_review=product is None or price_differs,
+        needs_review=product is None or (price_differs and price_decision == "offen"),
     )
 
 

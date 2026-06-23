@@ -541,7 +541,7 @@ class OrderPanel(QWidget):
             return
         unit_price_cents = row.current_price_cents
         deposit_cents = row.current_deposit_cents
-        if row.price_differs_from_central:
+        if row.price_differs_from_central and row.price_decision == "offen":
             use_central_price = self.confirm_price_mismatch(
                 row.product_name or row.source_product_name,
                 row.excel_price_cents,

@@ -41,6 +41,7 @@ class DocumentWorkflowPanel(QWidget):
     default_note_text = ""
     create_excel_button_text = ""
     create_pdf_button_text = ""
+    create_both_button_text = ""
 
     def __init__(self, session_factory=None) -> None:
         super().__init__()
@@ -182,12 +183,14 @@ class DocumentWorkflowPanel(QWidget):
         output_layout = QVBoxLayout(output_tab)
         output_layout.setContentsMargins(10, 10, 10, 10)
         action_row = QHBoxLayout()
+        self.create_both_button = QPushButton(self.create_both_button_text)
         self.create_excel_button = QPushButton(self.create_excel_button_text)
         self.create_pdf_button = QPushButton(self.create_pdf_button_text)
         self.open_excel_button = QPushButton("Excel oeffnen")
         self.open_pdf_button = QPushButton("PDF oeffnen")
         self.open_excel_button.setEnabled(False)
         self.open_pdf_button.setEnabled(False)
+        action_row.addWidget(self.create_both_button)
         action_row.addWidget(self.create_excel_button)
         action_row.addWidget(self.create_pdf_button)
         action_row.addWidget(self.open_excel_button)
@@ -211,6 +214,7 @@ class DocumentWorkflowPanel(QWidget):
         self.add_return_button.clicked.connect(self.add_deposit_return)
         self.remove_return_button.clicked.connect(self.remove_selected_deposit_return)
         self.deposit_return_select.currentIndexChanged.connect(self.apply_selected_deposit_return)
+        self.create_both_button.clicked.connect(self.create_complete_document)
         self.create_excel_button.clicked.connect(self.create_excel_document)
         self.create_pdf_button.clicked.connect(self.create_pdf_document)
         self.open_excel_button.clicked.connect(lambda: self._open_local_file(self.last_excel_path))
@@ -295,6 +299,9 @@ class DocumentWorkflowPanel(QWidget):
     def create_pdf_document(self) -> None:
         self.create_document({"pdf"})
 
+    def create_complete_document(self) -> None:
+        self.create_document({"excel", "pdf"})
+
     def create_document(self, assets: set[str]) -> None:
         asset_label = self._created_asset_label(assets)
         if self.current_order_id is None:
@@ -339,14 +346,20 @@ class DocumentWorkflowPanel(QWidget):
         )
 
     def _created_asset_label(self, assets: set[str]) -> str:
+        if assets == {"excel", "pdf"}:
+            return "Excel + PDF"
         return "Excel" if assets == {"excel"} else "PDF"
 
     def _created_asset_result(self, asset_label: str) -> str:
+        if asset_label == "Excel + PDF":
+            return f"Excel + PDF erstellt:\nExcel: {self.last_excel_path}\nPDF: {self.last_pdf_path}"
         if asset_label == "Excel":
             return f"Excel erstellt:\nExcel: {self.last_excel_path}"
         return f"PDF erstellt:\nPDF: {self.last_pdf_path}"
 
     def _created_asset_path(self, asset_label: str) -> Path | None:
+        if asset_label == "Excel + PDF":
+            return self.last_pdf_path
         return self.last_excel_path if asset_label == "Excel" else self.last_pdf_path
 
     def _create_document_for_order(self, session, assets: set[str]):
@@ -536,6 +549,7 @@ class DeliveryNotePanel(DocumentWorkflowPanel):
     default_note_text = ""
     create_excel_button_text = "Excel-Lieferschein erstellen"
     create_pdf_button_text = "PDF-Lieferschein erstellen"
+    create_both_button_text = "Lieferschein komplett erstellen"
 
     def _create_document_for_order(self, session, assets: set[str]):
         return create_order_delivery_order(
@@ -558,6 +572,7 @@ class InvoicePanel(DocumentWorkflowPanel):
     default_note_text = "Rechnungsbetrag wird per Sepa Basis Lastschrift Mandat eingezogen."
     create_excel_button_text = "Excel-Rechnung erstellen"
     create_pdf_button_text = "PDF-Rechnung erstellen"
+    create_both_button_text = "Rechnung komplett erstellen"
 
     def _create_document_for_order(self, session, assets: set[str]):
         return create_order_invoice(

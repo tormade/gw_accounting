@@ -27,11 +27,15 @@ def test_document_workflow_panels_make_excel_pdf_generation_flow_visible():
     assert "class InvoicePanel" in source
     assert "Excel-Lieferschein erstellen" in source
     assert "PDF-Lieferschein erstellen" in source
+    assert "Lieferschein komplett erstellen" in source
     assert "Excel-Rechnung erstellen" in source
     assert "PDF-Rechnung erstellen" in source
+    assert "Rechnung komplett erstellen" in source
+    assert "self.create_both_button.clicked.connect(self.create_complete_document)" in source
     assert "self.create_excel_button.clicked.connect(self.create_excel_document)" in source
     assert "self.create_pdf_button.clicked.connect(self.create_pdf_document)" in source
     assert "self._created_asset_label(assets)" in source
+    assert 'return "Excel + PDF"' in source
     assert "QMessageBox.information" in source
     assert "QMessageBox.critical" in source
     assert "QMessageBox.warning" in source
@@ -103,6 +107,15 @@ def test_document_workflow_uses_clearer_deposit_and_delivery_fee_labels():
     assert '"addDocumentDepositReturnButton": "Pfand-Rueckgabe eintragen"' in source
     assert "Lieferpauschale 3,90 EUR" in source
     assert "Aendert nur diesen Beleg" in source
+
+
+def test_document_workflow_prioritizes_complete_excel_pdf_generation():
+    source = Path("src/getraenkeladen_tool/ui/document_workflow_panel.py").read_text(encoding="utf-8")
+
+    assert "def create_complete_document" in source
+    assert 'self.create_document({"excel", "pdf"})' in source
+    assert "self.create_both_button" in source
+    assert "Excel + PDF erstellt" in source
 
 
 def test_order_panel_supports_editing_existing_orders():
@@ -216,6 +229,7 @@ def test_order_panel_loads_customer_assortment_into_order_dialog():
     assert "self.use_assortment_button.clicked.connect(self.add_selected_assortment_item)" in source
     assert "def add_selected_assortment_item" in source
     assert "row.price_differs_from_central" in source
+    assert 'row.price_decision == "offen"' in source
 
 
 def test_order_panel_filters_orders_by_customer_and_can_copy_existing_order():
