@@ -549,6 +549,18 @@ def test_dashboard_uses_cockpit_quick_actions_without_calendar():
     assert "Zu Belegen" not in source
 
 
+def test_dashboard_uses_compact_summary_rows_instead_of_tall_metric_cards():
+    from pathlib import Path
+
+    source = Path("src/getraenkeladen_tool/ui/dashboard_panel.py").read_text(encoding="utf-8")
+
+    assert "def _summary_panel" in source
+    assert "todaySummaryPanel" in source
+    assert "Ueberblick" in source
+    assert "metricHint" in source
+    assert "addLayout(self._cards_grid()" not in source
+
+
 def test_dashboard_copy_matches_customer_folder_workflow():
     from pathlib import Path
 

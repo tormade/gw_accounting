@@ -1,6 +1,6 @@
 from datetime import date
 
-from PySide6.QtCore import Signal
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import QGridLayout, QHBoxLayout, QLabel, QMessageBox, QPushButton, QVBoxLayout, QWidget
 
 from ..services.report_service import DashboardSummary, get_dashboard_summary
@@ -51,7 +51,7 @@ class DashboardPanel(QWidget):
         top_grid = QGridLayout()
         top_grid.setSpacing(16)
         top_grid.addWidget(self._task_queue(), 0, 0)
-        top_grid.addLayout(self._cards_grid(), 0, 1)
+        top_grid.addWidget(self._summary_panel(), 0, 1)
         top_grid.setColumnStretch(0, 3)
         top_grid.setColumnStretch(1, 2)
         layout.addLayout(top_grid)
@@ -158,27 +158,53 @@ class DashboardPanel(QWidget):
 
         return box
 
-    def _cards_grid(self) -> QGridLayout:
-        grid = QGridLayout()
-        grid.setSpacing(14)
-        for column, title in enumerate(DASHBOARD_CARDS):
+    def _summary_panel(self) -> QWidget:
+        panel = QWidget()
+        panel.setObjectName("todaySummaryPanel")
+        layout = QVBoxLayout(panel)
+        layout.setSpacing(10)
+
+        title = QLabel("Ueberblick")
+        title.setObjectName("summaryPanelTitle")
+        layout.addWidget(title)
+
+        for index, (title_text, hint_text) in enumerate(
+            zip(
+                DASHBOARD_CARDS,
+                ("Heute faellig", "Offen oder faellig", "Wiedervorlage"),
+                strict=True,
+            )
+        ):
             card = QWidget()
             card.setObjectName("dailyCockpitCard")
-            card.setProperty("tone", ("route", "cash", "audit")[column])
-            card_layout = QVBoxLayout(card)
-            card_layout.setSpacing(8)
+            card.setProperty("tone", ("route", "cash", "audit")[index])
+            card_layout = QGridLayout(card)
+            card_layout.setContentsMargins(14, 12, 14, 12)
+            card_layout.setHorizontalSpacing(12)
+            card_layout.setVerticalSpacing(2)
 
             value = QLabel("0")
             value.setObjectName("metricValue")
+            value.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            value.setFixedWidth(52)
             self.card_values.append(value)
-            card_layout.addWidget(value)
+            card_layout.addWidget(value, 0, 0, 2, 1)
 
-            label = QLabel(title)
+            label = QLabel(title_text)
             label.setObjectName("metricLabel")
             label.setWordWrap(True)
-            card_layout.addWidget(label)
-            grid.addWidget(card, 0, column)
-        return grid
+            card_layout.addWidget(label, 0, 1)
+
+            hint = QLabel(hint_text)
+            hint.setObjectName("metricHint")
+            hint.setWordWrap(True)
+            card_layout.addWidget(hint, 1, 1)
+
+            card_layout.setColumnStretch(1, 1)
+            layout.addWidget(card)
+
+        layout.addStretch()
+        return panel
 
     def refresh_dashboard(self) -> None:
         if self.session_factory is None:

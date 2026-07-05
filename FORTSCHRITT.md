@@ -77,6 +77,7 @@ Das Produktziel steht in `docs/zielbild.md`: ein schlankes lokales Windows-Buero
 - Volle Regression nach dem 2.0-Umbau ist gruen: 223 Tests bestanden, `compileall src tests` erfolgreich.
 - Winklmeier Office 2.0 wurde von Thomas abgenommen und im Programm erneut geprueft: volle Regression 223 Tests bestanden, `compileall src tests` erfolgreich, Screenshot-Smoke fuer alle fuenf Hauptbereiche unter `/private/tmp/getraenkeladen-design-preview/winklmeier-office-2-accepted`.
 - Visueller Button-/Alignment-Audit nach Computer-Use-Anfrage durchgefuehrt: Hauptbereiche erneut als Screenshots geprueft, Aktionsbuttons in Bestellungen, Kunden-/Artikel-Stammdaten, Tagesliste und Rechnungen vereinheitlicht, zu lange Buttontexte gekuerzt; volle Regression 223 Tests bestanden.
+- Kennzahlenbereich auf "Heute" visuell ueberarbeitet: kompakte Ueberblick-Zeilen ersetzen die zu hohen Leerkarten, Zahlen/Labels sind klar ausgerichtet und der Block bleibt scanbar neben der Tagesliste.
 
 ## In Arbeit
 

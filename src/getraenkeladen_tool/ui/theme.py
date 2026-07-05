@@ -202,7 +202,21 @@ QLabel#statusBox {
 }
 
 QWidget#dailyCockpitCard {
-    min-height: 112px;
+    min-height: 70px;
+    max-height: 86px;
+}
+
+QWidget#todaySummaryPanel {
+    background: transparent;
+    border: 0;
+    padding: 0;
+}
+
+QLabel#summaryPanelTitle {
+    color: #1d1d1f;
+    font-size: 17px;
+    font-weight: 800;
+    padding: 0 2px 2px 2px;
 }
 
 QWidget#heroSearchPanel {
@@ -273,14 +287,21 @@ QLabel#contactPreviewRow {
 
 QLabel#metricValue {
     color: #1d1d1f;
-    font-size: 36px;
+    font-size: 34px;
     font-weight: 800;
+    min-width: 52px;
 }
 
 QLabel#metricLabel {
+    color: #1d1d1f;
+    font-size: 15px;
+    font-weight: 800;
+}
+
+QLabel#metricHint {
     color: #6e6e73;
-    font-size: 14px;
-    font-weight: 700;
+    font-size: 13px;
+    font-weight: 650;
 }
 
 QLineEdit,
