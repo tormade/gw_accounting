@@ -10,11 +10,11 @@ from ..services.checklist_service import (
     resolve_price_mismatch,
 )
 from ..services.product_service import list_active_products
-from .layouts import ContentSurface, PageHeader, WorkspaceCard
+from .layouts import ContentSurface, InspectorPanel, PageHeader, ResponsiveSplitter, WorkspaceCard
 from .searchable_select import SearchableSelect
 
 
-CHECKLIST_COLUMNS = ("Prioritaet", "Status", "Kunde", "Problem", "Feld", "Kunden-Excel", "Zentrale Daten", "Naechster Schritt")
+CHECKLIST_COLUMNS = ("Prioritaet", "Kunde", "Problem", "Naechster Schritt")
 CHECKLIST_ACTIONS = {
     "refreshChecklistButton": "Pruefpunkte aktualisieren",
     "resolveChecklistButton": "Als erledigt markieren",
@@ -32,6 +32,8 @@ class ChecklistPanel(QWidget):
         super().__init__()
         self.session_factory = session_factory
         self.issue_ids_by_row = {}
+        self.issue_rows_by_id = {}
+        self.has_loaded = False
 
         self.summary_label = QLabel("Pruefpunkte werden nach Blockerwirkung gesammelt und priorisiert.")
         self.summary_label.setObjectName("muted")
@@ -54,9 +56,8 @@ class ChecklistPanel(QWidget):
         self.product_select = SearchableSelect("Zentralen Artikel suchen")
         self.product_select.setMinimumWidth(360)
         self.action_help_label = QLabel(
-            "Erklaerung der Aktionen: Aendert Stammdaten oder Kundensortiment dauerhaft. "
-            "Wenn die Artikelliste aktueller ist, zentralen Preis nutzen. "
-            "Wenn die Kunden-Excel die gelebte Wahrheit enthaelt, Kunden-Excel bzw. Excel-Preis behalten."
+            "Pruefpunkt auswaehlen. Nur die passenden Aktionen werden angezeigt. "
+            "Diese Entscheidung aendert Stammdaten oder Kundensortiment dauerhaft."
         )
         self.action_help_label.setObjectName("sectionSubtitle")
         self.action_help_label.setWordWrap(True)
@@ -70,6 +71,9 @@ class ChecklistPanel(QWidget):
         layout = surface.layout
         layout.addWidget(PageHeader("Pruefpunkte", "Blockierende Konflikte bewusst entscheiden, bevor sie Bestellungen stoeren."))
 
+        workspace = ResponsiveSplitter()
+        layout.addWidget(workspace, 1)
+
         card = WorkspaceCard(
             "Offene Punkte",
             "Blocker, Preisabweichungen, Artikelzuordnungen und Kundendaten-Konflikte.",
@@ -78,13 +82,13 @@ class ChecklistPanel(QWidget):
         )
         toolbar = QHBoxLayout()
         toolbar.addWidget(self.refresh_button)
-        toolbar.addWidget(self.resolve_button)
-        toolbar.addWidget(self.reopen_button)
-        toolbar.addWidget(self.use_central_price_button)
-        toolbar.addWidget(self.keep_excel_price_button)
-        toolbar.addWidget(self.use_list_value_button)
-        toolbar.addWidget(self.use_folder_value_button)
         toolbar.addStretch()
+        decision_toolbar = QHBoxLayout()
+        decision_toolbar.addWidget(self.use_central_price_button)
+        decision_toolbar.addWidget(self.keep_excel_price_button)
+        decision_toolbar.addWidget(self.use_list_value_button)
+        decision_toolbar.addWidget(self.use_folder_value_button)
+        decision_toolbar.addStretch()
         alias_toolbar = QHBoxLayout()
         alias_toolbar.addWidget(self.product_select)
         alias_toolbar.addWidget(self.confirm_product_alias_button)
@@ -92,9 +96,27 @@ class ChecklistPanel(QWidget):
         card.layout.addWidget(self.summary_label)
         card.layout.addWidget(self.action_help_label)
         card.layout.addLayout(toolbar)
-        card.layout.addLayout(alias_toolbar)
         card.layout.addWidget(self.issue_table)
-        layout.addWidget(card, 1)
+        workspace.addWidget(card)
+
+        self.issue_detail_panel = InspectorPanel(
+            "Pruefpunkt auswaehlen",
+            "Details, Vergleichswerte und passende Aktionen erscheinen hier.",
+        )
+        self.issue_detail_panel.setMaximumWidth(420)
+        self.issue_detail_panel.add_section_label("Details")
+        self.issue_field_label = self.issue_detail_panel.add_value_label("Feld")
+        self.issue_folder_label = self.issue_detail_panel.add_value_label("Kunden-Excel")
+        self.issue_list_label = self.issue_detail_panel.add_value_label("Zentrale Daten")
+        self.issue_message_label = self.issue_detail_panel.add_value_label("Naechster Schritt")
+        self.issue_detail_panel.add_section_label("Aktionen")
+        self.issue_detail_panel.body.addWidget(self.resolve_button)
+        self.issue_detail_panel.body.addWidget(self.reopen_button)
+        self.issue_detail_panel.body.addLayout(decision_toolbar)
+        self.issue_detail_panel.body.addLayout(alias_toolbar)
+        workspace.addWidget(self.issue_detail_panel)
+        workspace.setStretchFactor(0, 3)
+        workspace.setStretchFactor(1, 2)
         layout.addWidget(self.status_label)
 
         self.refresh_button.clicked.connect(self.refresh_issues)
@@ -105,8 +127,15 @@ class ChecklistPanel(QWidget):
         self.confirm_product_alias_button.clicked.connect(self.confirm_product_alias_for_selected_issue)
         self.use_list_value_button.clicked.connect(self.use_list_value_for_selected_issue)
         self.use_folder_value_button.clicked.connect(self.use_folder_value_for_selected_issue)
+        self.issue_table.itemSelectionChanged.connect(self.update_issue_context)
+        self.update_issue_context()
+
+    def ensure_loaded(self) -> None:
+        if self.has_loaded:
+            return
         self.refresh_products()
         self.refresh_issues()
+        self.has_loaded = True
 
     def refresh_products(self) -> None:
         if self.session_factory is None:
@@ -148,28 +177,65 @@ class ChecklistPanel(QWidget):
 
     def show_issues(self, rows: list) -> None:
         self.issue_ids_by_row = {}
-        self.issue_table.setRowCount(len(rows))
+        self.issue_rows_by_id = {row.id: row for row in rows}
         open_count = sum(1 for row in rows if row.status != "erledigt")
-        for row_index, row in enumerate(rows):
-            self.issue_ids_by_row[row_index] = row.id
-            priority = self._priority_label(row)
-            values = (
-                priority,
-                row.status,
-                row.customer_name,
-                row.issue_type_label,
-                row.field_name,
-                row.folder_value,
-                row.list_value,
-                row.message,
-            )
-            for column, value in enumerate(values):
-                item = QTableWidgetItem(value)
-                if column == 1 and row.status == "erledigt":
-                    item.setForeground(Qt.GlobalColor.darkGreen)
-                self.issue_table.setItem(row_index, column, item)
+        self.issue_table.setUpdatesEnabled(False)
+        try:
+            self.issue_table.setRowCount(len(rows))
+            for row_index, row in enumerate(rows):
+                self.issue_ids_by_row[row_index] = row.id
+                priority = self._priority_label(row)
+                values = (
+                    priority,
+                    row.customer_name,
+                    row.issue_type_label,
+                    row.message,
+                )
+                for column, value in enumerate(values):
+                    item = QTableWidgetItem(value)
+                    if row.status == "erledigt":
+                        item.setForeground(Qt.GlobalColor.darkGreen)
+                    self.issue_table.setItem(row_index, column, item)
+        finally:
+            self.issue_table.setUpdatesEnabled(True)
         self.summary_label.setText(f"{open_count} offene Pruefpunkte, {len(rows)} insgesamt.")
         self.status_label.setText("Pruefpunkte aktualisiert.")
+        self.update_issue_context()
+
+    def update_issue_context(self) -> None:
+        issue_id = self._selected_issue_id()
+        row = self.issue_rows_by_id.get(issue_id)
+        if row is None:
+            self.issue_detail_panel.set_heading(
+                "Pruefpunkt auswaehlen",
+                "Nur die passenden Aktionen werden angezeigt.",
+            )
+            self.issue_field_label.setText("Feld: -")
+            self.issue_folder_label.setText("Kunden-Excel: -")
+            self.issue_list_label.setText("Zentrale Daten: -")
+            self.issue_message_label.setText("Naechster Schritt: -")
+            self._set_issue_action_visibility(None)
+            return
+        self.issue_detail_panel.set_heading(row.issue_type_label, f"{row.customer_name} | Status: {row.status}")
+        self.issue_field_label.setText(f"Feld: {row.field_name or '-'}")
+        self.issue_folder_label.setText(f"Kunden-Excel: {row.folder_value or '-'}")
+        self.issue_list_label.setText(f"Zentrale Daten: {row.list_value or '-'}")
+        self.issue_message_label.setText(f"Naechster Schritt: {row.message or '-'}")
+        self._set_issue_action_visibility(getattr(row, "issue_type", ""))
+
+    def _set_issue_action_visibility(self, issue_type: str | None) -> None:
+        is_price = issue_type == "price_mismatch"
+        is_alias = issue_type == "product_alias"
+        is_customer = bool(issue_type and issue_type.startswith("customer_"))
+        has_issue = issue_type is not None
+        self.resolve_button.setVisible(has_issue)
+        self.reopen_button.setVisible(has_issue)
+        self.use_central_price_button.setVisible(is_price)
+        self.keep_excel_price_button.setVisible(is_price)
+        self.product_select.setVisible(is_alias)
+        self.confirm_product_alias_button.setVisible(is_alias)
+        self.use_list_value_button.setVisible(is_customer)
+        self.use_folder_value_button.setVisible(is_customer)
 
     def resolve_selected_issue(self) -> None:
         self._update_selected_issue("erledigt")

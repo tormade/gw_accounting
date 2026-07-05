@@ -4,7 +4,7 @@
         {
             "label": "Getraenkeladen Tool starten",
             "type": "shell",
-            "command": "PYTHONPATH=src .venv/bin/python -m getraenkeladen_tool",
+            "command": "PYTHONPATH=src /Users/thomasrumel/.venvs/gw_accounting_py311/bin/python -m getraenkeladen_tool",
             "options": {
                 "cwd": "${workspaceFolder}"
             },

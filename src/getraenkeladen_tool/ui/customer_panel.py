@@ -70,6 +70,7 @@ class CustomerPanel(QWidget):
         self.current_customer_id = None
         self.customer_ids_by_row = {}
         self.loaded_form_snapshot = None
+        self.has_loaded = False
 
         self.customer_name = QLineEdit()
         self.customer_name.setPlaceholderText("z. B. Cafe Nord")
@@ -82,7 +83,11 @@ class CustomerPanel(QWidget):
         self.status_label.setObjectName("muted")
         self.customers_table = QTableWidget(0, len(CUSTOMER_COLUMNS))
         self.customers_table.setHorizontalHeaderLabels(CUSTOMER_COLUMNS)
-        self.customers_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        self.customers_table.setMinimumHeight(360)
+        self.customers_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+        self.customers_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+        self.customers_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
+        self.customers_table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
 
         root_layout = QVBoxLayout(self)
         root_layout.setContentsMargins(0, 0, 0, 0)
@@ -100,6 +105,7 @@ class CustomerPanel(QWidget):
             tone="route",
             kicker="KUNDENKARTE",
         )
+        edit_box.setMaximumHeight(520)
         form = QFormLayout()
         configure_form_layout(form)
         form.addRow("Kunde", self.customer_name)
@@ -115,8 +121,8 @@ class CustomerPanel(QWidget):
         self.discard_button = self._button("discardCustomerChangesButton")
         self.undo_change_button = self._button("undoCustomerChangeButton")
         self.load_button = self._button("loadCustomerButton")
-        set_equal_button_widths((self.new_button, self.save_button, self.load_button), 190)
-        set_equal_button_widths((self.discard_button, self.undo_change_button), 230)
+        set_equal_button_widths((self.new_button, self.save_button, self.load_button), 170)
+        set_equal_button_widths((self.discard_button, self.undo_change_button), 170)
         action_row.addWidget(self.new_button)
         action_row.addWidget(self.save_button)
         action_row.addWidget(self.load_button)
@@ -137,7 +143,7 @@ class CustomerPanel(QWidget):
         self.refresh_button = self._button("refreshCustomersButton")
         self.archive_button = self._button("archiveCustomerButton")
         self.restore_button = self._button("restoreCustomerButton")
-        set_equal_button_widths((self.refresh_button, self.archive_button, self.restore_button), 190)
+        set_equal_button_widths((self.refresh_button, self.archive_button, self.restore_button), 170)
         for button in (
             self.refresh_button,
             self.archive_button,
@@ -164,7 +170,10 @@ class CustomerPanel(QWidget):
         self.customers_table.itemDoubleClicked.connect(lambda _item: self.load_selected_customer())
         self.customers_table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customers_table.customContextMenuRequested.connect(self.show_customer_context_menu)
-        self.refresh_customers()
+
+    def ensure_loaded(self) -> None:
+        if not self.has_loaded:
+            self.refresh_customers()
 
     def _folder_row(self) -> QWidget:
         row = QWidget()
@@ -234,22 +243,27 @@ class CustomerPanel(QWidget):
         session = self.session_factory()
         try:
             self.show_customers(list_customers(session))
+            self.has_loaded = True
         finally:
             session.close()
 
     def show_customers(self, customers: list) -> None:
         self.customer_ids_by_row = {}
-        self.customers_table.setRowCount(len(customers))
-        for row, customer in enumerate(customers):
-            self.customer_ids_by_row[row] = customer.id
-            values = (
-                customer.name,
-                customer.address or "",
-                to_display_date(customer.next_contact_date),
-                "aktiv" if customer.is_active else "archiviert",
-            )
-            for column, value in enumerate(values):
-                self.customers_table.setItem(row, column, QTableWidgetItem(value))
+        self.customers_table.setUpdatesEnabled(False)
+        try:
+            self.customers_table.setRowCount(len(customers))
+            for row, customer in enumerate(customers):
+                self.customer_ids_by_row[row] = customer.id
+                values = (
+                    customer.name,
+                    customer.address or "",
+                    to_display_date(customer.next_contact_date),
+                    "aktiv" if customer.is_active else "archiviert",
+                )
+                for column, value in enumerate(values):
+                    self.customers_table.setItem(row, column, QTableWidgetItem(value))
+        finally:
+            self.customers_table.setUpdatesEnabled(True)
         self.status_label.setText(f"{len(customers)} Kunden geladen.")
 
     def load_selected_customer(self) -> None:

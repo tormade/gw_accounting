@@ -49,7 +49,7 @@ def test_vscode_launch_uses_project_venv_with_debugpy():
     config = launch["configurations"][0]
 
     assert config["type"] == "debugpy"
-    assert config["python"] == "${workspaceFolder}/.venv/bin/python"
+    assert config["python"] == "/Users/thomasrumel/.venvs/gw_accounting_py311/bin/python"
     assert config["module"] == "getraenkeladen_tool"
     assert "QT_QPA_PLATFORM_PLUGIN_PATH" not in config.get("env", {})
 
@@ -61,7 +61,7 @@ def test_vscode_task_runs_app_without_debug_adapter():
     assert task["label"] == "Getraenkeladen Tool starten"
     assert task["command"] == (
         "PYTHONPATH=src "
-        ".venv/bin/python -m getraenkeladen_tool"
+        "/Users/thomasrumel/.venvs/gw_accounting_py311/bin/python -m getraenkeladen_tool"
     )
     assert task["type"] == "shell"
 

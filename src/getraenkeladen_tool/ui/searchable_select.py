@@ -2,6 +2,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 
 from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QColor, QFont
 from PySide6.QtWidgets import QLabel, QLineEdit, QListWidget, QListWidgetItem, QVBoxLayout, QWidget
 
 
@@ -10,6 +11,7 @@ class SearchableSelectItem:
     label: str
     value: object
     detail: str = ""
+    group: str = ""
 
 
 def filter_searchable_items(items: Iterable[SearchableSelectItem], search_text: str) -> list[SearchableSelectItem]:
@@ -21,7 +23,7 @@ def filter_searchable_items(items: Iterable[SearchableSelectItem], search_text: 
 
 class SearchableSelect(QWidget):
     selection_changed = Signal()
-    DEFAULT_LIST_HEIGHT = 130
+    DEFAULT_LIST_HEIGHT = 190
 
     def __init__(self, placeholder: str = "Suchen") -> None:
         super().__init__()
@@ -29,7 +31,7 @@ class SearchableSelect(QWidget):
         self._current_value = None
         self.search_input = QLineEdit()
         self.search_input.setPlaceholderText(placeholder)
-        self.help_label = QLabel("Namen tippen, dann Treffer anklicken.")
+        self.help_label = QLabel("Aus Liste waehlen oder Namen tippen.")
         self.help_label.setObjectName("sectionSubtitle")
         self.result_list = QListWidget()
         self.result_list.setMaximumHeight(0)
@@ -46,8 +48,16 @@ class SearchableSelect(QWidget):
         self.result_list.itemClicked.connect(self._select_item)
         self.result_list.itemDoubleClicked.connect(self._select_item)
 
-    def set_items(self, items: Iterable[tuple[str, object, str]]) -> None:
-        self._items = [SearchableSelectItem(label, value, detail) for label, value, detail in items]
+    def set_items(self, items: Iterable[tuple]) -> None:
+        self._items = [
+            SearchableSelectItem(
+                item[0],
+                item[1],
+                item[2] if len(item) >= 3 else "",
+                item[3] if len(item) >= 4 else "",
+            )
+            for item in items
+        ]
         self._current_value = None
         self._filter_items(self.search_input.text())
 
@@ -95,16 +105,23 @@ class SearchableSelect(QWidget):
 
     def _filter_items(self, text: str) -> None:
         self.result_list.clear()
-        if not text.strip():
-            self._current_value = None
-            self.result_list.setMaximumHeight(0)
-            self.help_label.setText("Namen tippen, dann Treffer anklicken.")
-            self.selection_changed.emit()
-            return
         self.result_list.setMaximumHeight(self.DEFAULT_LIST_HEIGHT)
-        self.help_label.setText("Treffer in der Liste anklicken.")
+        self.help_label.setText("Treffer in der Liste anklicken." if text.strip() else "Aus Liste waehlen oder Namen tippen.")
         matches = filter_searchable_items(self._items, text)
+        current_group = None
         for item in matches:
+            if item.group and item.group != current_group:
+                current_group = item.group
+                group_item = QListWidgetItem(item.group)
+                group_item.setFlags(Qt.ItemFlag.NoItemFlags)
+                group_item.setData(Qt.ItemDataRole.UserRole, None)
+                group_font = QFont(group_item.font())
+                group_font.setBold(True)
+                group_font.setPointSize(10)
+                group_item.setFont(group_font)
+                group_item.setForeground(QColor("#1d1d1f"))
+                group_item.setBackground(QColor("#f5f5f7"))
+                self.result_list.addItem(group_item)
             list_item = QListWidgetItem(item.label)
             list_item.setToolTip(item.detail)
             list_item.setData(Qt.ItemDataRole.UserRole, item.value)
@@ -114,12 +131,14 @@ class SearchableSelect(QWidget):
             empty_item.setFlags(empty_item.flags() & ~Qt.ItemFlag.ItemIsSelectable & ~Qt.ItemFlag.ItemIsEnabled)
             self.result_list.addItem(empty_item)
 
-        self._current_value = matches[0].value if len(matches) == 1 else None
-        if len(matches) == 1:
+        self._current_value = matches[0].value if len(matches) == 1 and text.strip() else None
+        if len(matches) == 1 and text.strip():
             self.help_label.setText("Eindeutiger Treffer. Sie koennen direkt weiterarbeiten.")
         self.selection_changed.emit()
 
     def _select_item(self, item: QListWidgetItem) -> None:
+        if not (item.flags() & Qt.ItemFlag.ItemIsEnabled) or item.data(Qt.ItemDataRole.UserRole) is None:
+            return
         self._current_value = item.data(Qt.ItemDataRole.UserRole)
         self.search_input.blockSignals(True)
         self.search_input.setText(item.text())

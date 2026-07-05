@@ -4,6 +4,7 @@ from PySide6.QtCore import Qt, QUrl, Signal
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
     QAbstractItemView,
+    QComboBox,
     QHBoxLayout,
     QHeaderView,
     QLabel,
@@ -22,7 +23,7 @@ from .date_input import to_display_date
 from .layouts import ContentSurface, PageHeader, WorkspaceCard
 
 
-DOCUMENT_ARCHIVE_COLUMNS = ("Lieferdatum", "Belegnummer", "Kunde", "Excel-Datei", "PDF-Datei", "Kundenordner", "Status")
+DOCUMENT_ARCHIVE_COLUMNS = ("Art", "Lieferdatum", "Belegnummer", "Kunde", "Excel-Datei", "PDF-Datei", "Kundenordner", "Status")
 DOCUMENT_ARCHIVE_ACTIONS = {
     "openExcelButton": "Excel oeffnen",
     "openPdfButton": "PDF oeffnen",
@@ -37,11 +38,9 @@ class DocumentArchivePanel(QWidget):
     def __init__(self, session_factory=None) -> None:
         super().__init__()
         self.session_factory = session_factory
-        self.invoice_ids_by_row = {}
-        self.delivery_note_ids_by_row = {}
+        self.document_ids_by_row = {}
         self.documents_by_id = {}
-        self.invoice_action_buttons = []
-        self.delivery_note_action_buttons = []
+        self.document_action_buttons = []
 
         root_layout = QVBoxLayout(self)
         root_layout.setContentsMargins(0, 0, 0, 0)
@@ -58,52 +57,58 @@ class DocumentArchivePanel(QWidget):
         self.search_field = QLineEdit()
         self.search_field.setObjectName("tableSearchField")
         self.search_field.setPlaceholderText("Kunde, Nummer oder Datum suchen")
-        search_box = WorkspaceCard("Suchen", "Tippen reicht: Kunde, Rechnungsnummer, Lieferscheinnummer oder Datum.")
+        self.document_filter = QComboBox()
+        self.document_filter.addItem("Alle Belege", "all")
+        self.document_filter.addItem("Nur Rechnungen", "Rechnung")
+        self.document_filter.addItem("Nur Lieferscheine", "Lieferschein")
+        self.document_filter.addItem("Fehlende Dateien", "missing")
+        search_box = WorkspaceCard(
+            "Suchen",
+            "Rechnungen und Lieferscheine gemeinsam durchsuchen. Tippen reicht: Kunde, Nummer oder Datum.",
+        )
         search_box.layout.addWidget(self.search_field)
-        self.context_hint = QLabel("Tipp: Rechtsklick auf einen Beleg oeffnet weitere Aktionen wie PDF neu erzeugen.")
+        search_box.layout.addWidget(self.document_filter)
+        self.context_hint = QLabel("Alle Aktionen stehen auch als Buttons bereit. Rechtsklick bietet zusaetzlich Neu-Erzeugen.")
         self.context_hint.setObjectName("sectionSubtitle")
         search_box.layout.addWidget(self.context_hint)
         layout.addWidget(search_box)
 
-        self.invoice_table = self._document_table()
-        self.invoice_table.customContextMenuRequested.connect(
-            lambda position: self.show_document_context_menu(self.invoice_table, self.invoice_ids_by_row, position)
+        self.document_table = self._document_table()
+        self.document_table.customContextMenuRequested.connect(
+            lambda position: self.show_document_context_menu(self.document_table, self.document_ids_by_row, position)
         )
-        invoice_box = WorkspaceCard(
-            "Bereits erstellte Rechnungen",
-            "Eine Rechnung markieren und dann Excel, PDF oder Ordner oeffnen.",
+        archive_box = WorkspaceCard(
+            "Alle Belege",
+            "Eine gemeinsame Liste fuer Rechnungen und Lieferscheine. Beleg markieren und Aktion waehlen.",
         )
-        invoice_box.layout.addWidget(self.invoice_table)
-        invoice_box.layout.addLayout(self._action_row(self.invoice_table, self.invoice_ids_by_row, self.invoice_action_buttons))
-        layout.addWidget(invoice_box)
-
-        self.delivery_note_table = self._document_table()
-        self.delivery_note_table.customContextMenuRequested.connect(
-            lambda position: self.show_document_context_menu(self.delivery_note_table, self.delivery_note_ids_by_row, position)
-        )
-        delivery_box = WorkspaceCard(
-            "Bereits erstellte Lieferscheine",
-            "Einen Lieferschein markieren und dann Excel, PDF oder Ordner oeffnen.",
-        )
-        delivery_box.layout.addWidget(self.delivery_note_table)
-        delivery_box.layout.addLayout(
-            self._action_row(self.delivery_note_table, self.delivery_note_ids_by_row, self.delivery_note_action_buttons)
-        )
-        layout.addWidget(delivery_box)
+        archive_box.layout.addWidget(self.document_table)
+        archive_box.layout.addLayout(self._action_row(self.document_table, self.document_ids_by_row, self.document_action_buttons))
+        layout.addWidget(archive_box, 1)
 
         self.status_label = QLabel("Noch keine Belege geladen.")
         self.status_label.setObjectName("muted")
         layout.addWidget(self.status_label)
 
         self.search_field.textChanged.connect(self.apply_search)
-        self.invoice_table.itemSelectionChanged.connect(self.update_action_buttons)
-        self.delivery_note_table.itemSelectionChanged.connect(self.update_action_buttons)
+        self.document_filter.currentIndexChanged.connect(self.apply_search)
+        self.document_table.itemSelectionChanged.connect(self.update_action_buttons)
         self.refresh_archive()
 
     def _document_table(self) -> QTableWidget:
         table = QTableWidget(0, len(DOCUMENT_ARCHIVE_COLUMNS))
         table.setHorizontalHeaderLabels(DOCUMENT_ARCHIVE_COLUMNS)
-        table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        header = table.horizontalHeader()
+        header.setMinimumSectionSize(96)
+        header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(2, QHeaderView.ResizeMode.Interactive)
+        header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(6, QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(7, QHeaderView.ResizeMode.Interactive)
+        table.setColumnWidth(1, 180)
+        table.setColumnWidth(6, 190)
         table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
@@ -151,8 +156,12 @@ class DocumentArchivePanel(QWidget):
                 }
                 for document in [*invoices, *delivery_notes]
             }
-            self._show_documents(self.invoice_table, self.invoice_ids_by_row, invoices)
-            self._show_documents(self.delivery_note_table, self.delivery_note_ids_by_row, delivery_notes)
+            documents = sorted(
+                [*invoices, *delivery_notes],
+                key=lambda document: (document.delivery_date, document.document_type, document.document_number),
+                reverse=True,
+            )
+            self._show_documents(self.document_table, self.document_ids_by_row, documents)
         finally:
             session.close()
         self.apply_search()
@@ -167,6 +176,7 @@ class DocumentArchivePanel(QWidget):
             pdf_path = Path(document.pdf_path)
             folder_path = excel_path.parent
             values = (
+                document.document_type,
                 to_display_date(document.delivery_date),
                 document.document_number,
                 document.customer.name,
@@ -197,22 +207,25 @@ class DocumentArchivePanel(QWidget):
 
     def apply_search(self) -> None:
         query = self.search_field.text().strip().lower()
-        visible_counts = []
-        for table in (self.invoice_table, self.delivery_note_table):
-            table.clearSelection()
-            visible_count = 0
-            for row in range(table.rowCount()):
-                row_matches = self._row_matches_query(table, row, query)
-                table.setRowHidden(row, not row_matches)
-                if row_matches:
-                    visible_count += 1
-            visible_counts.append(visible_count)
+        filter_value = self.document_filter.currentData()
+        table = self.document_table
+        table.clearSelection()
+        visible_count = 0
+        for row in range(table.rowCount()):
+            row_matches = self._row_matches_query(table, row, query) and self._row_matches_filter(table, row, filter_value)
+            table.setRowHidden(row, not row_matches)
+            if row_matches:
+                visible_count += 1
         self.update_action_buttons()
         if query:
-            total = sum(visible_counts)
-            self.status_label.setText(
-                f"{total} Belege gefunden: {visible_counts[0]} Rechnungen und {visible_counts[1]} Lieferscheine."
-            )
+            self.status_label.setText(f"{visible_count} Belege gefunden.")
+
+    def _row_matches_filter(self, table: QTableWidget, row: int, filter_value: str) -> bool:
+        if filter_value == "all":
+            return True
+        if filter_value == "missing":
+            return "fehlt" in self._item_text(table, row, 7).lower()
+        return self._item_text(table, row, 0) == filter_value
 
     def _row_matches_query(self, table: QTableWidget, row: int, query: str) -> bool:
         if not query:
@@ -222,6 +235,10 @@ class DocumentArchivePanel(QWidget):
             if item is not None and query in item.text().lower():
                 return True
         return False
+
+    def _item_text(self, table: QTableWidget, row: int, column: int) -> str:
+        item = table.item(row, column)
+        return item.text() if item is not None else ""
 
     def open_selected_excel(self, table: QTableWidget, row_map: dict[int, int]) -> None:
         self._open_selected_path(table, row_map, "excel_path", "Die Excel-Datei wurde nicht gefunden.")
@@ -258,11 +275,7 @@ class DocumentArchivePanel(QWidget):
         regenerate_pdf_action.setToolTip("Nur aktiv, wenn die PDF-Datei fehlt.")
         regenerate_excel_action.setToolTip("Nur aktiv, wenn die Excel-Datei fehlt.")
         menu.addSeparator()
-        document_label = (
-            "Im Rechnungsbereich oeffnen"
-            if document["document_type"] == "Rechnung"
-            else "Im Lieferscheinbereich oeffnen"
-        )
+        document_label = "Im Belegbereich oeffnen"
         open_document_action = menu.addAction(document_label)
         open_order_action = menu.addAction("Zugehoerige Bestellung oeffnen")
         open_order_action.setEnabled(document["order_id"] is not None)
@@ -355,12 +368,8 @@ class DocumentArchivePanel(QWidget):
 
     def update_action_buttons(self) -> None:
         self._set_action_buttons_enabled(
-            self.invoice_action_buttons,
-            self._has_visible_selection(self.invoice_table, self.invoice_ids_by_row),
-        )
-        self._set_action_buttons_enabled(
-            self.delivery_note_action_buttons,
-            self._has_visible_selection(self.delivery_note_table, self.delivery_note_ids_by_row),
+            self.document_action_buttons,
+            self._has_visible_selection(self.document_table, self.document_ids_by_row),
         )
 
     def _has_visible_selection(self, table: QTableWidget, row_map: dict[int, int]) -> bool:

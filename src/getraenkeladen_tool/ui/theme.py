@@ -10,33 +10,6 @@ QWidget {
     color: #1d1d1f;
 }
 
-QWidget#appToolbar {
-    background: #ffffff;
-    border-bottom: 1px solid #d2d2d7;
-}
-
-QLabel#toolbarLogo {
-    color: #1d1d1f;
-    font-size: 15px;
-    font-weight: 800;
-    min-width: 190px;
-}
-
-QLineEdit#toolbarSearch {
-    background: #f5f5f7;
-    border: 1px solid #d2d2d7;
-    border-radius: 8px;
-    color: #1d1d1f;
-    min-height: 34px;
-    padding: 6px 12px;
-}
-
-QLineEdit#toolbarSearch:focus {
-    background: #ffffff;
-    border: 2px solid #0a84ff;
-    padding: 5px 11px;
-}
-
 QWidget#appShell,
 QScrollArea,
 QWidget#contentSurface {
@@ -62,6 +35,16 @@ QLabel#inspectorSubtitle,
 QLabel#inspectorValue {
     color: #6e6e73;
     font-size: 14px;
+}
+
+QLabel#nextStepValue {
+    background: #f5f5f7;
+    border: 1px solid #e1e1e6;
+    border-radius: 8px;
+    color: #1d1d1f;
+    font-size: 14px;
+    font-weight: 650;
+    padding: 10px;
 }
 
 QLabel#inspectorSection {
@@ -191,6 +174,7 @@ QWidget#pageToolbar {
 }
 
 QWidget#totalBar,
+QWidget#documentFinishBar,
 QLabel#statusBox {
     background: #eef6ff;
     border: 1px solid #c8ddf4;
@@ -199,6 +183,56 @@ QLabel#statusBox {
     padding: 11px;
     font-size: 14px;
     font-weight: 700;
+}
+
+QLabel#totalAmount {
+    color: #1d1d1f;
+    font-size: 17px;
+    font-weight: 800;
+}
+
+QPushButton#disclosureButton {
+    background: #ffffff;
+    border: 1px solid #d2d2d7;
+    border-radius: 8px;
+    color: #1d1d1f;
+    font-size: 15px;
+    font-weight: 760;
+    min-height: 42px;
+    padding: 8px 14px;
+    text-align: left;
+}
+
+QPushButton#disclosureButton:checked {
+    background: #f5f5f7;
+    border-color: #b9b9bf;
+}
+
+QWidget#disclosurePanel {
+    background: #ffffff;
+    border: 1px solid #d2d2d7;
+    border-radius: 8px;
+    padding: 12px;
+}
+
+QGroupBox {
+    background: #ffffff;
+    border: 1px solid #d2d2d7;
+    border-radius: 8px;
+    color: #1d1d1f;
+    font-weight: 700;
+    margin-top: 12px;
+    padding: 14px 10px 10px 10px;
+}
+
+QGroupBox::title {
+    subcontrol-origin: margin;
+    left: 10px;
+    padding: 0 6px;
+}
+
+QGroupBox:unchecked {
+    color: #6e6e73;
 }
 
 QWidget#dailyCockpitCard {
@@ -330,6 +364,12 @@ QSpinBox:focus,
 QDateEdit:focus {
     background: #ffffff;
     border: 2px solid #0a84ff;
+    padding: 6px 9px;
+}
+
+QLineEdit[state="error"] {
+    background: #fff7f7;
+    border: 2px solid #c4312f;
     padding: 6px 9px;
 }
 
@@ -534,7 +574,6 @@ QPushButton:disabled {
     color: #8e8e93;
 }
 
-QPushButton#toolbarPrimaryButton,
 QPushButton#primaryAction,
 QPushButton#newDeliveryButton,
 QPushButton#newOrderButton,
@@ -547,7 +586,6 @@ QPushButton#workflowStepButton {
     color: #ffffff;
 }
 
-QPushButton#toolbarPrimaryButton:hover,
 QPushButton#primaryAction:hover,
 QPushButton#newDeliveryButton:hover,
 QPushButton#newOrderButton:hover,
@@ -559,11 +597,18 @@ QPushButton#workflowStepButton:hover {
     border-color: #0071e3;
 }
 
-QPushButton#toolbarButton {
-    background: #ffffff;
+QPushButton#primaryAction:disabled,
+QPushButton#newDeliveryButton:disabled,
+QPushButton#newOrderButton:disabled,
+QPushButton#addOrderLineButton:disabled,
+QPushButton#saveOrderButton:disabled,
+QPushButton#createOrderDocumentsButton:disabled,
+QPushButton#workflowStepButton:disabled {
+    background: #f0f0f2;
+    border-color: #d2d2d7;
+    color: #8e8e93;
 }
 
-QPushButton#toolbarHelpButton,
 QPushButton#helpButton {
     background: #ffffff;
     border: 1px solid #d2d2d7;
@@ -577,7 +622,6 @@ QPushButton#helpButton {
     padding: 0;
 }
 
-QPushButton#toolbarHelpButton:hover,
 QPushButton#helpButton:hover {
     background: #f5f5f7;
     color: #1d1d1f;

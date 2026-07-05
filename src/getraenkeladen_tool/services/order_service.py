@@ -115,6 +115,18 @@ def list_active_orders(session: Session, customer_id: int | None = None) -> list
     return list(session.scalars(query))
 
 
+def latest_order_for_customer(session: Session, customer_id: int) -> Order | None:
+    return session.scalar(
+        select(Order)
+        .options(selectinload(Order.lines), selectinload(Order.deposit_returns), selectinload(Order.customer))
+        .where(Order.customer_id == customer_id)
+        .where(Order.status != "archiviert")
+        .where(Order.number_released == False)  # noqa: E712
+        .order_by(Order.delivery_date.desc(), Order.id.desc())
+        .limit(1)
+    )
+
+
 def archive_order(session: Session, order_id: int) -> Order:
     order = get_order(session, order_id)
     order.status = "archiviert"

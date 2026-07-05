@@ -1,8 +1,4 @@
-DEPOSIT_RETURN_PRESETS = (
-    ("Pfand 1,50 EUR", 150),
-    ("Pfand 2,40 EUR", 240),
-    ("Pfand 3,10 EUR", 310),
-    ("Pfand 3,30 EUR", 330),
-    ("Pfand 4,80 EUR", 480),
-    ("Pfand 5,10 EUR", 510),
-)
+from ..services.deposit_service import DEPOSIT_RETURN_PRESETS as SERVICE_DEPOSIT_RETURN_PRESETS
+
+
+DEPOSIT_RETURN_PRESETS = tuple((preset.label, preset.deposit_cents) for preset in SERVICE_DEPOSIT_RETURN_PRESETS)

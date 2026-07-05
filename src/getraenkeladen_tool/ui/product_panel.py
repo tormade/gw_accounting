@@ -67,6 +67,7 @@ class ProductPanel(QWidget):
         self.current_product_id = None
         self.product_ids_by_row = {}
         self.loaded_form_snapshot = None
+        self.has_loaded = False
 
         self.product_name = QLineEdit()
         self.product_name.setPlaceholderText("z. B. Wasser 0,7")
@@ -81,7 +82,12 @@ class ProductPanel(QWidget):
         self.status_label.setObjectName("muted")
         self.products_table = QTableWidget(0, len(PRODUCT_COLUMNS))
         self.products_table.setHorizontalHeaderLabels(PRODUCT_COLUMNS)
-        self.products_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        self.products_table.setMinimumHeight(360)
+        self.products_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+        self.products_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
+        self.products_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
+        self.products_table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
+        self.products_table.horizontalHeader().setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
 
         root_layout = QVBoxLayout(self)
         root_layout.setContentsMargins(0, 0, 0, 0)
@@ -99,6 +105,7 @@ class ProductPanel(QWidget):
             tone="cash",
             kicker="PREISKARTE",
         )
+        edit_box.setMaximumHeight(500)
         form = QFormLayout()
         configure_form_layout(form)
         form.addRow("Produkt", self.product_name)
@@ -114,8 +121,8 @@ class ProductPanel(QWidget):
         self.discard_button = self._button("discardProductChangesButton")
         self.undo_change_button = self._button("undoProductChangeButton")
         self.load_button = self._button("loadProductButton")
-        set_equal_button_widths((self.new_button, self.save_button, self.load_button), 190)
-        set_equal_button_widths((self.discard_button, self.undo_change_button), 230)
+        set_equal_button_widths((self.new_button, self.save_button, self.load_button), 170)
+        set_equal_button_widths((self.discard_button, self.undo_change_button), 170)
         action_row.addWidget(self.new_button)
         action_row.addWidget(self.save_button)
         action_row.addWidget(self.load_button)
@@ -137,7 +144,7 @@ class ProductPanel(QWidget):
         self.refresh_button = self._button("refreshProductsButton")
         self.deactivate_button = self._button("deactivateProductButton")
         self.restore_button = self._button("restoreProductButton")
-        set_equal_button_widths((self.refresh_button, self.deactivate_button, self.restore_button), 190)
+        set_equal_button_widths((self.refresh_button, self.deactivate_button, self.restore_button), 170)
         for button in (
             self.refresh_button,
             self.deactivate_button,
@@ -164,7 +171,10 @@ class ProductPanel(QWidget):
         self.products_table.itemDoubleClicked.connect(lambda _item: self.load_selected_product())
         self.products_table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.products_table.customContextMenuRequested.connect(self.show_product_context_menu)
-        self.refresh_products()
+
+    def ensure_loaded(self) -> None:
+        if not self.has_loaded:
+            self.refresh_products()
 
     def _button(self, object_name: str) -> QPushButton:
         button = QPushButton(PRODUCT_PANEL_ACTIONS[object_name])
@@ -196,6 +206,8 @@ class ProductPanel(QWidget):
         if self.session_factory is None:
             self.status_label.setText("Keine Datenbankverbindung vorhanden.")
             return
+        if not self._validate_product_form():
+            return
 
         payload = ProductCreate(
             name=self.product_name.text().strip(),
@@ -226,23 +238,28 @@ class ProductPanel(QWidget):
         session = self.session_factory()
         try:
             self.show_products(list_products(session))
+            self.has_loaded = True
         finally:
             session.close()
 
     def show_products(self, products: list) -> None:
         self.product_ids_by_row = {}
-        self.products_table.setRowCount(len(products))
-        for row, product in enumerate(products):
-            self.product_ids_by_row[row] = product.id
-            values = (
-                product.name,
-                product.article_number or "",
-                f"{product.standard_price_cents / 100:.2f} EUR".replace(".", ","),
-                f"{product.default_deposit_cents / 100:.2f} EUR".replace(".", ","),
-                "aktiv" if product.is_active else "archiviert",
-            )
-            for column, value in enumerate(values):
-                self.products_table.setItem(row, column, QTableWidgetItem(value))
+        self.products_table.setUpdatesEnabled(False)
+        try:
+            self.products_table.setRowCount(len(products))
+            for row, product in enumerate(products):
+                self.product_ids_by_row[row] = product.id
+                values = (
+                    product.name,
+                    product.article_number or "",
+                    f"{product.standard_price_cents / 100:.2f} EUR".replace(".", ","),
+                    f"{product.default_deposit_cents / 100:.2f} EUR".replace(".", ","),
+                    "aktiv" if product.is_active else "archiviert",
+                )
+                for column, value in enumerate(values):
+                    self.products_table.setItem(row, column, QTableWidgetItem(value))
+        finally:
+            self.products_table.setUpdatesEnabled(True)
         self.status_label.setText(f"{len(products)} Produkte geladen.")
 
     def load_selected_product(self) -> None:
@@ -328,6 +345,7 @@ class ProductPanel(QWidget):
 
     def new_product(self) -> None:
         self.current_product_id = None
+        self._set_field_error(self.product_name, False)
         self.product_name.clear()
         self.article_number.clear()
         self.price_eur.clear()
@@ -380,6 +398,7 @@ class ProductPanel(QWidget):
 
     def _apply_snapshot(self, snapshot: dict) -> None:
         self.current_product_id = snapshot["id"]
+        self._set_field_error(self.product_name, False)
         self.product_name.setText(snapshot["name"])
         self.article_number.setText(snapshot["article_number"])
         self.price_eur.setText(snapshot["price_eur"])
@@ -391,3 +410,20 @@ class ProductPanel(QWidget):
             return 0
         normalized = value.strip().replace(".", "").replace(",", ".")
         return int(round(float(normalized) * 100))
+
+    def _validate_product_form(self) -> bool:
+        if not self.product_name.text().strip():
+            self._set_field_error(self.product_name, True)
+            self.status_label.setText("Bitte Produktnamen eintragen.")
+            self.product_name.setFocus()
+            return False
+        self._set_field_error(self.product_name, False)
+        return True
+
+    def _set_field_error(self, field: QLineEdit, has_error: bool) -> None:
+        if has_error:
+            field.setProperty("state", "error")
+        else:
+            field.setProperty("state", "")
+        field.style().unpolish(field)
+        field.style().polish(field)

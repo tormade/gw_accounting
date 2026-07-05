@@ -60,6 +60,31 @@ def test_create_order_copies_product_prices_into_order_lines(session, tmp_path: 
     assert loaded.lines[0].deposit_cents == 330
 
 
+def test_create_order_keeps_zero_quantity_lines_as_visible_placeholders(session, tmp_path: Path):
+    customer = create_customer(session, CustomerCreate(name="Cafe Nord", folder_path=str(tmp_path / "Cafe Nord")))
+    water = create_product(
+        session,
+        ProductCreate(name="Wasser 12x0,7", unit="Kiste", standard_price_cents=1299, default_deposit_cents=330),
+    )
+
+    order = create_order(
+        session,
+        OrderCreate(
+            order_number="AUF-1001-NULL",
+            customer_id=customer.id,
+            order_date="2026-06-21",
+            delivery_date="2026-06-22",
+            lines=[OrderLineCreate(product_id=water.id, quantity=0, deposit_cents=330)],
+        ),
+    )
+
+    loaded = get_order(session, order.id)
+
+    assert loaded.lines[0].product_name == "Wasser 12x0,7"
+    assert loaded.lines[0].quantity == 0
+    assert loaded.lines[0].unit_price_cents == 1299
+
+
 def test_create_order_allows_price_override(session, tmp_path: Path):
     customer = create_customer(session, CustomerCreate(name="Hotel Blau", folder_path=str(tmp_path / "Hotel Blau")))
     product = create_product(

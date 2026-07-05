@@ -41,7 +41,7 @@ def test_customer_folder_panel_disables_actions_until_customer_context_exists():
     assert panel.open_folder_button.isEnabled() is False
     assert panel.open_file_button.isEnabled() is False
     assert panel.new_order_button.isEnabled() is False
-    assert panel.seed_file_hint.text() == "Letzte Mengen erscheinen nach der Kundenauswahl."
+    assert panel.seed_file_hint.text() == "Kunde suchen, dann erscheinen letzte Mengen und passende Aktionen."
     assert panel.delivery_note_button.isEnabled() is False
     assert panel.invoice_button.isEnabled() is False
     assert panel.customer_next_step_label.text() == "Naechster Schritt: Kunde suchen."
@@ -89,10 +89,10 @@ def test_customer_folder_panel_enables_actions_from_snapshot_state(tmp_path: Pat
     assert panel.assortment_table.item(0, 0).text() == "Frucade"
     assert panel.open_folder_button.isEnabled() is True
     assert panel.new_order_button.isEnabled() is True
-    assert panel.new_order_button.text() == "Bestellung starten"
-    assert panel.seed_file_hint.text() == "Letzte Mengen erscheinen nach der Kundenauswahl."
+    assert panel.new_order_button.text() == "Neue Bestellung starten"
+    assert panel.seed_file_hint.text() == "Letzte Mengen sind vorbereitet. Neue Bestellung starten und Mengen anpassen."
     assert panel.inspector.title_label.text() == "Cafe Nord"
-    assert panel.customer_next_step_label.text() == "Naechster Schritt: Bestellung aus letzten Mengen starten."
+    assert panel.customer_next_step_label.text() == "Naechster Schritt: Neue Bestellung starten; die letzten Mengen sind vorbereitet."
     assert panel.delivery_note_button.isEnabled() is False
     assert panel.invoice_button.isEnabled() is False
 
@@ -184,3 +184,54 @@ def test_customer_folder_panel_routes_selected_order_to_documents():
     assert "def request_invoice_for_selected_order" in source
     assert "self.invoice_requested.emit(order_id)" in source
     assert "Bitte zuerst eine Bestellung dieses Kunden auswaehlen" in source
+
+
+def test_customer_folder_panel_shows_automation_quickstart_suggestions():
+    source = Path("src/getraenkeladen_tool/ui/customer_folder_panel.py").read_text(encoding="utf-8")
+
+    assert "from ..services.automation_service import get_customer_quickstart, list_customer_folder_excel_previews" in source
+    assert "quickstart = get_customer_quickstart(session, customer.id)" in source
+    assert "quickstart.suggestions" in source
+    assert "excel_previews = list_customer_folder_excel_previews(session, customer.id)" in source
+    assert "Neue Excel-Datei" in source
+
+
+def test_customer_folder_panel_emits_new_order_for_selected_customer(tmp_path: Path):
+    _app()
+    from getraenkeladen_tool.ui.customer_folder_panel import CustomerFolderPanel
+
+    folder = tmp_path / "Cafe Nord"
+    customer = SimpleNamespace(id=7, name="Cafe Nord")
+    snapshot = SimpleNamespace(
+        customer=customer,
+        folder_path=folder,
+        folder_exists=False,
+        files=[],
+        orders=[],
+    )
+    panel = CustomerFolderPanel(session_factory=None)
+    requested_ids: list[int] = []
+    panel.new_order_requested.connect(requested_ids.append)
+
+    panel.show_snapshot(snapshot, [])
+    panel.request_new_order()
+
+    assert requested_ids == [7]
+
+
+def test_customer_folder_panel_loads_last_quantities_from_latest_order_when_assortment_is_empty():
+    source = Path("src/getraenkeladen_tool/ui/customer_folder_panel.py").read_text(encoding="utf-8")
+
+    assert "list_customer_assortment_with_order_fallback" in source
+    assert "Letzte Mengen aus letzter Bestellung" in source
+    assert "Neue Bestellung starten" in source
+    assert "self.customer_context_tabs.setCurrentIndex(0)" in source
+
+
+def test_customer_folder_panel_keeps_next_step_short_enough_for_inspector():
+    source = Path("src/getraenkeladen_tool/ui/customer_folder_panel.py").read_text(encoding="utf-8")
+
+    assert "quickstart.suggestions[0]" in source
+    assert '" | ".join(quickstart.suggestions[:3])' not in source
+    assert 'self.customer_next_step_label.setObjectName("nextStepValue")' in source
+    assert "self.customer_next_step_label.setMinimumHeight(72)" in source

@@ -7,6 +7,7 @@ def test_main_window_exposes_first_version_tabs():
         "Heute",
         "Kunden",
         "Bestellungen",
+        "Belege",
         "Rechnungen",
         "Stammdaten",
     )
@@ -57,19 +58,19 @@ def test_dashboard_quick_actions_open_customer_folder_workspace():
     assert 'MAIN_TABS.index("Stammdaten")' in source
 
 
-def test_main_window_uses_apple_like_toolbar_instead_of_brand_banner():
+def test_main_window_removes_global_header_toolbar_in_favor_of_page_headers():
     from pathlib import Path
 
     source = Path("src/getraenkeladen_tool/ui/main_window.py").read_text(encoding="utf-8")
 
-    assert "def _toolbar" in source
-    assert 'setObjectName("appToolbar")' in source
-    assert "toolbarSearch" in source
-    assert "Kunde, Rechnung oder Artikel suchen" in source
-    assert "self.toolbar_new_button.clicked.connect(self.handle_toolbar_primary_action)" in source
-    assert "def update_toolbar_primary_action" in source
-    assert "self.toolbar_refresh_button.clicked.connect" in source
-    assert "root_layout.addWidget(self._toolbar())" in source
+    assert "def _toolbar" not in source
+    assert 'setObjectName("appToolbar")' not in source
+    assert "toolbarSearch" not in source
+    assert "Kunde, Rechnung oder Artikel suchen" not in source
+    assert "handle_toolbar_search" not in source
+    assert "show_toolbar_help" not in source
+    assert "update_toolbar_primary_action" not in source
+    assert "root_layout.addWidget(self._toolbar())" not in source
     assert "brandService" not in source
 
 
@@ -94,14 +95,9 @@ def test_theme_uses_winklmeier_work_tool_direction():
     assert "pageToolbar" in APP_STYLESHEET
 
 
-def test_theme_uses_light_apple_like_shell_instead_of_black_bars():
-    from pathlib import Path
-
-    assert "QWidget#appToolbar {\n    background: #ffffff;" in APP_STYLESHEET
-    assert "QLineEdit#toolbarSearch" in APP_STYLESHEET
-    assert "Kunde, Rechnung oder Artikel suchen" in Path("src/getraenkeladen_tool/ui/main_window.py").read_text(
-        encoding="utf-8"
-    )
+def test_theme_uses_light_apple_like_shell_without_global_header_bar():
+    assert "QWidget#appToolbar" not in APP_STYLESHEET
+    assert "QLineEdit#toolbarSearch" not in APP_STYLESHEET
     assert "QListWidget#sidebarNavigation {\n    background: #f5f5f7;" in APP_STYLESHEET
     assert "background: #111111;" not in APP_STYLESHEET
     assert "QWidget#brandHeader" not in APP_STYLESHEET
@@ -180,6 +176,8 @@ def test_sidebar_navigation_is_named_for_keyboard_and_accessibility():
     assert 'self.setAccessibleName("Hauptnavigation")' in source
     assert "Qt.FocusPolicy.StrongFocus" in source
     assert 'item.setToolTip(f"{label} oeffnen")' in source
+    assert "item.setData(Qt.ItemDataRole.AccessibleTextRole, label)" in source
+    assert "item.setData(Qt.ItemDataRole.AccessibleDescriptionRole, f\"{label} oeffnen\")" in source
 
 
 def test_order_and_document_workspaces_use_named_layout_regions():
@@ -249,6 +247,7 @@ def test_target_state_navigation_prioritizes_customer_folder_path():
     assert '"Heute"' in source
     assert '"Kunden"' in source
     assert '"Bestellungen"' in source
+    assert '"Belege"' in source
     assert '"Rechnungen"' in source
     assert '"Kunde & Bestellung"' not in source
     assert '"Auftraege"' not in source
@@ -279,7 +278,10 @@ def test_checklist_panel_exposes_concrete_resolution_actions():
     assert '"confirmProductAliasButton": "Artikel zuordnen"' in source
     assert '"useListValueButton": "Zentrale Liste nutzen"' in source
     assert '"useFolderValueButton": "Kunden-Excel nutzen"' in source
-    assert 'CHECKLIST_COLUMNS = ("Prioritaet", "Status", "Kunde", "Problem", "Feld", "Kunden-Excel", "Zentrale Daten", "Naechster Schritt")' in source
+    assert 'CHECKLIST_COLUMNS = ("Prioritaet", "Kunde", "Problem", "Naechster Schritt")' in source
+    assert "self.issue_detail_panel = InspectorPanel" in source
+    assert "def update_issue_context" in source
+    assert "def _set_issue_action_visibility" in source
     assert "def _priority_label" in source
     assert "def use_central_price_for_selected_issue" in source
     assert "def keep_excel_price_for_selected_issue" in source
@@ -293,9 +295,9 @@ def test_checklist_panel_explains_data_changing_actions_for_uncertain_users():
 
     source = Path("src/getraenkeladen_tool/ui/checklist_panel.py").read_text(encoding="utf-8")
 
-    assert "Erklaerung der Aktionen" in source
-    assert "Aendert Stammdaten oder Kundensortiment" in source
-    assert "Wenn die Artikelliste aktueller ist" in source
+    assert "Pruefpunkt auswaehlen" in source
+    assert "Nur die passenden Aktionen werden angezeigt." in source
+    assert "Diese Entscheidung aendert Stammdaten oder Kundensortiment dauerhaft." in source
 
 
 def test_date_fields_use_calendar_input():
@@ -335,7 +337,7 @@ def test_main_window_keeps_document_workflows_as_internal_helpers():
     assert "DocumentPanel" not in source
     assert "self.document_workspace =" not in source
     assert "self.pages.addWidget(self._scrollable_tab(self.document_workspace))" not in source
-    assert "DocumentArchivePanel" not in source
+    assert "DocumentArchivePanel" in source
     assert "DeliveryNotePanel" in source
     assert "InvoicePanel" in source
 
@@ -354,6 +356,7 @@ def test_order_tab_exposes_guided_order_actions():
         "newOrderButton": "Neue Bestellung",
         "copyOrderButton": "Als Vorlage kopieren",
         "refreshOrderDataButton": "Daten neu laden",
+        "suggestOrderNumberButton": "Nummer vorschlagen",
         "addOrderLineButton": "Position hinzufuegen",
         "removeOrderLineButton": "Position entfernen",
         "addDepositReturnButton": "Pfand-Rueckgabe eintragen",
@@ -406,8 +409,20 @@ def test_main_window_embeds_customer_folder_as_second_page_and_wires_actions():
     assert "self.order_panel.open_new_order_for_customer(customer_id)" in source
     assert "self.customer_folder_panel.delivery_note_requested.connect(self.open_delivery_note_for_order)" in source
     assert "self.customer_folder_panel.invoice_requested.connect(self.open_invoice_for_order)" in source
+    assert "self.customer_folder_panel.new_order_requested.connect(self.open_new_order_for_customer)" in source
     assert '"Lieferscheine"' not in source
     assert '"Rechnungen"' in source
+
+
+def test_customer_folder_request_opens_order_tab_not_customer_tab():
+    from pathlib import Path
+
+    source = Path("src/getraenkeladen_tool/ui/main_window.py").read_text(encoding="utf-8")
+
+    assert "def open_new_order_for_customer" in source
+    assert "self.open_orders_tab()" in source
+    assert "self.order_panel.open_new_order_for_customer(customer_id)" in source
+    assert "self.open_customer_folder_tab()\n        self.order_panel.open_new_order_for_customer(customer_id)" not in source
 
 
 def test_main_window_opens_document_workflows_as_visible_dialogs_from_customer_folder():
@@ -492,14 +507,21 @@ def test_product_tab_exposes_price_list_actions():
 
 
 def test_settings_tab_focuses_on_master_data_import_without_number_sequences():
+    from pathlib import Path
+
     from getraenkeladen_tool.ui.settings_panel import SETTINGS_PANEL_ACTIONS, SETTINGS_PANEL_SECTIONS
 
     assert SETTINGS_PANEL_ACTIONS == {
         "settingsHelpButton": "?",
         "chooseInputFolderButton": "Ordner waehlen",
+        "previewMasterDataButton": "Import pruefen",
         "importMasterDataButton": "Import starten",
     }
     assert SETTINGS_PANEL_SECTIONS == ("Excel-Stammdaten importieren",)
+    source = Path("src/getraenkeladen_tool/ui/settings_panel.py").read_text(encoding="utf-8")
+    assert "preview_master_data_from_folder" in source
+    assert "Import bestaetigen" in source
+    assert "preview.safety_report_text" in source
 
 
 def test_product_panel_hides_unit_maintenance_from_user():
@@ -629,16 +651,136 @@ def test_main_window_refreshes_tab_data_when_user_switches_tabs():
     assert "refresh_customers" in source
 
 
+def test_main_window_refreshes_only_active_master_data_panel():
+    from pathlib import Path
+
+    source = Path("src/getraenkeladen_tool/ui/main_window.py").read_text(encoding="utf-8")
+
+    assert '"Stammdaten": (self.refresh_active_master_data_panel,)' in source
+    assert "self.master_data_workspace.currentChanged.connect(self.refresh_active_master_data_panel)" in source
+    assert "def refresh_active_master_data_panel" in source
+    assert '"Stammdaten": (self.customer_panel.refresh_customers, self.product_panel.refresh_products)' not in source
+
+
+def test_master_data_panels_load_lazily_once_to_keep_tab_switch_fast():
+    import ast
+    from pathlib import Path
+
+    def init_calls_refresh(source: str, class_name: str, refresh_name: str) -> bool:
+        tree = ast.parse(source)
+        for node in tree.body:
+            if isinstance(node, ast.ClassDef) and node.name == class_name:
+                for item in node.body:
+                    if isinstance(item, ast.FunctionDef) and item.name == "__init__":
+                        for call in ast.walk(item):
+                            if (
+                                isinstance(call, ast.Call)
+                                and isinstance(call.func, ast.Attribute)
+                                and call.func.attr == refresh_name
+                            ):
+                                return True
+        return False
+
+    main_source = Path("src/getraenkeladen_tool/ui/main_window.py").read_text(encoding="utf-8")
+    customer_source = Path("src/getraenkeladen_tool/ui/customer_panel.py").read_text(encoding="utf-8")
+    product_source = Path("src/getraenkeladen_tool/ui/product_panel.py").read_text(encoding="utf-8")
+    checklist_source = Path("src/getraenkeladen_tool/ui/checklist_panel.py").read_text(encoding="utf-8")
+
+    assert "self._loaded_master_data_panels: set[QWidget] = set()" in main_source
+    assert "if current_panel in self._loaded_master_data_panels:" in main_source
+    assert "current_panel.ensure_loaded()" in main_source
+    assert "self._loaded_master_data_panels.add(current_panel)" in main_source
+
+    assert "self.has_loaded = False" in customer_source
+    assert "def ensure_loaded" in customer_source
+    assert not init_calls_refresh(customer_source, "CustomerPanel", "refresh_customers")
+
+    assert "self.has_loaded = False" in product_source
+    assert "def ensure_loaded" in product_source
+    assert not init_calls_refresh(product_source, "ProductPanel", "refresh_products")
+
+    assert "self.has_loaded = False" in checklist_source
+    assert "def ensure_loaded" in checklist_source
+    assert not init_calls_refresh(checklist_source, "ChecklistPanel", "refresh_products")
+    assert not init_calls_refresh(checklist_source, "ChecklistPanel", "refresh_issues")
+
+
+def test_checklist_shortcut_selects_subtab_before_master_data_refresh():
+    from pathlib import Path
+
+    source = Path("src/getraenkeladen_tool/ui/main_window.py").read_text(encoding="utf-8")
+    method_start = source.index("    def open_checklist_tab")
+    method_end = source.index("    def open_orders_tab", method_start)
+    method_source = source[method_start:method_end]
+
+    assert method_source.index("self.master_data_workspace.setCurrentWidget(self.checklist_panel)") < method_source.index(
+        'self.navigation.setCurrentRow(MAIN_TABS.index("Stammdaten"))'
+    )
+
+
+def test_master_data_tables_pause_repaints_during_bulk_fill():
+    from pathlib import Path
+
+    customer_source = Path("src/getraenkeladen_tool/ui/customer_panel.py").read_text(encoding="utf-8")
+    product_source = Path("src/getraenkeladen_tool/ui/product_panel.py").read_text(encoding="utf-8")
+    checklist_source = Path("src/getraenkeladen_tool/ui/checklist_panel.py").read_text(encoding="utf-8")
+
+    assert "self.customers_table.setUpdatesEnabled(False)" in customer_source
+    assert "self.customers_table.setUpdatesEnabled(True)" in customer_source
+    assert "finally:" in customer_source
+
+    assert "self.products_table.setUpdatesEnabled(False)" in product_source
+    assert "self.products_table.setUpdatesEnabled(True)" in product_source
+    assert "finally:" in product_source
+
+    assert "self.issue_table.setUpdatesEnabled(False)" in checklist_source
+    assert "self.issue_table.setUpdatesEnabled(True)" in checklist_source
+    assert "finally:" in checklist_source
+
+
 def test_report_tab_exposes_reporting_actions():
+    from pathlib import Path
+
     from getraenkeladen_tool.ui.report_panel import REPORT_PANEL_ACTIONS
 
     assert REPORT_PANEL_ACTIONS == {
         "seedDemoDataButton": "Beispieldaten anlegen",
-        "refreshOpenItemsButton": "Rechnungen aktualisieren",
-        "markPaidButton": "Als bezahlt markieren",
+        "refreshOpenItemsButton": "Aktualisieren",
+        "markPaidButton": "Bezahlt",
+        "markPartialButton": "Teilzahlung",
         "refreshDeliveriesButton": "Lieferliste laden",
         "refreshContactsButton": "Kontaktliste laden",
-        "exportOpenItemsButton": "Rechnungen exportieren",
+        "exportOpenItemsButton": "Exportieren",
         "exportDeliveriesButton": "Lieferliste exportieren",
         "exportContactsButton": "Kontaktliste exportieren",
     }
+    source = Path("src/getraenkeladen_tool/ui/report_panel.py").read_text(encoding="utf-8")
+    assert "self.invoice_status_filter = QComboBox()" in source
+    assert "list_invoice_worklist" in source
+    assert "mark_open_item_partially_paid" in source
+    assert "invoice_action_row = QHBoxLayout()" in source
+    assert "self.invoice_inspector.body.addLayout(invoice_action_row)" in source
+    assert "self.refresh_button.setMinimumWidth(220)" in source
+
+
+def test_report_mark_paid_requires_confirmation_and_does_not_auto_jump_selection():
+    from pathlib import Path
+
+    source = Path("src/getraenkeladen_tool/ui/report_panel.py").read_text(encoding="utf-8")
+
+    assert "QMessageBox.question" in source
+    assert "Zahlung markieren" in source
+    assert "Diese Rechnung wirklich als bezahlt markieren?" in source
+    assert "self._select_open_item_by_id(open_item_id)" in source
+    assert "def _select_open_item_by_id" in source
+
+
+def test_product_panel_marks_missing_required_name_inline():
+    from pathlib import Path
+
+    source = Path("src/getraenkeladen_tool/ui/product_panel.py").read_text(encoding="utf-8")
+
+    assert "def _validate_product_form" in source
+    assert 'setProperty("state", "error")' in source
+    assert "Bitte Produktnamen eintragen." in source
+    assert "self.product_name.setFocus()" in source

@@ -27,6 +27,87 @@ class MasterDataImportResult:
     changes: list[MasterDataChange] = field(default_factory=list)
 
 
+@dataclass(frozen=True, slots=True)
+class MasterDataPreviewItem:
+    entity_type: str
+    action: str
+    name: str
+    source_row: int
+    changes: tuple[tuple[str, str | None, str | None], ...] = ()
+    message: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class MasterDataImportPreview:
+    items: tuple[MasterDataPreviewItem, ...]
+
+    @property
+    def products_created(self) -> int:
+        return self._count("product", "create")
+
+    @property
+    def products_updated(self) -> int:
+        return self._count("product", "update")
+
+    @property
+    def customers_created(self) -> int:
+        return self._count("customer", "create")
+
+    @property
+    def customers_updated(self) -> int:
+        return self._count("customer", "update")
+
+    @property
+    def unclear_rows(self) -> int:
+        return self._count_any("skip")
+
+    @property
+    def summary_text(self) -> str:
+        return (
+            f"{self.products_created} Produkt neu, {self.products_updated} Produkte aktualisiert, "
+            f"{self.customers_created} Kunden neu, {self.customers_updated} Kunden aktualisiert, "
+            f"{self.unclear_rows} Zeilen unklar."
+        )
+
+    @property
+    def safety_groups(self) -> dict[str, int]:
+        return {
+            "neu": self._count_any("create"),
+            "geaendert": self._count_any("update"),
+            "unsicher": self._count_any("unclear"),
+            "uebersprungen": self._count_any("skip"),
+        }
+
+    @property
+    def safety_report_text(self) -> str:
+        groups = self.safety_groups
+        return (
+            "Import-Sicherheitspruefung:\n"
+            f"Neu: {groups['neu']}\n"
+            f"Geaendert: {groups['geaendert']}\n"
+            f"Unsicher: {groups['unsicher']}\n"
+            f"Uebersprungen: {groups['uebersprungen']}\n\n"
+            f"{self.summary_text}"
+        )
+
+    def _count(self, entity_type: str, action: str) -> int:
+        return sum(1 for item in self.items if item.entity_type == entity_type and item.action == action)
+
+    def _count_any(self, action: str) -> int:
+        return sum(1 for item in self.items if item.action == action)
+
+
+def preview_master_data_from_folder(session: Session, input_dir: Path) -> MasterDataImportPreview:
+    items: list[MasterDataPreviewItem] = []
+    article_path = input_dir / ARTICLE_FILE_NAME
+    customer_path = input_dir / CUSTOMER_FILE_NAME
+    if article_path.exists():
+        items.extend(_preview_products(session, article_path))
+    if customer_path.exists():
+        items.extend(_preview_customers(session, customer_path))
+    return MasterDataImportPreview(tuple(items))
+
+
 def import_master_data_from_folder(session: Session, input_dir: Path) -> MasterDataImportResult:
     result = MasterDataImportResult()
     first_new_change_id = (session.scalar(select(func.max(MasterDataChange.id))) or 0) + 1
@@ -47,19 +128,48 @@ def import_master_data_from_folder(session: Session, input_dir: Path) -> MasterD
     return result
 
 
+def _preview_products(session: Session, path: Path) -> list[MasterDataPreviewItem]:
+    items: list[MasterDataPreviewItem] = []
+    for row_number, row in _sheet_rows(path):
+        name = _clean_text(row.get("Prudukt Bezeichnung"))
+        if not name:
+            items.append(MasterDataPreviewItem("product", "skip", "", row_number, message="Produktname fehlt."))
+            continue
+        payload = _product_payload_from_row(path, row_number, row, name)
+        existing = _find_product_by_name(session, name)
+        if existing is None:
+            items.append(MasterDataPreviewItem("product", "create", name, row_number))
+        else:
+            changes = _product_preview_changes(existing, payload)
+            if changes:
+                items.append(MasterDataPreviewItem("product", "update", name, row_number, changes))
+    return items
+
+
+def _preview_customers(session: Session, path: Path) -> list[MasterDataPreviewItem]:
+    items: list[MasterDataPreviewItem] = []
+    for row_number, row in _sheet_rows(path):
+        name = _clean_text(row.get("Name"))
+        if not name:
+            items.append(MasterDataPreviewItem("customer", "skip", "", row_number, message="Kundenname fehlt."))
+            continue
+        payload = _customer_payload_from_row(path, row_number, row, name)
+        existing = _find_customer_by_name(session, name)
+        if existing is None:
+            items.append(MasterDataPreviewItem("customer", "create", name, row_number))
+        else:
+            changes = _customer_preview_changes(existing, payload)
+            if changes:
+                items.append(MasterDataPreviewItem("customer", "update", name, row_number, changes))
+    return items
+
+
 def _import_products(session: Session, path: Path, result: MasterDataImportResult) -> None:
     for row_number, row in _sheet_rows(path):
         name = _clean_text(row.get("Prudukt Bezeichnung"))
         if not name:
             continue
-        payload = ProductCreate(
-            name=name,
-            unit=_unit_from_article_row(row),
-            standard_price_cents=_price_to_cents(row.get("Liefer Preis") or row.get("Laden VK") or row.get("Re.-Preis")),
-            default_deposit_cents=_price_to_cents(row.get("Pfand")),
-            source_file=str(path),
-            source_row=row_number,
-        )
+        payload = _product_payload_from_row(path, row_number, row, name)
         existing = _find_product_by_name(session, name)
         if existing is None:
             product = create_product(session, payload)
@@ -76,19 +186,7 @@ def _import_customers(session: Session, path: Path, result: MasterDataImportResu
         name = _clean_text(row.get("Name"))
         if not name:
             continue
-        payload = CustomerCreate(
-            name=name,
-            folder_path=f"Kunden/{name}",
-            address=_address_from_customer_row(row),
-            contact_name=_clean_text(row.get("Ansprechpartner")),
-            contact_email=_clean_text(row.get("e-mail (Kontakt)")) or _clean_text(row.get("e-mail (Re Versand)")),
-            next_contact_date=_date_to_iso(row.get("nächster Kontakt")),
-            delivery_notes=_delivery_notes_from_customer_row(row),
-            opening_hours=_opening_hours_from_customer_row(row),
-            internal_notes=_clean_text(row.get("ABO ")),
-            source_file=str(path),
-            source_row=row_number,
-        )
+        payload = _customer_payload_from_row(path, row_number, row, name)
         existing = _find_customer_by_name(session, name)
         if existing is None:
             customer = create_customer(session, payload)
@@ -98,6 +196,74 @@ def _import_customers(session: Session, path: Path, result: MasterDataImportResu
             customer = update_customer(session, existing.id, payload)
             result.customers_updated += 1
         result.customers.append(customer)
+
+
+def _product_payload_from_row(path: Path, row_number: int, row: dict, name: str) -> ProductCreate:
+    return ProductCreate(
+        name=name,
+        unit=_unit_from_article_row(row),
+        standard_price_cents=_price_to_cents(row.get("Liefer Preis") or row.get("Laden VK") or row.get("Re.-Preis")),
+        default_deposit_cents=_price_to_cents(row.get("Pfand")),
+        source_file=str(path),
+        source_row=row_number,
+    )
+
+
+def _customer_payload_from_row(path: Path, row_number: int, row: dict, name: str) -> CustomerCreate:
+    return CustomerCreate(
+        name=name,
+        folder_path=f"Kunden/{name}",
+        address=_address_from_customer_row(row),
+        contact_name=_clean_text(row.get("Ansprechpartner")),
+        contact_email=_clean_text(row.get("e-mail (Kontakt)")) or _clean_text(row.get("e-mail (Re Versand)")),
+        next_contact_date=_date_to_iso(row.get("nächster Kontakt")),
+        delivery_notes=_delivery_notes_from_customer_row(row),
+        opening_hours=_opening_hours_from_customer_row(row),
+        internal_notes=_clean_text(row.get("ABO ")),
+        source_file=str(path),
+        source_row=row_number,
+    )
+
+
+def _product_preview_changes(product: Product, payload: ProductCreate) -> tuple[tuple[str, str | None, str | None], ...]:
+    return _preview_changes(
+        product,
+        payload,
+        ("unit", "standard_price_cents", "default_deposit_cents", "source_file", "source_row"),
+    )
+
+
+def _customer_preview_changes(customer: Customer, payload: CustomerCreate) -> tuple[tuple[str, str | None, str | None], ...]:
+    return _preview_changes(
+        customer,
+        payload,
+        (
+            "folder_path",
+            "address",
+            "contact_name",
+            "contact_email",
+            "next_contact_date",
+            "delivery_notes",
+            "opening_hours",
+            "internal_notes",
+            "source_file",
+            "source_row",
+        ),
+    )
+
+
+def _preview_changes(entity, payload, fields: tuple[str, ...]) -> tuple[tuple[str, str | None, str | None], ...]:
+    changes = []
+    for field_name in fields:
+        old_value = getattr(entity, field_name)
+        new_value = getattr(payload, field_name)
+        if old_value != new_value:
+            changes.append((field_name, _string_or_none(old_value), _string_or_none(new_value)))
+    return tuple(changes)
+
+
+def _string_or_none(value) -> str | None:
+    return None if value is None else str(value)
 
 
 def _sheet_rows(path: Path):

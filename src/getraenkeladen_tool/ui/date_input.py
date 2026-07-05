@@ -39,7 +39,7 @@ class DateInput(QDateEdit):
         super().__init__()
         self.setCalendarPopup(True)
         self.setDisplayFormat(DISPLAY_DATE_FORMAT)
-        self.setSpecialValueText("")
+        self.setSpecialValueText("kein Termin")
         self.setMinimumDate(QDate(1900, 1, 1))
         self.setMaximumDate(QDate(2999, 12, 31))
         self.set_iso_date(iso_date)

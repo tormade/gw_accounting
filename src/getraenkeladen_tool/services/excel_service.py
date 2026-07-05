@@ -29,6 +29,7 @@ def build_invoice_workbook(
     deposit_returns: list[dict] | None = None,
     delivery_fee_enabled: bool = False,
     invoice_footer_text: str | None = None,
+    source_workbook_path: Path | None = None,
 ) -> None:
     _build_document_workbook(
         output_path,
@@ -41,6 +42,7 @@ def build_invoice_workbook(
         delivery_fee_enabled,
         None,
         invoice_footer_text,
+        source_workbook_path,
     )
 
 
@@ -54,6 +56,7 @@ def build_delivery_note_workbook(
     delivery_fee_enabled: bool = False,
     delivery_comment: str | None = None,
     footer_text: str | None = None,
+    source_workbook_path: Path | None = None,
 ) -> None:
     _build_document_workbook(
         output_path,
@@ -66,6 +69,7 @@ def build_delivery_note_workbook(
         delivery_fee_enabled,
         delivery_comment,
         footer_text or DELIVERY_NOTE_FOOTER,
+        source_workbook_path,
     )
 
 
@@ -80,10 +84,12 @@ def _build_document_workbook(
     delivery_fee_enabled: bool,
     delivery_comment: str | None,
     footer_text: str | None,
+    source_workbook_path: Path | None,
 ) -> None:
     ensure_parent_folder(output_path)
 
-    workbook = load_workbook(TEMPLATE_PATH)
+    preserve_customer_template = source_workbook_path is not None and source_workbook_path.exists()
+    workbook = load_workbook(source_workbook_path if preserve_customer_template else TEMPLATE_PATH)
     workbook.calculation.calcMode = "auto"
     workbook.calculation.forceFullCalc = True
     workbook.calculation.fullCalcOnLoad = True
@@ -125,29 +131,47 @@ def _build_document_workbook(
     )
 
     cached_formula_values = {}
+    item_rows_by_name: dict[str, int] = {}
+    empty_item_rows: list[int] = []
     for row in range(FIRST_ITEM_ROW, MAX_ITEM_ROW + 1):
-        sheet.cell(row=row, column=1, value=None)
-        sheet.cell(row=row, column=2, value=None)
-        sheet.cell(row=row, column=3, value=None)
-        sheet.cell(row=row, column=4, value=None)
+        current_name = sheet.cell(row=row, column=2).value
+        if preserve_customer_template and current_name:
+            item_rows_by_name[_normalize_lookup(str(current_name))] = row
+            sheet.cell(row=row, column=1).value = None
+        else:
+            empty_item_rows.append(row)
+            sheet.cell(row=row, column=1).value = None
+            sheet.cell(row=row, column=2).value = None
+            sheet.cell(row=row, column=3).value = None
+            sheet.cell(row=row, column=4).value = None
         sheet.cell(row=row, column=5, value=f"=(C{row}+D{row})*A{row}")
         cached_formula_values[f"E{row}"] = 0
 
+    return_rows_by_deposit: dict[int, int] = {}
+    empty_return_rows: list[int] = []
     for row in range(FIRST_RETURN_ROW, MAX_RETURN_ROW + 1):
-        sheet.cell(row=row, column=1, value=None)
-        sheet.cell(row=row, column=2, value=None)
-        sheet.cell(row=row, column=3, value=None)
-        sheet.cell(row=row, column=4, value=None)
+        deposit_cents = _negative_money_cell_to_positive_cents(sheet.cell(row=row, column=3).value)
+        if preserve_customer_template and deposit_cents:
+            return_rows_by_deposit[deposit_cents] = row
+            sheet.cell(row=row, column=1).value = None
+        else:
+            empty_return_rows.append(row)
+            sheet.cell(row=row, column=1).value = None
+            sheet.cell(row=row, column=2).value = None
+            sheet.cell(row=row, column=3).value = None
         sheet.cell(row=row, column=5, value=f"=(C{row}+D{row})*A{row}")
         cached_formula_values[f"E{row}"] = 0
 
-    for row, item in enumerate(line_items, start=6):
-        target_row = FIRST_ITEM_ROW + row - 6
+    for index, item in enumerate(line_items):
+        lookup_name = _normalize_lookup(item["name"])
+        target_row = item_rows_by_name.pop(lookup_name, None)
+        if target_row is None:
+            target_row = empty_item_rows.pop(0)
         quantity = item["quantity"]
         unit_price = item["unit_price_cents"] / 100
         deposit = item.get("deposit_cents", 0) / 100
-        line_total_cents = beleg_summen.positionssummen_cents[row - 6]
-        sheet.cell(row=target_row, column=1, value=quantity)
+        line_total_cents = beleg_summen.positionssummen_cents[index]
+        sheet.cell(row=target_row, column=1, value=quantity if quantity > 0 else None)
         sheet.cell(row=target_row, column=2, value=item["name"])
         sheet.cell(row=target_row, column=3, value=deposit)
         sheet.cell(row=target_row, column=4, value=unit_price)
@@ -162,14 +186,16 @@ def _build_document_workbook(
     cached_formula_values["E31"] = _cents_to_euro(beleg_summen.lieferpauschale_cents)
 
     for index, deposit_return in enumerate(deposit_returns):
-        target_row = FIRST_RETURN_ROW + index
         quantity = deposit_return["quantity"]
         deposit_cents = deposit_return["deposit_cents"]
+        target_row = return_rows_by_deposit.pop(deposit_cents, None)
+        if target_row is None:
+            target_row = empty_return_rows.pop(0)
         line_total_cents = beleg_summen.ruecknahme_summen_cents[index]
         sheet.cell(row=target_row, column=1, value=quantity)
-        sheet.cell(row=target_row, column=2, value=deposit_return["name"])
+        if not preserve_customer_template:
+            sheet.cell(row=target_row, column=2, value=deposit_return["name"])
         sheet.cell(row=target_row, column=3, value=-deposit_cents / 100)
-        sheet.cell(row=target_row, column=4, value=None)
         sheet.cell(row=target_row, column=5, value=f"=(C{target_row}+D{target_row})*A{target_row}")
         cached_formula_values[f"E{target_row}"] = _cents_to_euro(line_total_cents)
 
@@ -207,6 +233,20 @@ def _document_date_value(document_date: str | None) -> datetime:
 def _cents_to_euro(cents: int) -> int | float:
     euros = cents / 100
     return int(euros) if cents % 100 == 0 else euros
+
+
+def _normalize_lookup(value: str) -> str:
+    return " ".join(value.strip().casefold().split())
+
+
+def _negative_money_cell_to_positive_cents(value) -> int:
+    if value is None:
+        return 0
+    try:
+        cents = round(float(value) * 100)
+    except (TypeError, ValueError):
+        return 0
+    return abs(cents) if cents < 0 else 0
 
 
 def _store_cached_formula_values(output_path: Path, cached_formula_values: dict[str, int | float]) -> None:

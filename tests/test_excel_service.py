@@ -9,6 +9,8 @@ from getraenkeladen_tool.services.excel_service import (
     build_invoice_workbook,
 )
 
+INPUT_DIR = Path("/Users/thomasrumel/Documents/Codex/2026-06-20/Input")
+
 
 def test_winklmeier_template_is_available():
     assert TEMPLATE_PATH.exists()
@@ -42,6 +44,32 @@ def test_build_invoice_workbook_writes_customer_excel_file(tmp_path: Path):
     assert workbook.calculation.calcMode == "auto"
     assert workbook.calculation.forceFullCalc is True
     assert sheet.print_area == "'Tabelle1'!$A$1:$F$48"
+
+
+def test_build_invoice_workbook_keeps_zero_quantity_lines_with_blank_quantity_cell(tmp_path: Path):
+    output_path = tmp_path / "Kunden" / "Cafe Nord" / "RG-NULL.xlsx"
+
+    build_invoice_workbook(
+        output_path=output_path,
+        customer_name="Cafe Nord",
+        document_number="RG-NULL",
+        document_date="2026-06-22",
+        line_items=[
+            {"name": "Wasser", "quantity": 0, "unit_price_cents": 1299, "deposit_cents": 330},
+            {"name": "Spezi", "quantity": 2, "unit_price_cents": 1599, "deposit_cents": 310},
+        ],
+    )
+
+    formula_sheet = load_workbook(output_path, data_only=False).active
+    assert formula_sheet["A13"].value is None
+    assert formula_sheet["B13"].value == "Wasser"
+    assert formula_sheet["E13"].value == "=(C13+D13)*A13"
+    assert formula_sheet["A14"].value == 2
+    assert formula_sheet["B14"].value == "Spezi"
+
+    value_sheet = load_workbook(output_path, data_only=True).active
+    assert value_sheet["E13"].value == 0
+    assert value_sheet["F43"].value == 38.18
 
 
 def test_build_delivery_order_workbook_writes_customer_excel_file(tmp_path: Path):
@@ -193,3 +221,48 @@ def test_build_invoice_workbook_writes_deposit_returns_into_return_block(tmp_pat
     assert value_sheet["F32"].value == 15.1
     assert value_sheet["F40"].value == -4.8
     assert value_sheet["F43"].value == 10.3
+
+
+def test_build_invoice_workbook_continues_last_customer_excel_without_removing_article_rows(tmp_path: Path):
+    output_path = tmp_path / "Kunden" / "Metzgerei Karl" / "RE-NEU.xlsx"
+
+    build_invoice_workbook(
+        output_path=output_path,
+        customer_name="Metzgerei Karl",
+        document_number="RE-NEU",
+        document_date="2026-07-05",
+        line_items=[
+            {"name": "Frucade Colamix 20x0,5", "quantity": 5, "unit_price_cents": 1048, "deposit_cents": 310},
+            {"name": "Brunnthaler Spritzig 20x0,5", "quantity": 2, "unit_price_cents": 748, "deposit_cents": 310},
+        ],
+        deposit_returns=[
+            {"name": "Pfand 3,10 EUR", "quantity": 6, "deposit_cents": 310},
+            {"name": "Pfand 4,50 EUR", "quantity": 1, "deposit_cents": 450},
+            {"name": "Pfand 1,50 EUR", "quantity": 2, "deposit_cents": 150},
+        ],
+        source_workbook_path=INPUT_DIR / "_ RE 0525 Metzgerei Karl .xlsx",
+    )
+
+    formula_sheet = load_workbook(output_path, data_only=False).active
+    assert formula_sheet["A8"].value == "Rechnung"
+    assert formula_sheet["F8"].value == "RE-NEU"
+    assert formula_sheet["C5"].value.date() == date(2026, 7, 5)
+    assert formula_sheet["B13"].value == "Labertaler Apfelschorle 20x0,5"
+    assert formula_sheet["A13"].value is None
+    assert formula_sheet["B14"].value == "Frucade Colamix 20x0,5"
+    assert formula_sheet["A14"].value == 5
+    assert formula_sheet["B20"].value == "Brunnthaler Spritzig 20x0,5"
+    assert formula_sheet["A20"].value == 2
+    assert formula_sheet["B27"].value == "Hofbrauhaus Moy Hell 20x0,5"
+    assert formula_sheet["A27"].value is None
+    assert formula_sheet["E14"].value == "=(C14+D14)*A14"
+    assert formula_sheet["A34"].value == 6
+    assert formula_sheet["C34"].value == -3.1
+    assert formula_sheet["A35"].value == 1
+    assert formula_sheet["C35"].value == -4.5
+    assert formula_sheet["A36"].value == 2
+    assert formula_sheet["C36"].value == -1.5
+
+    value_sheet = load_workbook(output_path, data_only=True).active
+    assert value_sheet["A32"].value == 7
+    assert value_sheet["F40"].value == -26.1

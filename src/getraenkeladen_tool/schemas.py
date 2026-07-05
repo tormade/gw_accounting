@@ -31,7 +31,7 @@ class ProductCreate(BaseModel):
 
 class DocumentLineItem(BaseModel):
     name: str = Field(min_length=1)
-    quantity: int = Field(gt=0)
+    quantity: int = Field(ge=0)
     unit_price_cents: int = Field(ge=0)
     deposit_cents: int = Field(ge=0, default=0)
 
@@ -58,7 +58,7 @@ class DocumentCreate(BaseModel):
 
 class OrderLineCreate(BaseModel):
     product_id: int = Field(gt=0)
-    quantity: int = Field(gt=0)
+    quantity: int = Field(ge=0)
     unit_price_cents: int | None = Field(default=None, ge=0)
     deposit_cents: int = Field(default=0, ge=0)
 

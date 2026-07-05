@@ -65,7 +65,7 @@ class InspectorPanel(QWidget):
         super().__init__()
         self.setObjectName("inspectorPanel")
         self.setMinimumWidth(300)
-        self.setMaximumWidth(360)
+        self.setMaximumWidth(420)
 
         self.layout = QVBoxLayout(self)
         self.layout.setContentsMargins(20, 20, 20, 20)
@@ -152,6 +152,8 @@ class SidebarNavigation(QListWidget):
             item = QListWidgetItem(label)
             item.setTextAlignment(Qt.AlignmentFlag.AlignVCenter)
             item.setToolTip(f"{label} oeffnen")
+            item.setData(Qt.ItemDataRole.AccessibleTextRole, label)
+            item.setData(Qt.ItemDataRole.AccessibleDescriptionRole, f"{label} oeffnen")
             self.addItem(item)
         self.setCurrentRow(0)
 

@@ -6,6 +6,7 @@ from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
     QComboBox,
     QFormLayout,
+    QGroupBox,
     QHBoxLayout,
     QHeaderView,
     QLabel,
@@ -21,6 +22,8 @@ from PySide6.QtWidgets import (
 
 from ..kern.regeln.beleg import BelegParameter, PfandRueckgabe, Position, berechne_beleg
 from ..schemas import DepositReturnCreate, DocumentLineItem
+from ..services.automation_service import verify_document_assets
+from ..services.number_suggestion_service import suggest_document_number
 from ..services.order_service import create_order_delivery_order, create_order_invoice, get_order, list_active_orders
 from .date_input import to_display_date
 from .deposit_return_presets import DEPOSIT_RETURN_PRESETS
@@ -29,6 +32,7 @@ from .searchable_select import SearchableSelect
 
 
 DOCUMENT_WORKFLOW_ACTIONS = {
+    "suggestDocumentNumberButton": "Nummer vorschlagen",
     "removeDocumentLineButton": "Position entfernen",
     "addDocumentDepositReturnButton": "Pfand-Rueckgabe eintragen",
     "removeDocumentDepositReturnButton": "Pfand-Rueckgabe entfernen",
@@ -64,6 +68,7 @@ class DocumentWorkflowPanel(QWidget):
         self.order_summary.setWordWrap(True)
         self.document_number = QLineEdit()
         self.document_number.setPlaceholderText(self.number_label)
+        self.suggest_document_number_button = self._button("suggestDocumentNumberButton")
         self.delivery_fee_choice = QComboBox()
         self.delivery_fee_choice.addItem("Keine Pauschale", False)
         self.delivery_fee_choice.addItem("3,90 EUR hinzufuegen", True)
@@ -135,6 +140,9 @@ class DocumentWorkflowPanel(QWidget):
         )
         document_layout.addWidget(self.order_summary)
 
+        self.create_both_button = QPushButton(self.create_both_button_text)
+        self.create_both_button.setObjectName("primaryAction")
+
         self.document_tabs = QTabWidget()
         self.document_tabs.setUsesScrollButtons(False)
         document_layout.addWidget(self.document_tabs, 1)
@@ -155,7 +163,7 @@ class DocumentWorkflowPanel(QWidget):
         total_layout.setContentsMargins(0, 0, 0, 0)
         total_layout.addStretch()
         total_layout.addWidget(self.total_label)
-        self.document_tabs.addTab(positions_tab, "1 Artikel")
+        self.document_tabs.addTab(positions_tab, "Artikel pruefen")
 
         deposit_tab = QWidget()
         deposit_layout = QVBoxLayout(deposit_tab)
@@ -175,50 +183,53 @@ class DocumentWorkflowPanel(QWidget):
         return_action_row.addStretch()
         deposit_layout.addLayout(return_action_row)
         deposit_layout.addWidget(self.returns_table)
-        self.document_tabs.addTab(deposit_tab, "2 Pfand")
-
-        details_tab = QWidget()
-        details_layout = QVBoxLayout(details_tab)
-        details_layout.setContentsMargins(10, 10, 10, 10)
-        number_form = QFormLayout()
-        configure_form_layout(number_form)
-        number_form.addRow(self.number_label, self.document_number)
-        number_form.addRow("Lieferpauschale hinzufuegen?", self.delivery_fee_choice)
-        number_form.addRow(self.note_label, self.document_note)
-        details_layout.addLayout(number_form)
-        details_layout.addStretch()
-        self.document_tabs.addTab(details_tab, "3 Nummer/Text")
+        self.document_tabs.addTab(deposit_tab, "Pfand")
 
         output_tab = QWidget()
         output_layout = QVBoxLayout(output_tab)
         output_layout.setContentsMargins(10, 10, 10, 10)
-        self.create_both_button = QPushButton(self.create_both_button_text)
-        self.create_both_button.setObjectName("primaryAction")
         self.create_excel_button = QPushButton(self.create_excel_button_text)
         self.create_pdf_button = QPushButton(self.create_pdf_button_text)
         self.open_excel_button = QPushButton("Excel oeffnen")
         self.open_pdf_button = QPushButton("PDF oeffnen")
         self.open_excel_button.setEnabled(False)
         self.open_pdf_button.setEnabled(False)
-        primary_action_row = QHBoxLayout()
-        primary_action_row.addWidget(self.create_both_button)
-        primary_action_row.addStretch()
-        output_layout.addLayout(primary_action_row)
-        normal_hint = QLabel("Normalerweise reicht der rote Hauptbutton: Excel und PDF zusammen erstellen.")
+        normal_hint = QLabel("Normalerweise reicht der Hauptbutton: Excel und PDF zusammen erstellen.")
         normal_hint.setObjectName("sectionSubtitle")
         normal_hint.setWordWrap(True)
         output_layout.addWidget(normal_hint)
+        self.more_output_box = QGroupBox("Weitere Optionen")
+        self.more_output_box.setCheckable(True)
+        self.more_output_box.setChecked(False)
+        more_output_layout = QVBoxLayout(self.more_output_box)
         secondary_action_row = QHBoxLayout()
         secondary_action_row.addWidget(self.create_excel_button)
         secondary_action_row.addWidget(self.create_pdf_button)
         secondary_action_row.addWidget(self.open_excel_button)
         secondary_action_row.addWidget(self.open_pdf_button)
         secondary_action_row.addStretch()
-        output_layout.addLayout(secondary_action_row)
+        more_output_layout.addLayout(secondary_action_row)
+        output_layout.addWidget(self.more_output_box)
         output_layout.addWidget(self.result_label)
         output_layout.addStretch()
-        self.document_tabs.addTab(output_tab, "4 Excel/PDF")
+        self.document_tabs.addTab(output_tab, "Ausgabe")
         document_layout.addWidget(total_bar)
+
+        finish_bar = QWidget()
+        finish_bar.setObjectName("documentFinishBar")
+        finish_layout = QHBoxLayout(finish_bar)
+        finish_layout.setContentsMargins(0, 0, 0, 0)
+        finish_form = QFormLayout()
+        configure_form_layout(finish_form)
+        document_number_row = QHBoxLayout()
+        document_number_row.addWidget(self.document_number)
+        document_number_row.addWidget(self.suggest_document_number_button)
+        finish_form.addRow(self.number_label, document_number_row)
+        finish_form.addRow("Lieferpauschale hinzufuegen?", self.delivery_fee_choice)
+        finish_form.addRow(self.note_label, self.document_note)
+        finish_layout.addLayout(finish_form, 1)
+        finish_layout.addWidget(self.create_both_button)
+        document_layout.addWidget(finish_bar)
 
         body.addWidget(document_box)
         body.setStretchFactor(0, 1)
@@ -228,6 +239,7 @@ class DocumentWorkflowPanel(QWidget):
         self.refresh_button.clicked.connect(self.refresh_orders)
         self.load_button.clicked.connect(self.load_selected_order)
         self.reset_order_button.clicked.connect(self.reset_order_selection)
+        self.suggest_document_number_button.clicked.connect(self.apply_suggested_document_number)
         self.remove_line_button.clicked.connect(self.remove_selected_line)
         self.add_return_button.clicked.connect(self.add_deposit_return)
         self.remove_return_button.clicked.connect(self.remove_selected_deposit_return)
@@ -339,6 +351,7 @@ class DocumentWorkflowPanel(QWidget):
         session = self.session_factory()
         try:
             document = self._create_document_for_order(session, assets=assets)
+            verification = verify_document_assets(session, document.id, expected_assets=assets)
         except Exception as error:
             self.status_label.setText(f"Erstellung fehlgeschlagen: {error}")
             QMessageBox.critical(
@@ -355,14 +368,15 @@ class DocumentWorkflowPanel(QWidget):
         self.open_excel_button.setEnabled(self.last_excel_path.exists())
         self.open_pdf_button.setEnabled(self.last_pdf_path.exists())
         self.result_label.setText(self._created_asset_result(asset_label))
+        check_text = "Belegpruefung: OK." if verification.ok else "Belegpruefung: Bitte Dateien pruefen."
         self.status_label.setText(
-            f"Erfolgreich erstellt: {self._document_name()} {document.document_number} als {asset_label}."
+            f"Erfolgreich erstellt: {self._document_name()} {document.document_number} als {asset_label}. {check_text}"
         )
         QMessageBox.information(
             self,
             f"{self._document_name()} erstellt",
             f"{self._document_name()} {document.document_number} wurde als {asset_label} erstellt.\n\n"
-            f"Datei: {self._created_asset_path(asset_label)}",
+            f"Datei: {self._created_asset_path(asset_label)}\n\n{check_text}",
         )
 
     def _document_name(self) -> str:
@@ -445,6 +459,22 @@ class DocumentWorkflowPanel(QWidget):
         if cents is None:
             return
         self.deposit_return_eur.setText(f"{int(cents) / 100:.2f}".replace(".", ","))
+
+    def apply_suggested_document_number(self) -> None:
+        if self.session_factory is None:
+            self.status_label.setText("Keine Datenbankverbindung vorhanden.")
+            return
+        session = self.session_factory()
+        try:
+            suggestion = suggest_document_number(
+                session,
+                self.document_singular,
+                fallback_date=date.today().isoformat(),
+            )
+        finally:
+            session.close()
+        self.document_number.setText(suggestion)
+        self.status_label.setText(f"Vorschlag uebernommen: {suggestion}. Die Nummer kann frei geaendert werden.")
 
     def remove_selected_line(self) -> None:
         row = self.lines_table.currentRow()

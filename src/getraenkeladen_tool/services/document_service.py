@@ -47,6 +47,7 @@ def create_document(
         customer_name=customer.name,
         document_date=document_date,
     )
+    source_workbook_path = _latest_customer_excel(Path(customer.folder_path), exclude_path=paths.excel_path)
     line_items = [item.model_dump() for item in payload.line_items]
     deposit_returns = [item.model_dump() for item in payload.deposit_returns]
 
@@ -70,6 +71,7 @@ def create_document(
                 deposit_returns=deposit_returns,
                 delivery_fee_enabled=payload.delivery_fee_enabled,
                 invoice_footer_text=footer_text,
+                source_workbook_path=source_workbook_path,
             )
         else:
             build_delivery_note_workbook(
@@ -82,6 +84,7 @@ def create_document(
                 delivery_fee_enabled=payload.delivery_fee_enabled,
                 delivery_comment=payload.delivery_comment,
                 footer_text=footer_text,
+                source_workbook_path=source_workbook_path,
             )
 
     if "pdf" in requested_assets:
@@ -189,6 +192,24 @@ def _copy_invoice_pdf_to_datev(pdf_path: Path, datev_upload_dir: Path, document_
     ensure_parent_folder(target_path)
     copy2(pdf_path, target_path)
     return target_path
+
+
+def _latest_customer_excel(customer_folder: Path, exclude_path: Path | None = None) -> Path | None:
+    if not customer_folder.is_dir():
+        return None
+    excluded = exclude_path.resolve() if exclude_path is not None else None
+    candidates = []
+    for path in customer_folder.iterdir():
+        if not path.is_file() or path.suffix.lower() != ".xlsx":
+            continue
+        if path.name.startswith("~$"):
+            continue
+        if excluded is not None and path.resolve() == excluded:
+            continue
+        candidates.append(path)
+    if not candidates:
+        return None
+    return max(candidates, key=lambda path: (path.stat().st_mtime, path.name.lower()))
 
 
 def _document_calculation(payload: DocumentCreate) -> BelegSummen:

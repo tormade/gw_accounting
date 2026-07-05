@@ -12,13 +12,14 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from ..services.master_data_import_service import import_master_data_from_folder
+from ..services.master_data_import_service import import_master_data_from_folder, preview_master_data_from_folder
 from .layouts import ContentSurface, PageHeader, WorkspaceCard, configure_form_layout
 
 
 SETTINGS_PANEL_ACTIONS = {
     "settingsHelpButton": "?",
     "chooseInputFolderButton": "Ordner waehlen",
+    "previewMasterDataButton": "Import pruefen",
     "importMasterDataButton": "Import starten",
 }
 SETTINGS_PANEL_SECTIONS = ("Excel-Stammdaten importieren",)
@@ -35,7 +36,7 @@ class SettingsPanel(QWidget):
 
         self.input_folder = QLineEdit(str(Path.cwd().parent / "Input"))
         self.input_folder.setPlaceholderText("Ordner mit Artikel Liste Preise.xlsx und Lieferkunden Liste.xlsx")
-        self.status_label = QLabel("Input-Ordner waehlen und Import starten.")
+        self.status_label = QLabel("Input-Ordner waehlen und Import pruefen.")
         self.status_label.setObjectName("muted")
 
         root_layout = QVBoxLayout(self)
@@ -65,8 +66,10 @@ class SettingsPanel(QWidget):
         configure_form_layout(import_form)
         import_form.addRow("Input-Ordner", self._input_folder_row())
         import_layout.addLayout(import_form)
+        self.preview_master_data_button = self._button("previewMasterDataButton")
         self.import_master_data_button = self._button("importMasterDataButton")
         import_actions = QHBoxLayout()
+        import_actions.addWidget(self.preview_master_data_button)
         import_actions.addWidget(self.import_master_data_button)
         import_actions.addStretch()
         import_layout.addLayout(import_actions)
@@ -75,6 +78,7 @@ class SettingsPanel(QWidget):
         layout.addStretch()
 
         self.help_button.clicked.connect(self.show_help)
+        self.preview_master_data_button.clicked.connect(self.preview_master_data)
         self.import_master_data_button.clicked.connect(self.import_master_data)
 
     def _button(self, object_name: str) -> QPushButton:
@@ -110,6 +114,19 @@ class SettingsPanel(QWidget):
             return
         session = self.session_factory()
         try:
+            preview = preview_master_data_from_folder(session, input_dir)
+            answer = QMessageBox.question(
+                self,
+                "Import bestaetigen",
+                "Diese Aenderungen wurden gefunden:\n\n"
+                f"{preview.safety_report_text}\n\n"
+                "Import jetzt ausfuehren?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No,
+            )
+            if answer != QMessageBox.StandardButton.Yes:
+                self.status_label.setText(f"Import nicht ausgefuehrt. Vorschau: {preview.summary_text}")
+                return
             result = import_master_data_from_folder(session, input_dir)
         finally:
             session.close()
@@ -118,3 +135,21 @@ class SettingsPanel(QWidget):
             f"{result.customers_created} Kunden neu, {result.customers_updated} Kunden aktualisiert, "
             f"{result.products_created} Produkte neu, {result.products_updated} Produkte aktualisiert."
         )
+
+    def preview_master_data(self) -> None:
+        if self.session_factory is None:
+            self.status_label.setText("Keine Datenbankverbindung vorhanden.")
+            return
+        input_dir = Path(self.input_folder.text()).expanduser()
+        if not input_dir.exists():
+            self.status_label.setText("Input-Ordner wurde nicht gefunden.")
+            return
+        session = self.session_factory()
+        try:
+            preview = preview_master_data_from_folder(session, input_dir)
+        finally:
+            session.close()
+        examples = "\n".join(f"- {item.name or 'Zeile ' + str(item.source_row)}: {item.action}" for item in preview.items[:8])
+        details = f"\n\nBeispiele:\n{examples}" if examples else ""
+        QMessageBox.information(self, "Import-Vorschau", preview.safety_report_text + details)
+        self.status_label.setText(f"Import-Vorschau: {preview.summary_text}")

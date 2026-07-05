@@ -43,6 +43,27 @@ def test_build_document_pdf_includes_line_and_document_totals(tmp_path: Path):
     assert "Gesamtbetrag" in pdf_text
 
 
+def test_build_document_pdf_keeps_zero_quantity_lines_without_zero_amount(tmp_path: Path):
+    output_path = tmp_path / "RG-NULL.pdf"
+
+    build_document_pdf(
+        output_path=output_path,
+        document_title="Rechnung",
+        customer_name="Cafe Nord",
+        document_number="RG-NULL",
+        line_items=[
+            {"name": "Wasser", "quantity": 0, "unit_price_cents": 1299, "deposit_cents": 330},
+            {"name": "Spezi", "quantity": 2, "unit_price_cents": 1599, "deposit_cents": 310},
+        ],
+    )
+
+    pdf_text = output_path.read_bytes().decode("latin-1")
+    assert "Wasser" in pdf_text
+    assert "Spezi" in pdf_text
+    assert "0,00 EUR" not in pdf_text
+    assert "38,18 EUR" in pdf_text
+
+
 def test_build_document_pdf_reduces_total_by_deposit_returns(tmp_path: Path):
     output_path = tmp_path / "RG-1003.pdf"
 

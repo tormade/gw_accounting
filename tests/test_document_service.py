@@ -7,6 +7,8 @@ from getraenkeladen_tool.schemas import CustomerCreate, DepositReturnCreate, Doc
 from getraenkeladen_tool.services.customer_service import create_customer
 from getraenkeladen_tool.services.document_service import create_document, latest_invoice_number
 
+INPUT_DIR = Path("/Users/thomasrumel/Documents/Codex/2026-06-20/Input")
+
 
 def test_document_outputs_use_shared_core_calculation():
     document_source = Path("src/getraenkeladen_tool/services/document_service.py").read_text(encoding="utf-8")
@@ -210,6 +212,46 @@ def test_create_invoice_reduces_open_item_by_deposit_returns(session, tmp_path: 
     sheet = load_workbook(document.excel_path, data_only=True).active
     assert sheet["F40"].value == -4.8
     assert sheet["F43"].value == 10.3
+
+
+def test_create_document_uses_latest_customer_excel_as_working_template(session, tmp_path: Path):
+    customer_folder = tmp_path / "Kunden" / "Metzgerei Karl"
+    customer_folder.mkdir(parents=True)
+    old_invoice = customer_folder / "_ RE 0525 Metzgerei Karl .xlsx"
+    old_invoice.write_bytes((INPUT_DIR / "_ RE 0525 Metzgerei Karl .xlsx").read_bytes())
+    customer = create_customer(
+        session,
+        CustomerCreate(name="Metzgerei Karl", folder_path=str(customer_folder), payment_method="SEPA"),
+    )
+
+    document = create_document(
+        session,
+        DocumentCreate(
+            customer_id=customer.id,
+            document_type="Rechnung",
+            document_number="RE-FORT",
+            delivery_date="2026-07-05",
+            line_items=[
+                DocumentLineItem(
+                    name="Frucade Colamix 20x0,5",
+                    quantity=4,
+                    unit_price_cents=1048,
+                    deposit_cents=310,
+                )
+            ],
+            deposit_returns=[DepositReturnCreate(name="Pfand 3,10 EUR", quantity=3, deposit_cents=310)],
+        ),
+    )
+
+    sheet = load_workbook(document.excel_path, data_only=False).active
+    assert sheet["B13"].value == "Labertaler Apfelschorle 20x0,5"
+    assert sheet["A13"].value is None
+    assert sheet["B14"].value == "Frucade Colamix 20x0,5"
+    assert sheet["A14"].value == 4
+    assert sheet["B28"].value == "Frucade Zitrone 20x0,5"
+    assert sheet["A28"].value is None
+    assert sheet["A34"].value == 3
+    assert sheet["C34"].value == -3.1
 
 
 def test_create_invoice_rejects_duplicate_invoice_number(session, tmp_path: Path):

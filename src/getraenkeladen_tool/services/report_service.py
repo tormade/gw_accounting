@@ -16,6 +16,19 @@ class DashboardSummary:
     next_steps: tuple[str, str, str]
 
 
+@dataclass(frozen=True, slots=True)
+class InvoiceWorkItem:
+    id: int
+    customer_name: str
+    document_number: str
+    document_date: str | None
+    due_date: str | None
+    amount_cents: int
+    payment_method: str
+    status: str
+    status_bucket: str
+
+
 def get_dashboard_summary(session: Session, target_date: str) -> DashboardSummary:
     return DashboardSummary(
         target_date=target_date,
@@ -41,12 +54,36 @@ def list_open_items(session: Session, payment_method: str | None = None) -> list
     return list(session.scalars(statement))
 
 
+def list_invoice_worklist(session: Session, status_filter: str = "offen", target_date: str | None = None) -> list[InvoiceWorkItem]:
+    statement = select(OpenItem).order_by(OpenItem.due_date, OpenItem.customer_name, OpenItem.document_number)
+    if status_filter != "bezahlt":
+        statement = statement.where(OpenItem.status != "bezahlt")
+    items = sorted(
+        (_invoice_work_item(item, target_date) for item in session.scalars(statement)),
+        key=_invoice_sort_key,
+    )
+    if status_filter == "alle":
+        return items
+    return [item for item in items if item.status_bucket == status_filter or item.status == status_filter]
+
+
 def mark_open_item_paid(session: Session, open_item_id: int) -> OpenItem:
     open_item = session.get(OpenItem, open_item_id)
     if open_item is None:
         raise ValueError("Offener Posten wurde nicht gefunden.")
 
     open_item.status = "bezahlt"
+    session.commit()
+    session.refresh(open_item)
+    return open_item
+
+
+def mark_open_item_partially_paid(session: Session, open_item_id: int) -> OpenItem:
+    open_item = session.get(OpenItem, open_item_id)
+    if open_item is None:
+        raise ValueError("Offener Posten wurde nicht gefunden.")
+
+    open_item.status = "teilbezahlt"
     session.commit()
     session.refresh(open_item)
     return open_item
@@ -124,6 +161,44 @@ def export_due_contacts_csv(session: Session, target_date: str, output_path: Pat
 
 def _format_cents(value: int) -> str:
     return f"{value / 100:.2f}".replace(".", ",")
+
+
+def _invoice_work_item(item: OpenItem, target_date: str | None) -> InvoiceWorkItem:
+    return InvoiceWorkItem(
+        id=item.id,
+        customer_name=item.customer_name,
+        document_number=item.document_number,
+        document_date=item.document_date,
+        due_date=item.due_date,
+        amount_cents=item.amount_cents,
+        payment_method=item.payment_method,
+        status=item.status,
+        status_bucket=_invoice_status_bucket(item, target_date),
+    )
+
+
+def _invoice_status_bucket(item: OpenItem, target_date: str | None) -> str:
+    if item.status == "teilbezahlt":
+        return "teilbezahlt"
+    if item.status == "bezahlt":
+        return "bezahlt"
+    if item.due_date and target_date:
+        if item.due_date < target_date:
+            return "ueberfaellig"
+        if item.due_date == target_date:
+            return "faellig"
+    return "offen"
+
+
+def _invoice_sort_key(item: InvoiceWorkItem) -> tuple[int, str, str, str]:
+    priority = {
+        "ueberfaellig": 0,
+        "faellig": 1,
+        "teilbezahlt": 2,
+        "offen": 3,
+        "bezahlt": 4,
+    }.get(item.status_bucket, 9)
+    return (priority, item.due_date or "9999-12-31", item.customer_name, item.document_number)
 
 
 def _write_csv(output_path: Path, rows: list[list[str]]) -> Path:

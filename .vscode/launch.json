@@ -6,7 +6,7 @@
             "type": "debugpy",
             "request": "launch",
             "module": "getraenkeladen_tool",
-            "python": "${workspaceFolder}/.venv/bin/python",
+            "python": "/Users/thomasrumel/.venvs/gw_accounting_py311/bin/python",
             "cwd": "${workspaceFolder}",
             "env": {
                 "PYTHONPATH": "${workspaceFolder}/src"

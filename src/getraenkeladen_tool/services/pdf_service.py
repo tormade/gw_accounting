@@ -234,13 +234,14 @@ def _line_rows(line_items: list[dict], deposit_returns: list[dict], delivery_fee
     for index, item in enumerate(line_items):
         deposit_cents = item.get("deposit_cents", 0)
         line_total = beleg_summen.positionssummen_cents[index]
+        quantity = item["quantity"]
         rows.append(
             [
-                str(item["quantity"]),
+                str(quantity) if quantity > 0 else "",
                 item["name"],
                 _format_euro(item["unit_price_cents"]),
                 _format_euro(deposit_cents),
-                _format_euro(line_total),
+                _format_euro(line_total) if quantity > 0 else "",
             ]
         )
     if delivery_fee_enabled:

@@ -10,7 +10,9 @@ from getraenkeladen_tool.services.report_service import (
     get_dashboard_summary,
     list_daily_deliveries,
     list_due_contacts,
+    list_invoice_worklist,
     list_open_items,
+    mark_open_item_partially_paid,
     mark_open_item_paid,
 )
 
@@ -52,6 +54,67 @@ def test_list_open_items_and_mark_payment_received(session, tmp_path: Path):
 
     assert paid_item.status == "bezahlt"
     assert list_open_items(session) == []
+
+
+def test_invoice_worklist_filters_due_overdue_paid_and_partial_status(session, tmp_path: Path):
+    transfer = create_customer(
+        session,
+        CustomerCreate(
+            name="Ueberweisung Kunde",
+            folder_path=str(tmp_path / "Kunden" / "Ueberweisung Kunde"),
+            payment_method="Ueberweisung",
+        ),
+    )
+    sepa = create_customer(
+        session,
+        CustomerCreate(name="SEPA Kunde", folder_path=str(tmp_path / "Kunden" / "SEPA Kunde"), payment_method="SEPA"),
+    )
+    create_document(
+        session,
+        DocumentCreate(
+            customer_id=transfer.id,
+            document_type="Rechnung",
+            document_number="RG-ALT",
+            delivery_date="2026-06-20",
+            line_items=[DocumentLineItem(name="Wasser", quantity=1, unit_price_cents=1000)],
+        ),
+    )
+    create_document(
+        session,
+        DocumentCreate(
+            customer_id=transfer.id,
+            document_type="Rechnung",
+            document_number="RG-HEUTE",
+            delivery_date="2026-06-28",
+            line_items=[DocumentLineItem(name="Spezi", quantity=1, unit_price_cents=1200)],
+        ),
+    )
+    create_document(
+        session,
+        DocumentCreate(
+            customer_id=sepa.id,
+            document_type="Rechnung",
+            document_number="RG-SEPA",
+            delivery_date="2026-07-05",
+            line_items=[DocumentLineItem(name="Limo", quantity=1, unit_price_cents=1400)],
+        ),
+    )
+    partial_item = next(item for item in list_open_items(session) if item.document_number == "RG-SEPA")
+    mark_open_item_partially_paid(session, partial_item.id)
+
+    all_items = list_invoice_worklist(session, "alle", target_date="2026-07-05")
+    overdue_items = list_invoice_worklist(session, "ueberfaellig", target_date="2026-07-05")
+    due_items = list_invoice_worklist(session, "faellig", target_date="2026-07-05")
+    partial_items = list_invoice_worklist(session, "teilbezahlt", target_date="2026-07-05")
+
+    assert [(item.document_number, item.status_bucket) for item in all_items] == [
+        ("RG-ALT", "ueberfaellig"),
+        ("RG-HEUTE", "faellig"),
+        ("RG-SEPA", "teilbezahlt"),
+    ]
+    assert [item.document_number for item in overdue_items] == ["RG-ALT"]
+    assert [item.document_number for item in due_items] == ["RG-HEUTE"]
+    assert [item.document_number for item in partial_items] == ["RG-SEPA"]
 
 
 def test_list_due_contacts_filters_by_target_date(session, tmp_path: Path):
