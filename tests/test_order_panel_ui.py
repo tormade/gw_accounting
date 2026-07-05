@@ -23,7 +23,7 @@ def test_order_panel_can_start_new_order_for_preselected_customer():
 
     assert "def open_new_order_for_customer" in source
     assert "self.customer_select.select_value(customer_id)" in source
-    assert "Neue Bestellung aus Kundenordner" in source
+    assert "Neue Bestellung aus Kunden" in source
 
 
 def test_order_panel_prefills_lines_from_customer_assortment_when_started_from_customer_folder(session):
@@ -134,6 +134,63 @@ def test_order_panel_skips_unresolved_assortment_items_when_prefilling_from_cust
     assert panel.order_lines_table.rowCount() == 1
     assert panel.order_lines_table.item(0, 0).text() == water.name
     assert "Ungeklaerte Artikel wurden ausgelassen." in panel.status_label.text()
+    panel.close_order_dialog()
+
+
+def test_order_panel_skips_open_price_mismatches_when_prefilling_from_customer_folder(session):
+    _app()
+    from getraenkeladen_tool.models import Customer, CustomerAssortmentItem, Product
+    from getraenkeladen_tool.ui.order_panel import OrderPanel
+
+    customer = Customer(name="Cafe Nord", folder_path="/tmp/Cafe Nord", is_active=True)
+    water = Product(
+        name="Adelholzener Wasser 12x0,7",
+        unit="Kiste",
+        standard_price_cents=890,
+        default_deposit_cents=330,
+        is_active=True,
+    )
+    frucade = Product(
+        name="Frucade Colamix 20x0,5",
+        unit="Kiste",
+        standard_price_cents=1190,
+        default_deposit_cents=310,
+        is_active=True,
+    )
+    session.add_all([customer, water, frucade])
+    session.flush()
+    session.add_all(
+        [
+            CustomerAssortmentItem(
+                customer_id=customer.id,
+                product_id=water.id,
+                source_product_name=water.name,
+                last_quantity=4,
+                last_unit_price_cents=890,
+                last_deposit_cents=330,
+                sort_order=1,
+                price_decision="zentraler_preis",
+            ),
+            CustomerAssortmentItem(
+                customer_id=customer.id,
+                product_id=frucade.id,
+                source_product_name=frucade.name,
+                last_quantity=3,
+                last_unit_price_cents=1048,
+                last_deposit_cents=310,
+                sort_order=2,
+                price_decision="offen",
+            ),
+        ]
+    )
+    session.commit()
+
+    panel = OrderPanel(session_factory=lambda: session)
+    panel.open_new_order_for_customer(customer.id)
+
+    assert panel.order_lines_table.rowCount() == 1
+    assert panel.order_lines_table.item(0, 0).text() == water.name
+    assert "Preisabweichungen wurden ausgelassen." in panel.status_label.text()
     panel.close_order_dialog()
 
 
@@ -269,7 +326,7 @@ def test_document_workflow_prioritizes_complete_excel_pdf_generation():
     assert "secondary_action_row.addWidget(self.create_excel_button)" in source
     assert "secondary_action_row.addWidget(self.create_pdf_button)" in source
     assert "Excel + PDF erstellt" in source
-    assert "Normalerweise reicht der gruene Hauptbutton: Excel und PDF zusammen erstellen." in source
+    assert "Normalerweise reicht der rote Hauptbutton: Excel und PDF zusammen erstellen." in source
 
 
 def test_order_panel_supports_editing_existing_orders():
@@ -283,30 +340,29 @@ def test_order_panel_supports_editing_existing_orders():
     assert "Bestellung" in source
 
 
-def test_order_panel_uses_list_page_and_order_dialog_for_editing():
+def test_order_panel_uses_main_window_editor_for_editing():
     source = Path("src/getraenkeladen_tool/ui/order_panel.py").read_text(encoding="utf-8")
 
-    assert "QDialog" in source
-    assert "QScrollArea" in source
     assert "self.order_dialog" in source
     assert "def open_order_dialog" in source
     assert "def close_order_dialog_after_success" in source
-    assert "Neue Bestellung anlegen" in source
+    assert "Neue Bestellung" in source
     assert "Bestellung speichern" in source
-    assert "WA_DeleteOnClose" in source
-    assert "setWidgetResizable(True)" in source
-    assert "self.order_dialog.setMinimumSize(760, 480)" in source
-    assert "self.order_dialog.resize(1020, 620)" in source
+    assert "orderEditorWorkspace" in source
+    assert "layout.addWidget(self.order_editor_widget, 2)" in source
+    assert "WA_DeleteOnClose" not in source
+    assert "self.order_dialog.setMinimumSize(760, 480)" not in source
+    assert "self.order_dialog.resize(1020, 620)" not in source
     assert "self.order_workspace_tabs = QTabWidget()" not in source
     assert "self.order_editor_widget" in source
 
 
-def test_order_dialog_content_can_scroll_instead_of_forcing_full_screen_height():
+def test_order_editor_is_embedded_in_main_window_instead_of_modal_dialog():
     source = Path("src/getraenkeladen_tool/ui/order_panel.py").read_text(encoding="utf-8")
 
-    assert "self.order_editor_scroll = QScrollArea()" in source
-    assert "self.order_editor_scroll.setWidget(self.order_editor_widget)" in source
-    assert "self.order_editor_scroll.takeWidget()" in source
+    assert "self.order_editor_widget = QWidget()" in source
+    assert 'self.order_editor_widget.setObjectName("orderEditorWorkspace")' in source
+    assert "layout.addWidget(self.order_editor_widget, 2)" in source
     assert "self.assortment_table.setMinimumHeight(180)" in source
     assert "self.order_lines_table.setMinimumHeight(220)" in source
     assert "self.deposit_returns_table.setMaximumHeight(120)" in source
@@ -332,8 +388,8 @@ def test_order_panel_shows_running_order_total():
 def test_order_panel_exposes_deposit_returns_new_order_and_copy_actions():
     source = Path("src/getraenkeladen_tool/ui/order_panel.py").read_text(encoding="utf-8")
 
-    assert '"newOrderButton": "Bestellung erfassen"' in source
-    assert '"copyOrderButton": "Markierte Bestellung kopieren"' in source
+    assert '"newOrderButton": "Neue Bestellung"' in source
+    assert '"copyOrderButton": "Als Vorlage kopieren"' in source
     assert '"addDepositReturnButton": "Pfand-Rueckgabe eintragen"' in source
     assert "self.deposit_returns_table" in source
     assert "self.deposit_return_select = QComboBox()" in source
@@ -387,7 +443,7 @@ def test_order_panel_warns_clearly_before_invalid_save():
 def test_order_panel_uses_clearer_labels_for_less_technical_users():
     source = Path("src/getraenkeladen_tool/ui/order_panel.py").read_text(encoding="utf-8")
 
-    assert '"copyOrderButton": "Markierte Bestellung kopieren"' in source
+    assert '"copyOrderButton": "Als Vorlage kopieren"' in source
     assert '"addDepositReturnButton": "Pfand-Rueckgabe eintragen"' in source
     assert '"removeDepositReturnButton": "Pfand-Rueckgabe entfernen"' in source
     assert 'ORDER_LINE_COLUMNS = ("Produkt", "Menge", "Preis je Einheit EUR", "Pfand je Einheit EUR", "Summe EUR")' in source
@@ -413,7 +469,7 @@ def test_order_panel_loads_customer_assortment_into_order_dialog():
 def test_order_panel_filters_orders_by_customer_and_can_copy_existing_order():
     source = Path("src/getraenkeladen_tool/ui/order_panel.py").read_text(encoding="utf-8")
 
-    assert '"copyOrderButton": "Markierte Bestellung kopieren"' in source
+    assert '"copyOrderButton": "Als Vorlage kopieren"' in source
     assert "self.order_table_search = QLineEdit()" in source
     assert "self.order_table_search.textChanged.connect(self.apply_order_table_search)" in source
     assert "def apply_order_table_search" in source

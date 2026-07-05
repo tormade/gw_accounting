@@ -6,6 +6,7 @@ from PySide6.QtWidgets import (
     QDialog,
     QHBoxLayout,
     QLabel,
+    QLineEdit,
     QMainWindow,
     QPushButton,
     QScrollArea,
@@ -29,11 +30,10 @@ from .settings_panel import SettingsPanel
 
 MAIN_TABS = (
     "Heute",
-    "Kundenordner",
-    "Offene Posten",
+    "Kunden",
+    "Bestellungen",
+    "Rechnungen",
     "Stammdaten",
-    "Pruefliste",
-    "Einstellungen",
 )
 MAIN_WINDOW_INITIAL_SIZE = (1180, 760)
 MAIN_WINDOW_MINIMUM_SIZE = (900, 560)
@@ -55,7 +55,7 @@ class MainWindow(QMainWindow):
         root_layout = QVBoxLayout(root)
         root_layout.setContentsMargins(0, 0, 0, 0)
         root_layout.setSpacing(0)
-        root_layout.addWidget(self._header())
+        root_layout.addWidget(self._toolbar())
 
         self.dashboard_panel = DashboardPanel(session_factory=session_factory)
         self.customer_folder_panel = CustomerFolderPanel(session_factory=session_factory)
@@ -66,18 +66,18 @@ class MainWindow(QMainWindow):
         self.product_panel = ProductPanel(session_factory=session_factory)
         self.open_items_panel = ReportPanel(session_factory=session_factory)
         self.settings_panel = SettingsPanel(session_factory=session_factory)
-        self.master_data_workspace = self._master_data_workspace()
         self.checklist_panel = ChecklistPanel(session_factory=session_factory)
+        self.master_data_workspace = self._master_data_workspace()
         self.refreshable_panels = {
             "Heute": (self.dashboard_panel.refresh_dashboard,),
-            "Kundenordner": (self.customer_folder_panel.refresh_customers,),
-            "Offene Posten": (self.open_items_panel.refresh_all_lists,),
+            "Kunden": (self.customer_folder_panel.refresh_customers,),
+            "Bestellungen": (self.order_panel.refresh_orders,),
+            "Rechnungen": (self.open_items_panel.refresh_all_lists,),
             "Stammdaten": (self.customer_panel.refresh_customers, self.product_panel.refresh_products),
-            "Pruefliste": (self.checklist_panel.refresh_issues,),
-            "Einstellungen": (),
         }
 
         self.dashboard_panel.new_delivery_requested.connect(self.open_customer_folder_tab)
+        self.dashboard_panel.orders_requested.connect(self.open_orders_tab)
         self.dashboard_panel.open_items_requested.connect(self.open_open_items_tab)
         self.dashboard_panel.checklist_requested.connect(self.open_checklist_tab)
         self.customer_folder_panel.new_order_requested.connect(self.open_new_order_for_customer)
@@ -95,28 +95,30 @@ class MainWindow(QMainWindow):
         self.pages = QStackedWidget()
         self.pages.addWidget(self._scrollable_tab(self.dashboard_panel))
         self.pages.addWidget(self._scrollable_tab(self.customer_folder_panel))
+        self.pages.addWidget(self._scrollable_tab(self.order_panel))
         self.pages.addWidget(self._scrollable_tab(self.open_items_panel))
         self.pages.addWidget(self._scrollable_tab(self.master_data_workspace))
-        self.pages.addWidget(self._scrollable_tab(self.checklist_panel))
-        self.pages.addWidget(self._scrollable_tab(self.settings_panel))
         self.navigation.currentRowChanged.connect(self.pages.setCurrentIndex)
         self.navigation.currentRowChanged.connect(self.refresh_current_tab)
+        self.navigation.currentRowChanged.connect(self.update_toolbar_primary_action)
         shell_layout.addWidget(self.navigation)
         shell_layout.addWidget(self.pages, 1)
         root_layout.addWidget(app_shell, 1)
         self.setCentralWidget(root)
+        self.update_toolbar_primary_action(self.navigation.currentRow())
 
     def open_customer_folder_tab(self) -> None:
-        self.navigation.setCurrentRow(MAIN_TABS.index("Kundenordner"))
+        self.navigation.setCurrentRow(MAIN_TABS.index("Kunden"))
 
     def open_open_items_tab(self) -> None:
-        self.navigation.setCurrentRow(MAIN_TABS.index("Offene Posten"))
+        self.navigation.setCurrentRow(MAIN_TABS.index("Rechnungen"))
 
     def open_checklist_tab(self) -> None:
-        self.navigation.setCurrentRow(MAIN_TABS.index("Pruefliste"))
+        self.navigation.setCurrentRow(MAIN_TABS.index("Stammdaten"))
+        self.master_data_workspace.setCurrentWidget(self.checklist_panel)
 
     def open_orders_tab(self) -> None:
-        self.open_customer_folder_tab()
+        self.navigation.setCurrentRow(MAIN_TABS.index("Bestellungen"))
 
     def open_new_order_dialog(self) -> None:
         self.open_orders_tab()
@@ -131,14 +133,14 @@ class MainWindow(QMainWindow):
         self.order_panel.load_order_by_id(order_id)
 
     def open_invoices_tab(self) -> None:
-        self.open_customer_folder_tab()
+        self.open_open_items_tab()
 
     def open_delivery_note_for_order(self, order_id: int) -> None:
-        self.open_customer_folder_tab()
+        self.open_orders_tab()
         self._open_document_dialog(DeliveryNotePanel, order_id, "Lieferschein erstellen")
 
     def open_invoice_for_order(self, order_id: int) -> None:
-        self.open_customer_folder_tab()
+        self.open_orders_tab()
         self._open_document_dialog(InvoicePanel, order_id, "Rechnung erstellen")
 
     def _open_document_dialog(self, panel_class, order_id: int, title: str) -> None:
@@ -171,10 +173,26 @@ class MainWindow(QMainWindow):
         for refresh in self.refreshable_panels.get(tab_name, ()):
             refresh()
 
+    def update_toolbar_primary_action(self, index: int) -> None:
+        if index < 0:
+            return
+        tab_name = MAIN_TABS[index]
+        labels = {
+            "Heute": "Bestellung starten",
+            "Kunden": "Bestellung starten",
+            "Bestellungen": "Neue Bestellung",
+            "Rechnungen": "Beleg erzeugen",
+            "Stammdaten": "Eintrag anlegen",
+        }
+        enabled_tabs = {"Heute", "Kunden", "Bestellungen"}
+        self.toolbar_new_button.setText(labels[tab_name])
+        self.toolbar_new_button.setEnabled(tab_name in enabled_tabs)
+
     def _scrollable_tab(self, panel: QWidget) -> QScrollArea:
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
         scroll_area.setFrameShape(QScrollArea.Shape.NoFrame)
+        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         scroll_area.setWidget(panel)
         return scroll_area
 
@@ -183,29 +201,47 @@ class MainWindow(QMainWindow):
         tabs.setObjectName("workspaceTabs")
         tabs.addTab(self.customer_panel, "Kunden")
         tabs.addTab(self.product_panel, "Artikel")
+        tabs.addTab(self.checklist_panel, "Pruefpunkte")
+        tabs.addTab(self.settings_panel, "Import")
         return tabs
 
-    def _header(self) -> QWidget:
-        header = QWidget()
-        header.setObjectName("brandHeader")
-        layout = QVBoxLayout(header)
-        layout.setContentsMargins(28, 20, 28, 18)
-        layout.setSpacing(8)
+    def _toolbar(self) -> QWidget:
+        toolbar = QWidget()
+        toolbar.setObjectName("appToolbar")
+        layout = QHBoxLayout(toolbar)
+        layout.setContentsMargins(18, 10, 18, 10)
+        layout.setSpacing(12)
 
         logo = QLabel("Getraenke Winklmeier")
-        logo.setObjectName("brandLogo")
+        logo.setObjectName("toolbarLogo")
         if LOGO_PATH.exists():
-            logo.setPixmap(QPixmap(str(LOGO_PATH)))
+            logo.setPixmap(QPixmap(str(LOGO_PATH)).scaledToHeight(24, Qt.TransformationMode.SmoothTransformation))
         layout.addWidget(logo)
 
-        claim = QLabel("Wir bringen's einfach")
-        claim.setObjectName("brandClaim")
-        if CLAIM_PATH.exists():
-            claim_pixmap = QPixmap(str(CLAIM_PATH)).scaledToWidth(220, Qt.TransformationMode.SmoothTransformation)
-            claim.setPixmap(claim_pixmap)
-        layout.addWidget(claim)
+        self.toolbar_search = QLineEdit()
+        self.toolbar_search.setObjectName("toolbarSearch")
+        self.toolbar_search.setPlaceholderText("Kunde, Rechnung oder Artikel suchen")
+        layout.addWidget(self.toolbar_search, 1)
 
-        return header
+        self.toolbar_new_button = QPushButton("Bestellung starten")
+        self.toolbar_new_button.setObjectName("toolbarPrimaryButton")
+        self.toolbar_refresh_button = QPushButton("Aktualisieren")
+        self.toolbar_refresh_button.setObjectName("toolbarButton")
+        self.toolbar_help_button = QPushButton("?")
+        self.toolbar_help_button.setObjectName("toolbarHelpButton")
+        layout.addWidget(self.toolbar_new_button)
+        layout.addWidget(self.toolbar_refresh_button)
+        layout.addWidget(self.toolbar_help_button)
+
+        self.toolbar_new_button.clicked.connect(self.handle_toolbar_primary_action)
+        self.toolbar_refresh_button.clicked.connect(lambda: self.refresh_current_tab(self.navigation.currentRow()))
+
+        return toolbar
+
+    def handle_toolbar_primary_action(self) -> None:
+        current_tab = MAIN_TABS[self.navigation.currentRow()]
+        if current_tab in {"Heute", "Kunden", "Bestellungen"}:
+            self.open_new_order_dialog()
 
     def _panel(self, title: str, subtitle: str) -> QWidget:
         widget = QWidget()

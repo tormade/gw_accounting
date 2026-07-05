@@ -172,8 +172,36 @@ def test_export_open_items_csv_writes_payment_overview(session, tmp_path: Path):
 
     assert output_path.exists()
     assert output_path.read_text(encoding="utf-8").splitlines() == [
-        "Kunde;Rechnungsnr.;Betrag EUR;Status",
-        "Cafe Nord;RG-1005;32,58;offen",
+        "Kunde;Rechnungsnr.;Rechnungsdatum;Faelligkeit;Zahlart;Betrag EUR;Status",
+        "Cafe Nord;RG-1005;;;SEPA;32,58;offen",
+    ]
+
+
+def test_export_open_items_csv_includes_due_date_for_bank_transfer(session, tmp_path: Path):
+    customer = create_customer(
+        session,
+        CustomerCreate(
+            name="Ueberweisung Kunde",
+            folder_path=str(tmp_path / "Kunden" / "Ueberweisung Kunde"),
+            payment_method="Ueberweisung",
+        ),
+    )
+    create_document(
+        session,
+        DocumentCreate(
+            customer_id=customer.id,
+            document_type="Rechnung",
+            document_number="RG-UE-1",
+            delivery_date="2026-06-24",
+            line_items=[DocumentLineItem(name="Wasser", quantity=1, unit_price_cents=1000)],
+        ),
+    )
+
+    output_path = export_open_items_csv(session, tmp_path / "offene_posten.csv")
+
+    assert output_path.read_text(encoding="utf-8").splitlines() == [
+        "Kunde;Rechnungsnr.;Rechnungsdatum;Faelligkeit;Zahlart;Betrag EUR;Status",
+        "Ueberweisung Kunde;RG-UE-1;2026-06-24;2026-07-01;Ueberweisung;10,00;offen",
     ]
 
 

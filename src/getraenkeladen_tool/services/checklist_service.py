@@ -10,6 +10,7 @@ ISSUE_TYPE_LABELS = {
     "price_mismatch": "Preisabweichung",
     "product_match": "Artikelzuordnung",
     "customer_conflict": "Kundendaten",
+    "merge_conflict": "Kundendaten",
     "folder_scan": "Ordnerpruefung",
 }
 

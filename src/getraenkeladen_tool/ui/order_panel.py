@@ -39,8 +39,8 @@ from .searchable_select import SearchableSelect
 
 ORDER_PANEL_ACTIONS = {
     "orderHelpButton": "?",
-    "newOrderButton": "Bestellung erfassen",
-    "copyOrderButton": "Markierte Bestellung kopieren",
+    "newOrderButton": "Neue Bestellung",
+    "copyOrderButton": "Als Vorlage kopieren",
     "refreshOrderDataButton": "Kunden/Artikel neu laden",
     "addOrderLineButton": "Position hinzufuegen",
     "removeOrderLineButton": "Position entfernen",
@@ -57,14 +57,14 @@ ASSORTMENT_COLUMNS = ("Artikel", "Letzte Menge", "Preis aktuell", "Preis Excel",
 DEPOSIT_RETURN_COLUMNS = ("Pfandart", "Menge", "Pfand EUR", "Gutschrift EUR")
 ORDER_COLUMNS = ("Bestellung", "Kunde", "Lieferdatum", "Zeitfenster", "Status")
 ORDER_PANEL_SECTIONS = (
-    "Kundenkopf",
-    "Kundensortiment",
-    "Bestellungen verwalten",
+    "Kunde und Lieferdatum",
+    "Mengen erfassen",
+    "Bestellungen",
 )
 ORDER_HELP_TEXT = (
-    "Kundenkopf: Kunde, Lieferdatum, Zeitfenster und Bestellnummer pruefen.\n\n"
-    "Kundensortiment: letzte Mengen sehen, neue Mengen eintragen und Artikel hinzufuegen.\n\n"
-    "Bestellungen: Vorhandene Bestellungen oeffnen, archivieren oder als Vorlage fuer eine neue Bestellung kopieren."
+    "Kunde und Lieferdatum: Kunde, Lieferdatum, Zeitfenster und Bestellnummer pruefen.\n\n"
+    "Mengen erfassen: letzte Mengen sehen, neue Mengen eintragen und Artikel hinzufuegen.\n\n"
+    "Bestellungen: Vorhandene Bestellungen oeffnen, archivieren oder als Vorlage kopieren."
 )
 ORDER_GUIDANCE_STEPS = (
     "Kunde suchen und letzte Mengen als Vorlage sehen.",
@@ -145,7 +145,7 @@ class OrderPanel(QWidget):
         self.order_table_search = QLineEdit()
         self.order_table_search.setObjectName("tableSearchField")
         self.order_table_search.setPlaceholderText("In den Bestellungen suchen, z. B. Kunde, Nummer oder Datum")
-        self.status_label = QLabel("Schritt 1: Kunde suchen, letzte Mengen pruefen, neue Bestellung erfassen.")
+        self.status_label = QLabel("Kunde suchen, letzte Mengen pruefen, Bestellung speichern.")
         self.status_label.setObjectName("muted")
 
         root_layout = QVBoxLayout(self)
@@ -156,7 +156,13 @@ class OrderPanel(QWidget):
 
         self.help_button = QPushButton(ORDER_PANEL_ACTIONS["orderHelpButton"])
         self.help_button.setObjectName("helpButton")
-        layout.addWidget(PageHeader("Bestellung erfassen", "Kundenordner-Vorlage oeffnen, Mengen pruefen und Bestellung speichern.", self.help_button))
+        layout.addWidget(
+            PageHeader(
+                "Bestellungen",
+                "Kunde waehlen, Mengen erfassen und direkt den naechsten Beleg vorbereiten.",
+                self.help_button,
+            )
+        )
 
         self.refresh_data_button = self._button("refreshOrderDataButton")
         self.add_line_button = self._button("addOrderLineButton")
@@ -164,7 +170,7 @@ class OrderPanel(QWidget):
         self.add_deposit_return_button = self._button("addDepositReturnButton")
         self.remove_deposit_return_button = self._button("removeDepositReturnButton")
         self.save_order_button = self._button("saveOrderButton")
-        self.cancel_order_dialog_button = QPushButton("Abbrechen")
+        self.cancel_order_dialog_button = QPushButton("Eingabe zuruecksetzen")
         self.refresh_orders_button = self._button("refreshOrdersButton")
         self.new_order_button = self._button("newOrderButton")
         self.copy_order_button = self._button("copyOrderButton")
@@ -175,7 +181,7 @@ class OrderPanel(QWidget):
         self.order_dialog: QDialog | None = None
         self.order_editor_scroll: QScrollArea | None = None
         self.order_editor_widget = QWidget()
-        self.order_editor_widget.setObjectName("orderEditorDialogBody")
+        self.order_editor_widget.setObjectName("orderEditorWorkspace")
         new_order_layout = QVBoxLayout(self.order_editor_widget)
         new_order_layout.setContentsMargins(0, 0, 0, 0)
         new_order_layout.setSpacing(14)
@@ -183,6 +189,8 @@ class OrderPanel(QWidget):
         customer_box, customer_layout = self._section(
             ORDER_PANEL_SECTIONS[0],
             "Oben stehen die Angaben, die beim Telefonat und fuer den Beleg wichtig sind.",
+            tone="route",
+            kicker="TELEFON",
         )
         customer_layout.addWidget(self.order_mode_label)
         customer_form = QFormLayout()
@@ -207,6 +215,8 @@ class OrderPanel(QWidget):
         position_box, position_layout = self._section(
             ORDER_PANEL_SECTIONS[1],
             "Links Produkt erfassen, rechts die Positionen wie in einer Belegliste kontrollieren.",
+            tone="cash",
+            kicker="MENGEN",
         )
         position_layout.addWidget(self.assortment_table)
         assortment_actions = QHBoxLayout()
@@ -242,7 +252,12 @@ class OrderPanel(QWidget):
         position_layout.addLayout(deposit_return_actions)
         order_entry_splitter.addWidget(position_box)
 
-        line_box, line_layout = self._section("Bestellpositionen", "Alle hinzugefuegten Artikel dieser Bestellung.")
+        line_box, line_layout = self._section(
+            "Bestellpositionen",
+            "Alle hinzugefuegten Artikel dieser Bestellung.",
+            tone="document",
+            kicker="BELEGLISTE",
+        )
         line_layout.addWidget(self.order_lines_table)
         line_layout.addWidget(self.deposit_returns_table)
         total_bar = QWidget()
@@ -255,10 +270,13 @@ class OrderPanel(QWidget):
         order_entry_splitter.addWidget(line_box)
         order_entry_splitter.setStretchFactor(0, 1)
         order_entry_splitter.setStretchFactor(1, 3)
+        layout.addWidget(self.order_editor_widget, 2)
 
         orders_box, orders_layout = self._section(
             ORDER_PANEL_SECTIONS[2],
-            "Vorhandene Bestellung doppelt anklicken oder per Rechtsklick weiterbearbeiten.",
+            "Vorhandene Bestellung auswaehlen. Die Details werden oben im Arbeitsbereich bearbeitet.",
+            tone="route",
+            kicker="BESTELLSTAPEL",
         )
         orders_actions = QHBoxLayout()
         orders_actions.addWidget(self.new_order_button)
@@ -277,7 +295,7 @@ class OrderPanel(QWidget):
         self.help_button.clicked.connect(self.show_help)
         self.refresh_data_button.clicked.connect(self.refresh_master_data)
         self.new_order_button.clicked.connect(self.open_new_order_dialog)
-        self.cancel_order_dialog_button.clicked.connect(self.close_order_dialog)
+        self.cancel_order_dialog_button.clicked.connect(self.reset_order_form)
         self.copy_order_button.clicked.connect(self.copy_selected_order_as_new)
         self.create_delivery_note_button.clicked.connect(self.request_delivery_note_for_selected_order)
         self.create_invoice_button.clicked.connect(self.request_invoice_for_selected_order)
@@ -323,8 +341,8 @@ class OrderPanel(QWidget):
 
         return box
 
-    def _section(self, title: str, subtitle: str) -> tuple[QWidget, QVBoxLayout]:
-        box = WorkspaceCard(title, subtitle)
+    def _section(self, title: str, subtitle: str, tone: str = "default", kicker: str = "") -> tuple[QWidget, QVBoxLayout]:
+        box = WorkspaceCard(title, subtitle, tone=tone, kicker=kicker)
         return box, box.layout
 
     def show_help(self) -> None:
@@ -332,34 +350,19 @@ class OrderPanel(QWidget):
 
     def open_new_order_dialog(self) -> None:
         self.reset_order_form()
-        self.open_order_dialog("Neue Bestellung anlegen")
+        self.open_order_dialog("Neue Bestellung")
 
     def open_new_order_for_customer(self, customer_id: int) -> None:
         self.reset_order_form()
         self.customer_select.select_value(customer_id)
         self.apply_selected_customer()
-        self.order_mode_label.setText("Neue Bestellung aus Kundenordner")
+        self.order_mode_label.setText("Neue Bestellung aus Kunden")
+        self.open_order_dialog("Neue Bestellung aus Kunden")
         self.prefill_order_lines_from_customer_assortment()
-        self.open_order_dialog("Neue Bestellung aus Kundenordner")
 
     def open_order_dialog(self, title: str = "Bestellung bearbeiten") -> None:
-        if self.order_dialog is not None:
-            self.order_dialog.close()
-        self.order_dialog = QDialog(self)
-        self.order_dialog.setWindowTitle(title)
-        self.order_dialog.setModal(True)
-        self.order_dialog.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
-        self.order_dialog.setMinimumSize(760, 480)
-        self.order_dialog.resize(1020, 620)
-        dialog_layout = QVBoxLayout(self.order_dialog)
-        dialog_layout.setContentsMargins(12, 12, 12, 12)
-        self.order_editor_scroll = QScrollArea()
-        self.order_editor_scroll.setWidgetResizable(True)
-        self.order_editor_scroll.setFrameShape(QScrollArea.Shape.NoFrame)
-        self.order_editor_scroll.setWidget(self.order_editor_widget)
-        dialog_layout.addWidget(self.order_editor_scroll)
-        self.order_dialog.finished.connect(lambda _result: self._restore_order_editor_parent())
-        self.order_dialog.show()
+        self.order_mode_label.setText(title)
+        self.status_label.setText(f"{title}: Angaben oben pruefen, Mengen erfassen und speichern.")
 
     def _restore_order_editor_parent(self) -> None:
         if self.order_editor_scroll is not None:
@@ -553,9 +556,13 @@ class OrderPanel(QWidget):
         self.order_lines_table.setRowCount(0)
         added_count = 0
         skipped_count = 0
+        skipped_price_count = 0
         for row in self.assortment_rows_by_row.values():
             if row.product_id is None or row.last_quantity <= 0:
                 skipped_count += 1
+                continue
+            if row.price_differs_from_central and row.price_decision == "offen":
+                skipped_price_count += 1
                 continue
             self._append_order_line_to_table(
                 row.product_name or row.source_product_name,
@@ -570,6 +577,8 @@ class OrderPanel(QWidget):
             message = f"{added_count} Positionen aus den letzten Mengen uebernommen."
             if skipped_count:
                 message += " Ungeklaerte Artikel wurden ausgelassen."
+            if skipped_price_count:
+                message += " Preisabweichungen wurden ausgelassen."
             self.status_label.setText(message)
         else:
             self.status_label.setText("Keine letzten Mengen zum Uebernehmen gefunden. Bitte Positionen manuell erfassen.")

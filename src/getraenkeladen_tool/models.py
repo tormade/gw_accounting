@@ -130,6 +130,27 @@ class Document(Base):
 
     customer: Mapped[Customer] = relationship()
     order: Mapped["Order | None"] = relationship()
+    lines: Mapped[list["DocumentLine"]] = relationship(
+        back_populates="document",
+        cascade="all, delete-orphan",
+        order_by="DocumentLine.sort_order",
+    )
+
+
+class DocumentLine(Base):
+    __tablename__ = "document_lines"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    document_id: Mapped[int] = mapped_column(ForeignKey("documents.id"))
+    line_type: Mapped[str] = mapped_column(String(30))
+    name: Mapped[str] = mapped_column(String(200))
+    quantity: Mapped[int] = mapped_column(Integer())
+    unit_price_cents: Mapped[int] = mapped_column(Integer(), default=0)
+    deposit_cents: Mapped[int] = mapped_column(Integer(), default=0)
+    total_cents: Mapped[int] = mapped_column(Integer())
+    sort_order: Mapped[int] = mapped_column(Integer(), default=0)
+
+    document: Mapped[Document] = relationship(back_populates="lines")
 
 
 class OpenItem(Base):
@@ -139,6 +160,8 @@ class OpenItem(Base):
     document_id: Mapped[int] = mapped_column(ForeignKey("documents.id"))
     customer_name: Mapped[str] = mapped_column(String(200))
     document_number: Mapped[str] = mapped_column(String(50))
+    document_date: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    due_date: Mapped[str | None] = mapped_column(String(20), nullable=True)
     amount_cents: Mapped[int] = mapped_column(Integer())
     payment_method: Mapped[str] = mapped_column(String(50))
     status: Mapped[str] = mapped_column(String(30), default="offen")

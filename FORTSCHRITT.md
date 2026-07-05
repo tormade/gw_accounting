@@ -62,15 +62,28 @@ Das Produktziel steht in `docs/zielbild.md`: ein schlankes lokales Windows-Buero
 - Lieferschein und Rechnung wurden jeweils als Excel und PDF im Kundenordner erzeugt und die Excel-Dateien enthalten Summenformeln fuer Positionen und Gesamtbetrag.
 - Belegdialoge nach 60+-Erstnutzer-Test vereinfacht: Bei vorausgewaehlter Bestellung wird die Suchspalte ausgeblendet, alle Schritte sind als kurze Reiter sichtbar und die Summe bleibt prominent.
 - Suchfelder zeigen bei eindeutigem Treffer jetzt, dass direkt weitergearbeitet werden kann, statt irrefuehrend noch einen Pflicht-Klick zu suggerieren.
+- Beleg-Snapshot-Datenmodell eingefuehrt: Erzeugte Belege speichern Positionen, Pfand-Rueckgaben, Lieferpauschale und Brutto als reproduzierbare Snapshot-Zeilen.
+- Offene Posten nutzen beim Erzeugen den gespeicherten Beleg-Snapshot-Brutto; DB-Bootstrap legt die Snapshot-Tabelle auch fuer bestehende Installationen an.
+- UAT-/Regressionstest dokumentiert und wichtigste Befunde behoben: Zahlart-Texte mit Ueberweisung-Faelligkeit, Teil-Export-Schutz, erweiterte offene Posten, Preisabweichungen beim Vorbefuellen und idempotentes Re-Onboarding.
+- Neues Designkonzept "Winklmeier Lieferservice-Cockpit 2026" umgesetzt: website-nahe Weiss/Rot/Schwarz-Marke, Kopfzeile mit Claim und Lieferservice-Telefon, eckige Arbeitsflaechen, groessere Bedienziele, staerkere Tabellenhierarchie und vollstaendigere Offene-Posten-Flaeche.
+- Generische KI-UI-Anmutung weiter reduziert: neues "Winklmeier Betriebs-Cockpit 2026" mit nummerierter Navigation, Seiten-Kickern, Arbeitszonen fuer Route/Kasse/Pruefstand/Beleg, schwarzen Tabellenkoepfen mit roter Markenlinie und semantischen Card-Tones fuer alle Hauptflaechen.
+- Radikaler UI-Schnitt begonnen: Hauptnavigation auf Aufgaben reduziert, Startseite als gefuehrtes Ablaufbrett neu gebaut, initial leere Suchlisten entfernt, Stammdaten von gequetschtem Split-Screen auf Bearbeiten-oben/Liste-unten umgestellt und horizontales Seiten-Scrollen abgeschaltet.
+- Neue Designentscheidung dokumentiert: Die Betriebs-Cockpit-Richtung wird verworfen. Zielbild ist nun "Winklmeier Office 2026": Apple-like helle Shell, ruhige Sidebar/Toolbar, Listen plus Inspector, Lexware-Aufgabenlogik und SAP-Fiori-Objektarbeit.
+- Phase 1 der neuen Office-Shell umgesetzt: schwerer Markenbanner entfernt, helle Toolbar mit globaler Suche/Neu/Aktualisieren eingefuehrt, Sidebar auf Apple-like helle Navigation ohne Nummern umgestellt, Hauptbereiche auf Heute/Kunden/Bestellungen/Rechnungen/Stammdaten reduziert und Pruefpunkte/Import unter Stammdaten gebuendelt.
+- Winklmeier Office 2.0 als radikaler Produktumbau festgelegt: alle Oberflaechen, Buttons, Tabellen und Dialoge werden am Hauptfluss Kunde -> Bestellung -> Beleg -> Zahlung gemessen; der Masterplan steht in `docs/winklmeier-office-2.0-masterplan.md`.
+- Bestehende Hauptscreens gegen den 2.0-Masterplan auditiert: konkrete Umbaukarte fuer Shell, Heute, Kunden, Bestellungen, Rechnungen/Kasse und Stammdaten steht in `docs/winklmeier-office-2.0-screen-audit.md`.
+- Erster 2.0-Code-Schritt umgesetzt: Toolbar-Hauptaktion ist nicht mehr generisch `Neu`, sondern passt sich je Hauptbereich an und ist in Bereichen ohne sicheren Kontext deaktiviert.
+- Winklmeier Office 2.0 Schrittfolge umgesetzt: wiederverwendbarer Inspector eingefuehrt, Kundenarbeitsplatz auf Liste + Kontext + `Bestellung starten` umgebaut, Bestelleditor ins Hauptfenster geholt, Rechnungen/Kasse auf Rechnungsliste + Zahlungs-Inspector umgestellt, Heute als Tagesliste statt Demo-/Workflow-Flaeche gebaut und Pruefpunkte/Import sprachlich bereinigt.
+- Volle Regression nach dem 2.0-Umbau ist gruen: 223 Tests bestanden, `compileall src tests` erfolgreich.
+- Winklmeier Office 2.0 wurde von Thomas abgenommen und im Programm erneut geprueft: volle Regression 223 Tests bestanden, `compileall src tests` erfolgreich, Screenshot-Smoke fuer alle fuenf Hauptbereiche unter `/private/tmp/getraenkeladen-design-preview/winklmeier-office-2-accepted`.
 
 ## In Arbeit
 
-- Kundenordner-Arbeitsplatz weiter abrunden und Beleg-Snapshots/Adapter schrittweise aus den alten Services trennen.
+- Echten Windows-Kundenordner fuer den naechsten Anwender-Smoke vorbereiten.
 
 ## Offen
 
 - Importlauf mit einem echten kompletten Windows-Kundenordner testen.
-- Belegpositionen langfristig als eigenen Snapshot persistieren, damit alte Belege voll reproduzierbar bleiben.
 - Offene Posten, Tagesliste und spaetere Windows-Verpackung.
 - Startbildschirm mit Kennzahlen: heutige Lieferungen, offene Posten, faellige Kontakte.
 - Tagesliste fuer Fahrer mit Adresse, Zeitfenster und Kundenhinweisen.
@@ -79,4 +92,4 @@ Das Produktziel steht in `docs/zielbild.md`: ein schlankes lokales Windows-Buero
 
 ## Naechste Aufgabe
 
-Beleg-Snapshot-Datenmodell und Adapter-Grenze vorbereiten, danach Bedienprobe mit einem echten kompletten Kundenordner durchspielen.
+Kompletter UAT mit echtem Kundenordner: Kunde suchen -> Bestellung -> Lieferschein/Rechnung -> PDF/Excel -> Rechnung als bezahlt markieren.

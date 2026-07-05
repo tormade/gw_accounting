@@ -19,7 +19,7 @@ from ..services.customer_assortment_service import list_customer_assortment
 from ..services.customer_folder_service import CustomerFolderFile, get_customer_folder_snapshot
 from ..services.customer_service import list_active_customers
 from .date_input import to_display_date
-from .layouts import ContentSurface, PageHeader, ResponsiveSplitter, WorkspaceCard
+from .layouts import ContentSurface, InspectorPanel, PageHeader, ResponsiveSplitter, WorkspaceCard
 from .searchable_select import SearchableSelect
 
 
@@ -50,68 +50,95 @@ class CustomerFolderPanel(QWidget):
         layout = surface.layout
         layout.addWidget(
             PageHeader(
-                "Kundenordner",
-                "Kunde oeffnen, alte Excel/PDF sehen und daraus die naechste Bestellung starten.",
+                "Kunden",
+                "Kunde finden, Kontext pruefen und direkt die naechste Bestellung starten.",
             )
         )
 
         self.customer_select = SearchableSelect("Kunde suchen, z. B. Cafe oder Metzgerei")
-        self.refresh_button = QPushButton("Kundenliste aktualisieren")
-        self.open_folder_button = QPushButton("Kundenordner oeffnen")
-        self.open_file_button = QPushButton("Markierte Excel/PDF oeffnen")
-        self.new_order_button = QPushButton("Neue Bestellung aus letzten Mengen starten")
-        self.seed_file_hint = QLabel("Die Vorlage kommt aus den letzten importierten Mengen rechts.")
+        self.refresh_button = QPushButton("Liste aktualisieren")
+        self.open_folder_button = QPushButton("Kundenordner")
+        self.open_file_button = QPushButton("Datei oeffnen")
+        self.new_order_button = QPushButton("Bestellung starten")
+        self.new_order_button.setObjectName("primaryAction")
+        self.seed_file_hint = QLabel("Letzte Mengen erscheinen nach der Kundenauswahl.")
         self.seed_file_hint.setObjectName("sectionSubtitle")
-        self.delivery_note_button = QPushButton("Aus markierter Bestellung Lieferschein")
-        self.invoice_button = QPushButton("Aus markierter Bestellung Rechnung")
+        self.delivery_note_button = QPushButton("Lieferschein erstellen")
+        self.invoice_button = QPushButton("Rechnung erstellen")
         self.status_label = QLabel("Noch kein Kunde ausgewaehlt.")
         self.status_label.setObjectName("muted")
 
-        search_card = WorkspaceCard("Kundenakte", "Kunden aus der Datenbank suchen und die echte Ordneransicht laden.")
-        search_card.layout.addWidget(self.customer_select)
-        search_actions = QHBoxLayout()
-        search_actions.addWidget(self.refresh_button)
-        search_actions.addWidget(self.open_folder_button)
-        search_actions.addWidget(self.new_order_button)
-        search_actions.addStretch()
-        search_card.layout.addLayout(search_actions)
-        layout.addWidget(search_card)
+        self.customer_address_label = QLabel("Adresse: -")
+        self.customer_contact_label = QLabel("Kontakt: -")
+        self.customer_payment_label = QLabel("Zahlart: -")
+        self.customer_delivery_notes_label = QLabel("Lieferhinweise: -")
+        self.customer_folder_label = QLabel("Ablage: -")
+        self.customer_documents_label = QLabel("Belege: -")
+        self.customer_next_step_label = QLabel("Naechster Schritt: Kunde suchen.")
+        for label in (
+            self.customer_address_label,
+            self.customer_contact_label,
+            self.customer_payment_label,
+            self.customer_delivery_notes_label,
+            self.customer_folder_label,
+            self.customer_documents_label,
+            self.customer_next_step_label,
+        ):
+            label.setObjectName("inspectorValue")
+            label.setWordWrap(True)
 
         splitter = ResponsiveSplitter()
         layout.addWidget(splitter, 1)
 
-        files_card = WorkspaceCard("Dateien im Kundenordner", "Excel- und PDF-Dateien aus dem hinterlegten Kundenordner.")
-        self.files_table = self._table(FOLDER_FILE_COLUMNS, 220)
-        files_card.layout.addWidget(self.files_table)
-        file_actions = QHBoxLayout()
-        file_actions.addWidget(self.open_file_button)
-        file_actions.addStretch()
-        files_card.layout.addLayout(file_actions)
-        splitter.addWidget(files_card)
-
-        workflow_card = WorkspaceCard(
-            "Vorlage aus Kundenordner",
-            "Alte Excel/PDF links oeffnen, letzte Mengen rechts als Vorlage nutzen.",
+        workspace_card = WorkspaceCard(
+            "Kunden finden",
+            "Suche einen Kunden. Danach zeigt die rechte Seite Adresse, Zahlart, Hinweise und den besten naechsten Schritt.",
+            tone="route",
+            kicker="ARBEITSPLATZ",
         )
+        workspace_card.layout.addWidget(self.customer_select)
+        workspace_actions = QHBoxLayout()
+        workspace_actions.addWidget(self.refresh_button)
+        workspace_actions.addStretch()
+        workspace_card.layout.addLayout(workspace_actions)
+
         self.orders_table = self._table(ORDER_COLUMNS, 180)
         self.assortment_table = self._table(ASSORTMENT_COLUMNS, 260)
+        self.files_table = self._table(FOLDER_FILE_COLUMNS, 180)
         orders_title = QLabel("Bestellungen dieses Kunden")
         orders_title.setObjectName("sectionTitle")
-        workflow_card.layout.addWidget(orders_title)
-        workflow_card.layout.addWidget(self.orders_table)
-        assortment_title = QLabel("Kundensortiment aus letzter Excel")
+        workspace_card.layout.addWidget(orders_title)
+        workspace_card.layout.addWidget(self.orders_table)
+        assortment_title = QLabel("Letzte Mengen")
         assortment_title.setObjectName("sectionTitle")
-        workflow_card.layout.addWidget(assortment_title)
-        workflow_card.layout.addWidget(self.assortment_table)
-        workflow_actions = QHBoxLayout()
-        workflow_actions.addWidget(self.delivery_note_button)
-        workflow_actions.addWidget(self.invoice_button)
-        workflow_actions.addStretch()
-        workflow_card.layout.addLayout(workflow_actions)
-        workflow_card.layout.addWidget(self.seed_file_hint)
-        splitter.addWidget(workflow_card)
-        splitter.setStretchFactor(0, 1)
-        splitter.setStretchFactor(1, 2)
+        workspace_card.layout.addWidget(assortment_title)
+        workspace_card.layout.addWidget(self.assortment_table)
+        files_title = QLabel("Letzte Dateien")
+        files_title.setObjectName("sectionTitle")
+        workspace_card.layout.addWidget(files_title)
+        workspace_card.layout.addWidget(self.files_table)
+        workspace_card.layout.addWidget(self.seed_file_hint)
+        splitter.addWidget(workspace_card)
+
+        self.inspector = InspectorPanel("Kunde auswaehlen", "Nach der Auswahl stehen hier Kontext und naechste Aktion.")
+        self.inspector.add_section_label("Kundenlage")
+        self.inspector.body.addWidget(self.customer_address_label)
+        self.inspector.body.addWidget(self.customer_contact_label)
+        self.inspector.body.addWidget(self.customer_payment_label)
+        self.inspector.body.addWidget(self.customer_delivery_notes_label)
+        self.inspector.add_section_label("Ablage und Belege")
+        self.inspector.body.addWidget(self.customer_folder_label)
+        self.inspector.body.addWidget(self.customer_documents_label)
+        self.inspector.add_section_label("Naechster Schritt")
+        self.inspector.body.addWidget(self.customer_next_step_label)
+        self.inspector.body.addWidget(self.new_order_button)
+        self.inspector.body.addWidget(self.open_folder_button)
+        self.inspector.body.addWidget(self.open_file_button)
+        self.inspector.body.addWidget(self.delivery_note_button)
+        self.inspector.body.addWidget(self.invoice_button)
+        splitter.addWidget(self.inspector)
+        splitter.setStretchFactor(0, 3)
+        splitter.setStretchFactor(1, 1)
 
         layout.addWidget(self.status_label)
 
@@ -180,6 +207,14 @@ class CustomerFolderPanel(QWidget):
         self.files_table.setRowCount(0)
         self.orders_table.setRowCount(0)
         self.assortment_table.setRowCount(0)
+        self.inspector.set_heading("Kunde auswaehlen", "Nach der Auswahl stehen hier Kontext und naechste Aktion.")
+        self.customer_address_label.setText("Adresse: -")
+        self.customer_contact_label.setText("Kontakt: -")
+        self.customer_payment_label.setText("Zahlart: -")
+        self.customer_delivery_notes_label.setText("Lieferhinweise: -")
+        self.customer_folder_label.setText("Ablage: -")
+        self.customer_documents_label.setText("Belege: -")
+        self.customer_next_step_label.setText("Naechster Schritt: Kunde suchen.")
         self.status_label.setText(message)
         self.update_action_state()
 
@@ -221,6 +256,31 @@ class CustomerFolderPanel(QWidget):
             )
 
         folder_status = "vorhanden" if snapshot.folder_exists else "fehlt"
+        customer = snapshot.customer
+        contact_parts = [
+            self._text(getattr(customer, "contact_name", "")),
+            self._text(getattr(customer, "phone", "")),
+            self._text(getattr(customer, "contact_email", "")),
+        ]
+        contact_text = " · ".join(part for part in contact_parts if part) or "-"
+        self.inspector.set_heading(customer.name, "Kundenkontext fuer Bestellung, Beleg und Zahlung.")
+        self.customer_address_label.setText(f"Adresse: {self._text(getattr(customer, 'address', '')) or '-'}")
+        self.customer_contact_label.setText(f"Kontakt: {contact_text}")
+        self.customer_payment_label.setText(f"Zahlart: {self._text(getattr(customer, 'payment_method', '')) or '-'}")
+        self.customer_delivery_notes_label.setText(
+            f"Lieferhinweise: {self._text(getattr(customer, 'delivery_notes', '')) or '-'}"
+        )
+        self.customer_folder_label.setText(f"Ablage: Kundenordner {folder_status}")
+        self.customer_documents_label.setText(
+            f"Belege: {len(getattr(snapshot, 'documents', []))} Dokumente, {len(snapshot.orders)} Bestellungen"
+        )
+        if assortment_rows:
+            next_step = "Bestellung aus letzten Mengen starten."
+        elif snapshot.folder_exists:
+            next_step = "Leere Bestellung starten oder alte Datei zum Nachsehen oeffnen."
+        else:
+            next_step = "Leere Bestellung starten; Kundenordner spaeter in Stammdaten pruefen."
+        self.customer_next_step_label.setText(f"Naechster Schritt: {next_step}")
         self.status_label.setText(
             f"{snapshot.customer.name}: Kundenordner {folder_status}, "
             f"{len(snapshot.files)} Dateien, {len(snapshot.orders)} Bestellungen."
@@ -281,11 +341,11 @@ class CustomerFolderPanel(QWidget):
         self.open_file_button.setEnabled(has_file)
         self.new_order_button.setEnabled(has_customer)
         if self.has_seed_quantities:
-            self.new_order_button.setText("Neue Bestellung aus letzten Mengen starten")
+            self.new_order_button.setText("Bestellung starten")
         elif has_customer and not has_folder:
-            self.new_order_button.setText("Ohne Kundenordner leere Bestellung starten")
+            self.new_order_button.setText("Leere Bestellung starten")
         else:
-            self.new_order_button.setText("Neue leere Bestellung starten")
+            self.new_order_button.setText("Bestellung starten")
         self.delivery_note_button.setEnabled(has_order)
         self.invoice_button.setEnabled(has_order)
         if selected_file is None:
@@ -294,7 +354,7 @@ class CustomerFolderPanel(QWidget):
                     "Kundenordner fehlt. Es kann nur eine leere Bestellung gestartet werden."
                 )
             else:
-                self.seed_file_hint.setText("Die Vorlage kommt aus den letzten importierten Mengen rechts.")
+                self.seed_file_hint.setText("Letzte Mengen erscheinen nach der Kundenauswahl.")
         elif selected_file.can_seed_order:
             self.seed_file_hint.setText(f"Excel-Datei zum Nachsehen: {selected_file.label}")
         else:
@@ -308,6 +368,9 @@ class CustomerFolderPanel(QWidget):
 
     def _money(self, cents: int | None) -> str:
         return f"{(cents or 0) / 100:.2f} EUR".replace(".", ",")
+
+    def _text(self, value: object) -> str:
+        return str(value or "").strip()
 
     def _open_url(self, path: Path) -> None:
         QDesktopServices.openUrl(QUrl.fromLocalFile(str(path)))

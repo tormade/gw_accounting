@@ -1,4 +1,5 @@
 from pathlib import Path
+from datetime import date, timedelta
 
 from PySide6.QtCore import Qt, QUrl
 from PySide6.QtGui import QDesktopServices
@@ -110,6 +111,8 @@ class DocumentWorkflowPanel(QWidget):
         order_box, order_layout = self._section(
             "1. Kundenbestellung suchen",
             "Kunde, Bestellnummer oder Lieferdatum eingeben. Danach diese Bestellung verwenden.",
+            tone="route",
+            kicker="AUSGANG",
         )
         self.order_box = order_box
         order_layout.addWidget(self.order_select)
@@ -127,6 +130,8 @@ class DocumentWorkflowPanel(QWidget):
         document_box, document_layout = self._section(
             "2. Artikel und Betraege pruefen",
             "Nur Beleg-Korrektur: Diese Aenderungen speichern keine neue Vorlage im Kundenordner.",
+            tone="document",
+            kicker="BELEGWERKSTATT",
         )
         document_layout.addWidget(self.order_summary)
 
@@ -199,7 +204,7 @@ class DocumentWorkflowPanel(QWidget):
         primary_action_row.addWidget(self.create_both_button)
         primary_action_row.addStretch()
         output_layout.addLayout(primary_action_row)
-        normal_hint = QLabel("Normalerweise reicht der gruene Hauptbutton: Excel und PDF zusammen erstellen.")
+        normal_hint = QLabel("Normalerweise reicht der rote Hauptbutton: Excel und PDF zusammen erstellen.")
         normal_hint.setObjectName("sectionSubtitle")
         normal_hint.setWordWrap(True)
         output_layout.addWidget(normal_hint)
@@ -241,8 +246,8 @@ class DocumentWorkflowPanel(QWidget):
     def _button(self, object_name: str) -> QPushButton:
         return QPushButton(DOCUMENT_WORKFLOW_ACTIONS[object_name])
 
-    def _section(self, title: str, subtitle: str) -> tuple[QWidget, QVBoxLayout]:
-        box = WorkspaceCard(title, subtitle)
+    def _section(self, title: str, subtitle: str, tone: str = "default", kicker: str = "") -> tuple[QWidget, QVBoxLayout]:
+        box = WorkspaceCard(title, subtitle, tone=tone, kicker=kicker)
         return box, box.layout
 
     def refresh_master_data(self) -> None:
@@ -299,7 +304,7 @@ class DocumentWorkflowPanel(QWidget):
             )
             self.lines_table.setRowCount(0)
             self.returns_table.setRowCount(0)
-            self.document_note.setText(self.default_note_text)
+            self.document_note.setText(self._default_note_for_order(order))
             for line in order.lines:
                 self._append_line(line.product_name, line.quantity, line.unit_price_cents, line.deposit_cents)
             for deposit_return in order.deposit_returns:
@@ -382,6 +387,9 @@ class DocumentWorkflowPanel(QWidget):
 
     def _create_document_for_order(self, session, assets: set[str]):
         raise NotImplementedError
+
+    def _default_note_for_order(self, order) -> str:
+        return self.default_note_text
 
     def _line_items_from_table(self) -> list[DocumentLineItem]:
         items = []
@@ -614,6 +622,18 @@ class InvoicePanel(DocumentWorkflowPanel):
     create_excel_button_text = "Nur Excel-Rechnung"
     create_pdf_button_text = "Nur PDF-Rechnung"
     create_both_button_text = "Rechnung als Excel + PDF erstellen"
+
+    def _default_note_for_order(self, order) -> str:
+        payment_method = (order.customer.payment_method or "").lower().replace("ü", "ue")
+        if "ueberweisung" in payment_method:
+            try:
+                due_date = (date.fromisoformat(order.delivery_date) + timedelta(days=7)).isoformat()
+            except ValueError:
+                return "Bitte ueberweisen Sie den Rechnungsbetrag."
+            return f"Bitte ueberweisen Sie den Rechnungsbetrag bis zum {due_date}."
+        if "sepa" in payment_method or "lastschrift" in payment_method:
+            return self.default_note_text
+        return ""
 
     def _create_document_for_order(self, session, assets: set[str]):
         return create_order_invoice(

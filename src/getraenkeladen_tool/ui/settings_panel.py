@@ -18,12 +18,12 @@ from .layouts import ContentSurface, PageHeader, WorkspaceCard, configure_form_l
 
 SETTINGS_PANEL_ACTIONS = {
     "settingsHelpButton": "?",
-    "chooseInputFolderButton": "Input-Ordner waehlen",
-    "importMasterDataButton": "Stammdaten importieren",
+    "chooseInputFolderButton": "Ordner waehlen",
+    "importMasterDataButton": "Import starten",
 }
-SETTINGS_PANEL_SECTIONS = ("Stammdaten aus Excel importieren",)
+SETTINGS_PANEL_SECTIONS = ("Excel-Stammdaten importieren",)
 SETTINGS_HELP_TEXT = (
-    "Einstellungen: Hier koennen Sie die erhaltenen Excel-Stammdaten einlesen.\n\n"
+    "Import: Hier koennen Sie die erhaltenen Excel-Stammdaten einlesen.\n\n"
     "Die Originaldateien werden nicht veraendert. Aenderungen in der App werden intern protokolliert."
 )
 
@@ -35,7 +35,7 @@ class SettingsPanel(QWidget):
 
         self.input_folder = QLineEdit(str(Path.cwd().parent / "Input"))
         self.input_folder.setPlaceholderText("Ordner mit Artikel Liste Preise.xlsx und Lieferkunden Liste.xlsx")
-        self.status_label = QLabel("Input-Ordner waehlen und Stammdaten importieren.")
+        self.status_label = QLabel("Input-Ordner waehlen und Import starten.")
         self.status_label.setObjectName("muted")
 
         root_layout = QVBoxLayout(self)
@@ -49,7 +49,7 @@ class SettingsPanel(QWidget):
         layout.addWidget(
             PageHeader(
                 "Einstellungen",
-                "Stammdatenimport und grundlegende App-Einstellungen.",
+                "Excel-Dateien einlesen und Pruefpunkte erzeugen.",
                 self.help_button,
             )
         )
@@ -57,6 +57,8 @@ class SettingsPanel(QWidget):
         import_box = WorkspaceCard(
             SETTINGS_PANEL_SECTIONS[0],
             "Die Excel-Dateien werden nur gelesen. Aenderungen landen in der Datenbank und werden protokolliert.",
+            tone="audit",
+            kicker="IMPORT",
         )
         import_layout = import_box.layout
         import_form = QFormLayout()

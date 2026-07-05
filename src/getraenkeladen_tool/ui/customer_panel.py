@@ -27,7 +27,7 @@ from ..services.customer_service import (
     update_customer,
 )
 from .date_input import DateInput, to_display_date
-from .layouts import ContentSurface, PageHeader, ResponsiveSplitter, WorkspaceCard, configure_form_layout
+from .layouts import ContentSurface, PageHeader, WorkspaceCard, configure_form_layout
 
 
 CUSTOMER_PANEL_ACTIONS = {
@@ -94,12 +94,11 @@ class CustomerPanel(QWidget):
         self.help_button.setObjectName("helpButton")
         layout.addWidget(PageHeader("Kunden", "Stammdaten, Lieferhinweise und Kontakttermine.", self.help_button))
 
-        workspace = ResponsiveSplitter()
-        layout.addWidget(workspace, 1)
-
         edit_box, edit_layout = self._section(
             CUSTOMER_PANEL_SECTIONS[0],
             "Pflicht ist der Kundenname. Ordner, Lieferhinweise und Kontakttermin helfen spaeter beim Tagesablauf.",
+            tone="route",
+            kicker="KUNDENKARTE",
         )
         form = QFormLayout()
         configure_form_layout(form)
@@ -118,14 +117,19 @@ class CustomerPanel(QWidget):
         self.load_button = self._button("loadCustomerButton")
         action_row.addWidget(self.new_button)
         action_row.addWidget(self.save_button)
-        action_row.addWidget(self.discard_button)
-        action_row.addWidget(self.undo_change_button)
         action_row.addWidget(self.load_button)
         action_row.addStretch()
         edit_layout.addLayout(action_row)
+        correction_row = QHBoxLayout()
+        correction_row.addWidget(self.discard_button)
+        correction_row.addWidget(self.undo_change_button)
+        correction_row.addStretch()
+        edit_layout.addLayout(correction_row)
         list_box, list_layout = self._section(
             CUSTOMER_PANEL_SECTIONS[1],
             "Kunden unten anklicken. Archivieren blendet sie aus dem Alltag aus, Wiederherstellen holt sie zurueck.",
+            tone="document",
+            kicker="KUNDENSTAMM",
         )
         list_actions = QHBoxLayout()
         self.refresh_button = self._button("refreshCustomersButton")
@@ -140,10 +144,8 @@ class CustomerPanel(QWidget):
         list_actions.addStretch()
         list_layout.addLayout(list_actions)
         list_layout.addWidget(self.customers_table)
-        workspace.addWidget(list_box)
-        workspace.addWidget(edit_box)
-        workspace.setStretchFactor(0, 3)
-        workspace.setStretchFactor(1, 2)
+        layout.addWidget(edit_box)
+        layout.addWidget(list_box, 1)
 
         layout.addWidget(self.status_label)
 
@@ -193,8 +195,8 @@ class CustomerPanel(QWidget):
             layout.addWidget(label)
         return box
 
-    def _section(self, title: str, subtitle: str) -> tuple[QWidget, QVBoxLayout]:
-        box = WorkspaceCard(title, subtitle)
+    def _section(self, title: str, subtitle: str, tone: str = "default", kicker: str = "") -> tuple[QWidget, QVBoxLayout]:
+        box = WorkspaceCard(title, subtitle, tone=tone, kicker=kicker)
         return box, box.layout
 
     def choose_folder(self) -> None:

@@ -15,7 +15,13 @@ from PySide6.QtWidgets import (
 
 
 class PageHeader(QWidget):
-    def __init__(self, title: str, subtitle: str = "", action: QWidget | None = None) -> None:
+    def __init__(
+        self,
+        title: str,
+        subtitle: str = "",
+        action: QWidget | None = None,
+        kicker: str = "",
+    ) -> None:
         super().__init__()
         self.setObjectName("pageHeader")
         layout = QHBoxLayout(self)
@@ -24,6 +30,10 @@ class PageHeader(QWidget):
 
         title_column = QVBoxLayout()
         title_column.setSpacing(4)
+        if kicker:
+            kicker_label = QLabel(kicker)
+            kicker_label.setObjectName("pageKicker")
+            title_column.addWidget(kicker_label)
         headline = QLabel(title)
         headline.setObjectName("headline")
         title_column.addWidget(headline)
@@ -43,16 +53,66 @@ class ContentSurface(QWidget):
         super().__init__()
         self.setObjectName("contentSurface")
         self.layout = QVBoxLayout(self)
-        self.layout.setContentsMargins(24, 24, 24, 24)
-        self.layout.setSpacing(18)
+        self.layout.setContentsMargins(28, 26, 28, 28)
+        self.layout.setSpacing(20)
+
+
+class InspectorPanel(QWidget):
+    def __init__(self, title: str = "Kontext", subtitle: str = "") -> None:
+        super().__init__()
+        self.setObjectName("inspectorPanel")
+        self.setMinimumWidth(300)
+        self.setMaximumWidth(360)
+
+        self.layout = QVBoxLayout(self)
+        self.layout.setContentsMargins(20, 20, 20, 20)
+        self.layout.setSpacing(14)
+
+        self.title_label = QLabel(title)
+        self.title_label.setObjectName("inspectorTitle")
+        self.title_label.setWordWrap(True)
+        self.layout.addWidget(self.title_label)
+
+        self.subtitle_label = QLabel(subtitle)
+        self.subtitle_label.setObjectName("inspectorSubtitle")
+        self.subtitle_label.setWordWrap(True)
+        self.layout.addWidget(self.subtitle_label)
+
+        self.body = QVBoxLayout()
+        self.body.setSpacing(10)
+        self.layout.addLayout(self.body)
+        self.layout.addStretch()
+
+    def set_heading(self, title: str, subtitle: str = "") -> None:
+        self.title_label.setText(title)
+        self.subtitle_label.setText(subtitle)
+
+    def add_section_label(self, text: str) -> QLabel:
+        label = QLabel(text)
+        label.setObjectName("inspectorSection")
+        self.body.addWidget(label)
+        return label
+
+    def add_value_label(self, label: str, value: str = "-") -> QLabel:
+        value_label = QLabel(f"{label}: {value}")
+        value_label.setObjectName("inspectorValue")
+        value_label.setWordWrap(True)
+        self.body.addWidget(value_label)
+        return value_label
 
 
 class ActionCard(QWidget):
-    def __init__(self, title: str, subtitle: str, button_text: str = "") -> None:
+    def __init__(self, title: str, subtitle: str, button_text: str = "", kicker: str = "", tone: str = "default") -> None:
         super().__init__()
         self.setObjectName("actionCard")
+        self.setProperty("tone", tone)
         layout = QVBoxLayout(self)
         layout.setSpacing(8)
+
+        if kicker:
+            kicker_label = QLabel(kicker)
+            kicker_label.setObjectName("cardKicker")
+            layout.addWidget(kicker_label)
 
         title_label = QLabel(title)
         title_label.setObjectName("actionCardTitle")
@@ -107,11 +167,17 @@ class PageToolbar(QWidget):
 
 
 class WorkspaceCard(QWidget):
-    def __init__(self, title: str, subtitle: str = "") -> None:
+    def __init__(self, title: str, subtitle: str = "", tone: str = "default", kicker: str = "") -> None:
         super().__init__()
         self.setObjectName("workspaceCard")
+        self.setProperty("tone", tone)
         self.layout = QVBoxLayout(self)
         self.layout.setSpacing(12)
+
+        if kicker:
+            kicker_label = QLabel(kicker)
+            kicker_label.setObjectName("cardKicker")
+            self.layout.addWidget(kicker_label)
 
         title_label = QLabel(title)
         title_label.setObjectName("sectionTitle")
@@ -126,6 +192,6 @@ class WorkspaceCard(QWidget):
 
 def configure_form_layout(form: QFormLayout) -> None:
     form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow)
-    form.setRowWrapPolicy(QFormLayout.RowWrapPolicy.DontWrapRows)
+    form.setRowWrapPolicy(QFormLayout.RowWrapPolicy.WrapLongRows)
     form.setLabelAlignment(Qt.AlignmentFlag.AlignLeft)
     form.setFormAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)

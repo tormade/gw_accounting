@@ -185,8 +185,7 @@ def onboard_customer_from_sources(
 
     persisted_issues = []
     for issue in issues:
-        session.add(issue)
-        persisted_issues.append(issue)
+        persisted_issues.append(_persist_issue_once(session, issue))
     session.commit()
     for issue in persisted_issues:
         session.refresh(issue)
@@ -254,7 +253,8 @@ def _sync_customer_assortment(
         else:
             _ensure_product_alias(session, product, line.name, snapshot.source_file)
             if _prices_differ(product, line):
-                item.price_decision = "offen"
+                if item.price_decision not in {"zentraler_preis", "excel_preis"}:
+                    item.price_decision = "offen"
                 issues.append(
                     OnboardingIssue(
                         customer_name=customer.name,
@@ -610,6 +610,24 @@ def _build_conflicts(
             )
         )
     return issues
+
+
+def _persist_issue_once(session: Session, issue: OnboardingIssue) -> OnboardingIssue:
+    existing = session.scalar(
+        select(OnboardingIssue)
+        .where(OnboardingIssue.customer_name == issue.customer_name)
+        .where(OnboardingIssue.source_file == issue.source_file)
+        .where(OnboardingIssue.issue_type == issue.issue_type)
+        .where(OnboardingIssue.field_name == issue.field_name)
+        .where(OnboardingIssue.folder_value == issue.folder_value)
+        .limit(1)
+    )
+    if existing is not None:
+        existing.list_value = issue.list_value
+        existing.message = issue.message
+        return existing
+    session.add(issue)
+    return issue
 
 
 def _join_notes(*values: str | None) -> str | None:

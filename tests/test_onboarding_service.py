@@ -9,6 +9,7 @@ from getraenkeladen_tool.services.onboarding_service import (
     onboard_customer_workbook_folder,
 )
 from getraenkeladen_tool.services.master_data_import_service import import_master_data_from_folder
+from getraenkeladen_tool.services.checklist_service import resolve_price_mismatch
 
 
 INPUT_DIR = Path("/Users/thomasrumel/Documents/Codex/2026-06-20/Input")
@@ -156,6 +157,46 @@ def test_onboarding_builds_customer_assortment_and_product_aliases(session):
     )
     assert any("Frucade Colamix 20x0,5" in issue.folder_value for issue in price_issues if issue.folder_value)
     assert any("10,48" in issue.folder_value and "11,90" in issue.list_value for issue in price_issues)
+
+
+def test_re_onboarding_keeps_resolved_price_decisions_and_does_not_duplicate_issues(session):
+    import_master_data_from_folder(session, INPUT_DIR)
+    first_result = onboard_customer_from_sources(
+        session,
+        customer_name="Metzgerei Karl",
+        customer_list_path=INPUT_DIR / "Lieferkunden Liste.xlsx",
+        workbook_path=INPUT_DIR / "_ RE 0525 Metzgerei Karl .xlsx",
+    )
+    frucade_issue = session.scalar(
+        select(OnboardingIssue)
+        .where(OnboardingIssue.issue_type == "price_mismatch")
+        .where(OnboardingIssue.folder_value.like("%Frucade Colamix 20x0,5%"))
+    )
+    resolve_price_mismatch(session, frucade_issue.id, "excel_preis")
+
+    onboard_customer_from_sources(
+        session,
+        customer_name="Metzgerei Karl",
+        customer_list_path=INPUT_DIR / "Lieferkunden Liste.xlsx",
+        workbook_path=INPUT_DIR / "_ RE 0525 Metzgerei Karl .xlsx",
+    )
+
+    frucade_item = session.scalar(
+        select(CustomerAssortmentItem)
+        .where(CustomerAssortmentItem.customer_id == first_result.customer.id)
+        .where(CustomerAssortmentItem.source_product_name == "Frucade Colamix 20x0,5")
+    )
+    frucade_issues = list(
+        session.scalars(
+            select(OnboardingIssue)
+            .where(OnboardingIssue.issue_type == "price_mismatch")
+            .where(OnboardingIssue.folder_value.like("%Frucade Colamix 20x0,5%"))
+        )
+    )
+
+    assert frucade_item.price_decision == "excel_preis"
+    assert len(frucade_issues) == 1
+    assert frucade_issues[0].status == "erledigt"
 
 
 def test_folder_onboarding_reports_readable_customers_and_skips_outliers(session, tmp_path):

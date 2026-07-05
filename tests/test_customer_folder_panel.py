@@ -16,17 +16,19 @@ def test_customer_folder_panel_exposes_real_folder_workflow():
 
     assert "class CustomerFolderPanel" in source
     assert "PageHeader(" in source
-    assert '"Kundenordner"' in source
+    assert '"Kunden"' in source
     assert 'SearchableSelect("Kunde suchen' in source
-    assert "Kundenakte" in source
-    assert "Kundenordner oeffnen" in source
-    assert "Kundenliste aktualisieren" in source
-    assert "Dateien im Kundenordner" in source
-    assert "Vorlage aus Kundenordner" in source
-    assert "Neue Bestellung aus letzten Mengen starten" in source
+    assert "Kunden finden" in source
+    assert "InspectorPanel" in source
+    assert "Kundenlage" in source
+    assert "Naechster Schritt" in source
+    assert "Bestellung starten" in source
+    assert "Liste aktualisieren" in source
+    assert "Letzte Dateien" in source
+    assert "Letzte Mengen" in source
     assert "Excel ansehen" in source
-    assert "Aus markierter Bestellung Lieferschein" in source
-    assert "Aus markierter Bestellung Rechnung" in source
+    assert "Lieferschein erstellen" in source
+    assert "Rechnung erstellen" in source
     assert "get_customer_folder_snapshot" in source
 
 
@@ -39,9 +41,10 @@ def test_customer_folder_panel_disables_actions_until_customer_context_exists():
     assert panel.open_folder_button.isEnabled() is False
     assert panel.open_file_button.isEnabled() is False
     assert panel.new_order_button.isEnabled() is False
-    assert panel.seed_file_hint.text() == "Die Vorlage kommt aus den letzten importierten Mengen rechts."
+    assert panel.seed_file_hint.text() == "Letzte Mengen erscheinen nach der Kundenauswahl."
     assert panel.delivery_note_button.isEnabled() is False
     assert panel.invoice_button.isEnabled() is False
+    assert panel.customer_next_step_label.text() == "Naechster Schritt: Kunde suchen."
 
 
 def test_customer_folder_panel_enables_actions_from_snapshot_state(tmp_path: Path):
@@ -86,8 +89,10 @@ def test_customer_folder_panel_enables_actions_from_snapshot_state(tmp_path: Pat
     assert panel.assortment_table.item(0, 0).text() == "Frucade"
     assert panel.open_folder_button.isEnabled() is True
     assert panel.new_order_button.isEnabled() is True
-    assert panel.new_order_button.text() == "Neue Bestellung aus letzten Mengen starten"
-    assert panel.seed_file_hint.text() == "Die Vorlage kommt aus den letzten importierten Mengen rechts."
+    assert panel.new_order_button.text() == "Bestellung starten"
+    assert panel.seed_file_hint.text() == "Letzte Mengen erscheinen nach der Kundenauswahl."
+    assert panel.inspector.title_label.text() == "Cafe Nord"
+    assert panel.customer_next_step_label.text() == "Naechster Schritt: Bestellung aus letzten Mengen starten."
     assert panel.delivery_note_button.isEnabled() is False
     assert panel.invoice_button.isEnabled() is False
 
@@ -156,7 +161,7 @@ def test_customer_folder_panel_names_empty_order_action_when_no_seed_quantities(
     panel.show_snapshot(snapshot, [])
 
     assert panel.new_order_button.isEnabled() is True
-    assert panel.new_order_button.text() == "Ohne Kundenordner leere Bestellung starten"
+    assert panel.new_order_button.text() == "Leere Bestellung starten"
     assert "Kundenordner fehlt" in panel.seed_file_hint.text()
 
 
@@ -164,11 +169,11 @@ def test_customer_folder_panel_uses_clear_customer_folder_language():
     source = Path("src/getraenkeladen_tool/ui/customer_folder_panel.py").read_text(encoding="utf-8")
 
     assert "Belege anstossen" not in source
-    assert "Neue Bestellung aus letzten Mengen starten" in source
+    assert "Bestellung starten" in source
     assert "Excel ansehen" in source
     assert "Bestellungen dieses Kunden" in source
-    assert "Aus markierter Bestellung Lieferschein" in source
-    assert "Aus markierter Bestellung Rechnung" in source
+    assert "Lieferschein erstellen" in source
+    assert "Rechnung erstellen" in source
 
 
 def test_customer_folder_panel_routes_selected_order_to_documents():

@@ -47,6 +47,12 @@ def _add_missing_columns(engine) -> None:
             order_columns = {column["name"] for column in inspector.get_columns("orders")}
             if "number_released" not in order_columns:
                 connection.execute(text("ALTER TABLE orders ADD COLUMN number_released BOOLEAN DEFAULT 0 NOT NULL"))
+        if "open_items" in table_names:
+            open_item_columns = {column["name"] for column in inspector.get_columns("open_items")}
+            if "document_date" not in open_item_columns:
+                connection.execute(text("ALTER TABLE open_items ADD COLUMN document_date VARCHAR(20)"))
+            if "due_date" not in open_item_columns:
+                connection.execute(text("ALTER TABLE open_items ADD COLUMN due_date VARCHAR(20)"))
         if "customers" in table_names:
             customer_columns = {column["name"] for column in inspector.get_columns("customers")}
             if "is_active" not in customer_columns:

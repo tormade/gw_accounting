@@ -43,15 +43,15 @@ def configure_qt_plugin_path() -> Path | None:
 def apply_light_palette(app: QApplication) -> None:
     app.setStyle("Fusion")
     palette = QPalette()
-    palette.setColor(QPalette.ColorRole.Window, QColor("#f4f1ea"))
-    palette.setColor(QPalette.ColorRole.WindowText, QColor("#1f2a24"))
+    palette.setColor(QPalette.ColorRole.Window, QColor("#f5f5f7"))
+    palette.setColor(QPalette.ColorRole.WindowText, QColor("#1d1d1f"))
     palette.setColor(QPalette.ColorRole.Base, QColor("#ffffff"))
-    palette.setColor(QPalette.ColorRole.AlternateBase, QColor("#f4f1ea"))
-    palette.setColor(QPalette.ColorRole.Text, QColor("#1f2a24"))
+    palette.setColor(QPalette.ColorRole.AlternateBase, QColor("#fbfbfd"))
+    palette.setColor(QPalette.ColorRole.Text, QColor("#1d1d1f"))
     palette.setColor(QPalette.ColorRole.Button, QColor("#ffffff"))
-    palette.setColor(QPalette.ColorRole.ButtonText, QColor("#123326"))
-    palette.setColor(QPalette.ColorRole.Highlight, QColor("#d7ebe2"))
-    palette.setColor(QPalette.ColorRole.HighlightedText, QColor("#123326"))
+    palette.setColor(QPalette.ColorRole.ButtonText, QColor("#1d1d1f"))
+    palette.setColor(QPalette.ColorRole.Highlight, QColor("#d9ebff"))
+    palette.setColor(QPalette.ColorRole.HighlightedText, QColor("#1d1d1f"))
     app.setPalette(palette)
 
 

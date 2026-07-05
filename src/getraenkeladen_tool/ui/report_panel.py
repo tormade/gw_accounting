@@ -15,7 +15,7 @@ from PySide6.QtWidgets import (
 )
 
 from .date_input import DateInput, to_display_date
-from .layouts import ContentSurface, PageHeader, WorkspaceCard, configure_form_layout
+from .layouts import ContentSurface, InspectorPanel, PageHeader, ResponsiveSplitter, WorkspaceCard, configure_form_layout
 from ..services.report_service import (
     export_daily_deliveries_csv,
     export_due_contacts_csv,
@@ -30,16 +30,16 @@ from ..services.sample_data_service import seed_demo_workflow
 
 REPORT_PANEL_ACTIONS = {
     "seedDemoDataButton": "Beispieldaten anlegen",
-    "refreshOpenItemsButton": "Offene Posten aktualisieren",
-    "markPaidButton": "Zahlung markieren",
+    "refreshOpenItemsButton": "Rechnungen aktualisieren",
+    "markPaidButton": "Als bezahlt markieren",
     "refreshDeliveriesButton": "Lieferliste laden",
     "refreshContactsButton": "Kontaktliste laden",
-    "exportOpenItemsButton": "Offene Posten exportieren",
+    "exportOpenItemsButton": "Rechnungen exportieren",
     "exportDeliveriesButton": "Lieferliste exportieren",
     "exportContactsButton": "Kontaktliste exportieren",
 }
 
-OPEN_ITEMS_COLUMNS = ("Kunde", "Rechnungsnr.", "Betrag", "Status")
+OPEN_ITEMS_COLUMNS = ("Kunde", "Rechnungsnr.", "Datum", "Faelligkeit", "Zahlart", "Betrag", "Status")
 DELIVERY_COLUMNS = ("Datum", "Zeitfenster", "Belegnr.", "Kunde", "Adresse", "Hinweise")
 CONTACT_COLUMNS = ("Kontakttermin", "Kunde", "E-Mail", "Hinweise")
 DATE_FIELD_WIDGETS = ("target_date",)
@@ -50,65 +50,109 @@ class ReportPanel(QWidget):
         super().__init__()
         self.session_factory = session_factory
         self.open_item_ids_by_row = {}
+        self.open_items_by_row = {}
 
         root_layout = QVBoxLayout(self)
         root_layout.setContentsMargins(0, 0, 0, 0)
         surface = ContentSurface()
         root_layout.addWidget(surface)
         layout = surface.layout
-        layout.addWidget(PageHeader("Listen", "Offene Posten, Tageslieferungen und Kontaktliste."))
+        layout.addWidget(PageHeader("Rechnungen", "Offene Rechnungen, Faelligkeiten und Zahlungseingaenge pruefen."))
 
         self.target_date = DateInput(date.today().isoformat())
         form = QFormLayout()
         configure_form_layout(form)
         form.addRow("Stichtag", self.target_date)
-        filter_box = WorkspaceCard("Auswertung", "Stichtag waehlen und die Listen darunter aktualisieren.")
+        filter_box = WorkspaceCard(
+            "Filter",
+            "Stichtag fuer Lieferungen und Wiedervorlagen waehlen.",
+            tone="route",
+            kicker="STICHTAG",
+        )
         filter_box.layout.addLayout(form)
         layout.addWidget(filter_box)
+
+        invoice_splitter = ResponsiveSplitter()
+        layout.addWidget(invoice_splitter, 2)
 
         self.open_items_table = QTableWidget(0, len(OPEN_ITEMS_COLUMNS))
         self.open_items_table.setHorizontalHeaderLabels(OPEN_ITEMS_COLUMNS)
         self.open_items_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-        open_items_box = WorkspaceCard("Offene Posten")
+        open_items_box = WorkspaceCard(
+            "Rechnungsliste",
+            "Offene und faellige Rechnungen nach Status pruefen.",
+            tone="cash",
+            kicker="KASSE",
+        )
         open_items_box.layout.addWidget(self.open_items_table)
-        layout.addWidget(open_items_box)
+        invoice_splitter.addWidget(open_items_box)
+
+        self.invoice_customer_label = QLabel("Kunde: -")
+        self.invoice_number_label = QLabel("Rechnung: -")
+        self.invoice_due_label = QLabel("Faelligkeit: -")
+        self.invoice_payment_label = QLabel("Zahlart: -")
+        self.invoice_amount_label = QLabel("Betrag: -")
+        self.invoice_status_label = QLabel("Status: -")
+        for label in (
+            self.invoice_customer_label,
+            self.invoice_number_label,
+            self.invoice_due_label,
+            self.invoice_payment_label,
+            self.invoice_amount_label,
+            self.invoice_status_label,
+        ):
+            label.setObjectName("inspectorValue")
+            label.setWordWrap(True)
+
+        self.invoice_inspector = InspectorPanel("Rechnung auswaehlen", "Details und naechster Zahlungsschritt erscheinen hier.")
+        self.invoice_inspector.add_section_label("Rechnung")
+        self.invoice_inspector.body.addWidget(self.invoice_customer_label)
+        self.invoice_inspector.body.addWidget(self.invoice_number_label)
+        self.invoice_inspector.body.addWidget(self.invoice_due_label)
+        self.invoice_inspector.body.addWidget(self.invoice_payment_label)
+        self.invoice_inspector.body.addWidget(self.invoice_amount_label)
+        self.invoice_inspector.body.addWidget(self.invoice_status_label)
+        self.invoice_inspector.add_section_label("Aktionen")
+        self.mark_paid_button = self._button("markPaidButton")
+        self.export_open_items_button = self._button("exportOpenItemsButton")
+        self.invoice_inspector.body.addWidget(self.mark_paid_button)
+        self.invoice_inspector.body.addWidget(self.export_open_items_button)
+        invoice_splitter.addWidget(self.invoice_inspector)
+        invoice_splitter.setStretchFactor(0, 3)
+        invoice_splitter.setStretchFactor(1, 1)
 
         self.deliveries_table = QTableWidget(0, len(DELIVERY_COLUMNS))
         self.deliveries_table.setHorizontalHeaderLabels(DELIVERY_COLUMNS)
         self.deliveries_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-        deliveries_box = WorkspaceCard("Tageslieferungen")
+        deliveries_box = WorkspaceCard("Tageslieferungen", tone="route", kicker="TOUR")
         deliveries_box.layout.addWidget(self.deliveries_table)
         layout.addWidget(deliveries_box)
 
         self.contacts_table = QTableWidget(0, len(CONTACT_COLUMNS))
         self.contacts_table.setHorizontalHeaderLabels(CONTACT_COLUMNS)
         self.contacts_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-        contacts_box = WorkspaceCard("Kontaktliste")
+        contacts_box = WorkspaceCard("Kontaktliste", tone="audit", kicker="WIEDERVORLAGE")
         contacts_box.layout.addWidget(self.contacts_table)
         layout.addWidget(contacts_box)
 
         action_row = QHBoxLayout()
         self.seed_button = self._button("seedDemoDataButton")
         self.refresh_button = self._button("refreshOpenItemsButton")
-        self.mark_paid_button = self._button("markPaidButton")
         self.refresh_deliveries_button = self._button("refreshDeliveriesButton")
         self.refresh_contacts_button = self._button("refreshContactsButton")
-        for button in (
-            self.seed_button,
-            self.refresh_button,
-            self.mark_paid_button,
-            self.refresh_deliveries_button,
-            self.refresh_contacts_button,
-        ):
+        for button in (self.refresh_button, self.refresh_deliveries_button, self.refresh_contacts_button):
             action_row.addWidget(button)
         action_row.addStretch()
         layout.addLayout(action_row)
 
+        demo_row = QHBoxLayout()
+        demo_row.addWidget(self.seed_button)
+        demo_row.addStretch()
+        layout.addLayout(demo_row)
+
         export_row = QHBoxLayout()
-        self.export_open_items_button = self._button("exportOpenItemsButton")
         self.export_deliveries_button = self._button("exportDeliveriesButton")
         self.export_contacts_button = self._button("exportContactsButton")
-        export_row.addWidget(self.export_open_items_button)
         export_row.addWidget(self.export_deliveries_button)
         export_row.addWidget(self.export_contacts_button)
         export_row.addStretch()
@@ -126,6 +170,8 @@ class ReportPanel(QWidget):
         self.export_open_items_button.clicked.connect(self.export_open_items)
         self.export_deliveries_button.clicked.connect(self.export_deliveries)
         self.export_contacts_button.clicked.connect(self.export_contacts)
+        self.open_items_table.itemSelectionChanged.connect(self.update_invoice_context)
+        self.mark_paid_button.setEnabled(False)
         self.refresh_all_lists()
 
     def _button(self, object_name: str) -> QPushButton:
@@ -155,18 +201,24 @@ class ReportPanel(QWidget):
 
     def show_open_items(self, open_items: list) -> None:
         self.open_item_ids_by_row = {}
+        self.open_items_by_row = {}
         self.open_items_table.setRowCount(len(open_items))
         for row, item in enumerate(open_items):
             self.open_item_ids_by_row[row] = item.id
+            self.open_items_by_row[row] = item
             amount = f"{item.amount_cents / 100:.2f} EUR".replace(".", ",")
             values = (
                 item.customer_name,
                 item.document_number,
+                to_display_date(item.document_date),
+                to_display_date(item.due_date),
+                item.payment_method,
                 amount,
                 item.status,
             )
             self._set_row(self.open_items_table, row, values)
-        self.status_label.setText(f"{len(open_items)} offene Posten geladen.")
+        self.update_invoice_context()
+        self.status_label.setText(f"{len(open_items)} Rechnungen offen.")
 
     def show_deliveries(self, deliveries: list) -> None:
         self.deliveries_table.setRowCount(len(deliveries))
@@ -235,13 +287,14 @@ class ReportPanel(QWidget):
         row = self.open_items_table.currentRow()
         open_item_id = self.open_item_ids_by_row.get(row)
         if open_item_id is None:
-            self.status_label.setText("Bitte zuerst einen offenen Posten auswaehlen.")
+            self.status_label.setText("Bitte zuerst eine Rechnung auswaehlen.")
             return
 
         session = self.session_factory()
         try:
             mark_open_item_paid(session, open_item_id)
             self.show_open_items(list_open_items(session))
+            self.status_label.setText("Rechnung als bezahlt markiert.")
         finally:
             session.close()
 
@@ -253,7 +306,7 @@ class ReportPanel(QWidget):
         session = self.session_factory()
         try:
             export_open_items_csv(session, output_path)
-            self.status_label.setText(f"Offene Posten exportiert: {output_path}")
+            self.status_label.setText(f"Rechnungen exportiert: {output_path}")
         finally:
             session.close()
 
@@ -298,3 +351,29 @@ class ReportPanel(QWidget):
 
     def _target_date(self) -> str:
         return self.target_date.iso_date() or date.today().isoformat()
+
+    def update_invoice_context(self) -> None:
+        item = self.open_items_by_row.get(self.open_items_table.currentRow())
+        if item is None:
+            self.invoice_inspector.set_heading(
+                "Rechnung auswaehlen",
+                "Details und naechster Zahlungsschritt erscheinen hier.",
+            )
+            self.invoice_customer_label.setText("Kunde: -")
+            self.invoice_number_label.setText("Rechnung: -")
+            self.invoice_due_label.setText("Faelligkeit: -")
+            self.invoice_payment_label.setText("Zahlart: -")
+            self.invoice_amount_label.setText("Betrag: -")
+            self.invoice_status_label.setText("Status: -")
+            self.mark_paid_button.setEnabled(False)
+            return
+
+        amount = f"{item.amount_cents / 100:.2f} EUR".replace(".", ",")
+        self.invoice_inspector.set_heading(item.document_number, item.customer_name)
+        self.invoice_customer_label.setText(f"Kunde: {item.customer_name}")
+        self.invoice_number_label.setText(f"Rechnung: {item.document_number}")
+        self.invoice_due_label.setText(f"Faelligkeit: {to_display_date(item.due_date) or '-'}")
+        self.invoice_payment_label.setText(f"Zahlart: {item.payment_method}")
+        self.invoice_amount_label.setText(f"Betrag: {amount}")
+        self.invoice_status_label.setText(f"Status: {item.status}")
+        self.mark_paid_button.setEnabled(item.status != "bezahlt")

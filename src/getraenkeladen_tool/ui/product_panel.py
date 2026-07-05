@@ -26,7 +26,7 @@ from ..services.product_service import (
     restore_product,
     update_product,
 )
-from .layouts import ContentSurface, PageHeader, ResponsiveSplitter, WorkspaceCard, configure_form_layout
+from .layouts import ContentSurface, PageHeader, WorkspaceCard, configure_form_layout
 
 
 PRODUCT_PANEL_ACTIONS = {
@@ -93,12 +93,11 @@ class ProductPanel(QWidget):
         self.help_button.setObjectName("helpButton")
         layout.addWidget(PageHeader("Produkte", "Zentrale Artikelliste und Standardpreise.", self.help_button))
 
-        workspace = ResponsiveSplitter()
-        layout.addWidget(workspace, 1)
-
         edit_box, edit_layout = self._section(
             PRODUCT_PANEL_SECTIONS[0],
             "Produktname, Artikelnummer, Preis und Pfand sind die Basis fuer spaetere Bestellungen.",
+            tone="cash",
+            kicker="PREISKARTE",
         )
         form = QFormLayout()
         configure_form_layout(form)
@@ -117,15 +116,20 @@ class ProductPanel(QWidget):
         self.load_button = self._button("loadProductButton")
         action_row.addWidget(self.new_button)
         action_row.addWidget(self.save_button)
-        action_row.addWidget(self.discard_button)
-        action_row.addWidget(self.undo_change_button)
         action_row.addWidget(self.load_button)
         action_row.addStretch()
         edit_layout.addLayout(action_row)
+        correction_row = QHBoxLayout()
+        correction_row.addWidget(self.discard_button)
+        correction_row.addWidget(self.undo_change_button)
+        correction_row.addStretch()
+        edit_layout.addLayout(correction_row)
 
         list_box, list_layout = self._section(
             PRODUCT_PANEL_SECTIONS[1],
             "Artikel unten anklicken. Deaktivieren verhindert neue Nutzung, Wiederherstellen macht ihn wieder aktiv.",
+            tone="document",
+            kicker="ARTIKELSTAMM",
         )
         list_actions = QHBoxLayout()
         self.refresh_button = self._button("refreshProductsButton")
@@ -140,10 +144,8 @@ class ProductPanel(QWidget):
         list_actions.addStretch()
         list_layout.addLayout(list_actions)
         list_layout.addWidget(self.products_table)
-        workspace.addWidget(list_box)
-        workspace.addWidget(edit_box)
-        workspace.setStretchFactor(0, 3)
-        workspace.setStretchFactor(1, 2)
+        layout.addWidget(edit_box)
+        layout.addWidget(list_box, 1)
 
         layout.addWidget(self.status_label)
 
@@ -183,8 +185,8 @@ class ProductPanel(QWidget):
             layout.addWidget(label)
         return box
 
-    def _section(self, title: str, subtitle: str) -> tuple[QWidget, QVBoxLayout]:
-        box = WorkspaceCard(title, subtitle)
+    def _section(self, title: str, subtitle: str, tone: str = "default", kicker: str = "") -> tuple[QWidget, QVBoxLayout]:
+        box = WorkspaceCard(title, subtitle, tone=tone, kicker=kicker)
         return box, box.layout
 
     def save_product(self) -> None:

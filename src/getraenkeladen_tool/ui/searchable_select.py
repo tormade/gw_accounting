@@ -32,7 +32,7 @@ class SearchableSelect(QWidget):
         self.help_label = QLabel("Namen tippen, dann Treffer anklicken.")
         self.help_label.setObjectName("sectionSubtitle")
         self.result_list = QListWidget()
-        self.result_list.setMaximumHeight(self.DEFAULT_LIST_HEIGHT)
+        self.result_list.setMaximumHeight(0)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)

@@ -157,3 +157,23 @@ def test_resolve_customer_conflict_applies_selected_source_value(session):
     assert customer.phone == "08167 9890720"
     assert issue.status == "erledigt"
     assert phone_issue.status == "erledigt"
+
+
+def test_checklist_labels_legacy_merge_conflict_as_customer_data(session):
+    issue = OnboardingIssue(
+        customer_name="Metzgerei Karl",
+        source_file="Input/_ RE 0525 Metzgerei Karl .xlsx",
+        issue_type="merge_conflict",
+        field_name="address",
+        list_value="Liste",
+        folder_value="Excel",
+        message="address unterscheidet sich.",
+        status="offen",
+        created_at="2026-06-23T10:00:00",
+    )
+    session.add(issue)
+    session.commit()
+
+    rows = list_checklist_issues(session)
+
+    assert rows[0].issue_type_label == "Kundendaten"

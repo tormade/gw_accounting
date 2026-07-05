@@ -40,6 +40,43 @@ def test_bootstrap_database_adds_missing_document_columns(tmp_path: Path):
     assert "number_released" in columns
 
 
+def test_bootstrap_database_creates_document_lines_snapshot_table_for_existing_database(tmp_path: Path):
+    config = AppConfig(base_dir=tmp_path)
+    config.database_path.parent.mkdir(parents=True, exist_ok=True)
+    connection = sqlite3.connect(config.database_path)
+    connection.execute(
+        "CREATE TABLE documents ("
+        "id INTEGER PRIMARY KEY, "
+        "customer_id INTEGER NOT NULL, "
+        "document_type VARCHAR(30) NOT NULL, "
+        "document_number VARCHAR(50) NOT NULL, "
+        "excel_path VARCHAR(500) NOT NULL, "
+        "pdf_path VARCHAR(500) NOT NULL"
+        ")"
+    )
+    connection.commit()
+    connection.close()
+
+    bootstrap_database(config)
+
+    connection = sqlite3.connect(config.database_path)
+    tables = {row[0] for row in connection.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()}
+    columns = {row[1] for row in connection.execute("PRAGMA table_info(document_lines)").fetchall()}
+    connection.close()
+
+    assert "document_lines" in tables
+    assert {
+        "document_id",
+        "line_type",
+        "name",
+        "quantity",
+        "unit_price_cents",
+        "deposit_cents",
+        "total_cents",
+        "sort_order",
+    }.issubset(columns)
+
+
 def test_bootstrap_database_adds_order_number_released_column(tmp_path: Path):
     config = AppConfig(base_dir=tmp_path)
     config.database_path.parent.mkdir(parents=True, exist_ok=True)
@@ -63,6 +100,32 @@ def test_bootstrap_database_adds_order_number_released_column(tmp_path: Path):
     columns = {row[1] for row in connection.execute("PRAGMA table_info(orders)").fetchall()}
     connection.close()
     assert "number_released" in columns
+
+
+def test_bootstrap_database_adds_open_item_date_and_due_columns(tmp_path: Path):
+    config = AppConfig(base_dir=tmp_path)
+    config.database_path.parent.mkdir(parents=True, exist_ok=True)
+    connection = sqlite3.connect(config.database_path)
+    connection.execute(
+        "CREATE TABLE open_items ("
+        "id INTEGER PRIMARY KEY, "
+        "document_id INTEGER NOT NULL, "
+        "customer_name VARCHAR(200) NOT NULL, "
+        "document_number VARCHAR(50) NOT NULL, "
+        "amount_cents INTEGER NOT NULL, "
+        "payment_method VARCHAR(50) NOT NULL, "
+        "status VARCHAR(30) DEFAULT 'offen' NOT NULL"
+        ")"
+    )
+    connection.commit()
+    connection.close()
+
+    bootstrap_database(config)
+
+    connection = sqlite3.connect(config.database_path)
+    columns = {row[1] for row in connection.execute("PRAGMA table_info(open_items)").fetchall()}
+    connection.close()
+    assert {"document_date", "due_date"}.issubset(columns)
 
 
 def test_bootstrap_database_normalizes_legacy_delivery_order_document_type(tmp_path: Path):

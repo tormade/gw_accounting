@@ -5,11 +5,10 @@ from getraenkeladen_tool.ui.theme import APP_STYLESHEET
 def test_main_window_exposes_first_version_tabs():
     assert MAIN_TABS == (
         "Heute",
-        "Kundenordner",
-        "Offene Posten",
+        "Kunden",
+        "Bestellungen",
+        "Rechnungen",
         "Stammdaten",
-        "Pruefliste",
-        "Einstellungen",
     )
 
 
@@ -25,6 +24,7 @@ def test_main_window_wraps_large_tabs_in_scroll_areas():
 
     assert "QScrollArea" in source
     assert "setWidgetResizable(True)" in source
+    assert "setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)" in source
     assert "self.pages.addWidget(self._scrollable_tab(" in source
 
 
@@ -52,14 +52,30 @@ def test_dashboard_quick_actions_open_customer_folder_workspace():
     assert "def open_customer_folder_tab" in source
     assert "def open_open_items_tab" in source
     assert "def open_checklist_tab" in source
-    assert 'MAIN_TABS.index("Kundenordner")' in source
-    assert 'MAIN_TABS.index("Offene Posten")' in source
-    assert 'MAIN_TABS.index("Pruefliste")' in source
+    assert 'MAIN_TABS.index("Kunden")' in source
+    assert 'MAIN_TABS.index("Rechnungen")' in source
+    assert 'MAIN_TABS.index("Stammdaten")' in source
+
+
+def test_main_window_uses_apple_like_toolbar_instead_of_brand_banner():
+    from pathlib import Path
+
+    source = Path("src/getraenkeladen_tool/ui/main_window.py").read_text(encoding="utf-8")
+
+    assert "def _toolbar" in source
+    assert 'setObjectName("appToolbar")' in source
+    assert "toolbarSearch" in source
+    assert "Kunde, Rechnung oder Artikel suchen" in source
+    assert "self.toolbar_new_button.clicked.connect(self.handle_toolbar_primary_action)" in source
+    assert "def update_toolbar_primary_action" in source
+    assert "self.toolbar_refresh_button.clicked.connect" in source
+    assert "root_layout.addWidget(self._toolbar())" in source
+    assert "brandService" not in source
 
 
 def test_theme_uses_winklmeier_work_tool_direction():
-    assert "#f4f1ea" in APP_STYLESHEET
-    assert "#116149" in APP_STYLESHEET
+    assert "#f5f5f7" in APP_STYLESHEET
+    assert "#0a84ff" in APP_STYLESHEET
     assert "#c4312f" in APP_STYLESHEET
     assert "guidanceBox" in APP_STYLESHEET
     assert "sectionBox" in APP_STYLESHEET
@@ -78,12 +94,35 @@ def test_theme_uses_winklmeier_work_tool_direction():
     assert "pageToolbar" in APP_STYLESHEET
 
 
-def test_theme_uses_light_website_inspired_navigation_instead_of_black_bars():
-    assert "QWidget#brandHeader {\n    background: #ffffff;" in APP_STYLESHEET
-    assert "QListWidget#sidebarNavigation {\n    background: #ffffff;" in APP_STYLESHEET
+def test_theme_uses_light_apple_like_shell_instead_of_black_bars():
+    from pathlib import Path
+
+    assert "QWidget#appToolbar {\n    background: #ffffff;" in APP_STYLESHEET
+    assert "QLineEdit#toolbarSearch" in APP_STYLESHEET
+    assert "Kunde, Rechnung oder Artikel suchen" in Path("src/getraenkeladen_tool/ui/main_window.py").read_text(
+        encoding="utf-8"
+    )
+    assert "QListWidget#sidebarNavigation {\n    background: #f5f5f7;" in APP_STYLESHEET
     assert "background: #111111;" not in APP_STYLESHEET
-    assert "background: #151515;" not in APP_STYLESHEET
-    assert "QListWidget#sidebarNavigation::item:selected {\n    background: #e8f3ee;" in APP_STYLESHEET
+    assert "QWidget#brandHeader" not in APP_STYLESHEET
+    assert "QListWidget#sidebarNavigation::item:selected {\n    background: #ffffff;" in APP_STYLESHEET
+
+
+def test_theme_uses_workshop_not_ai_card_geometry():
+    assert "border-radius: 18px" not in APP_STYLESHEET
+    assert "border-radius: 24px" not in APP_STYLESHEET
+    assert "QWidget#workspaceCard" in APP_STYLESHEET
+    assert "border-radius: 8px;" in APP_STYLESHEET
+    assert "min-height: 38px" in APP_STYLESHEET
+
+
+def test_layouts_support_apple_like_sidebar_labels_without_numbering():
+    from pathlib import Path
+
+    layouts = Path("src/getraenkeladen_tool/ui/layouts.py").read_text(encoding="utf-8")
+
+    assert 'QListWidgetItem(label)' in layouts
+    assert 'QListWidgetItem(f"{index:02d}  {label}")' not in layouts
 
 
 def test_forms_and_tables_have_clean_work_area_treatment():
@@ -92,8 +131,8 @@ def test_forms_and_tables_have_clean_work_area_treatment():
     assert "QWidget#totalBar" in APP_STYLESHEET
     assert "QLineEdit:focus" in APP_STYLESHEET
     assert "QTableWidget::item:selected" in APP_STYLESHEET
-    assert "selection-background-color: #d7ebe2" in APP_STYLESHEET
-    assert "selection-color: #123326" in APP_STYLESHEET
+    assert "selection-background-color: #d9ebff" in APP_STYLESHEET
+    assert "selection-color: #1d1d1f" in APP_STYLESHEET
     assert "QTableWidget QLineEdit" in APP_STYLESHEET
 
 
@@ -121,12 +160,14 @@ def test_shared_layout_widgets_are_available():
     assert "class SidebarNavigation" in source
     assert "class PageToolbar" in source
     assert "class ContentSurface" in source
+    assert "class InspectorPanel" in source
     assert 'setObjectName("pageHeader")' in source
     assert 'setObjectName("actionCard")' in source
     assert 'setObjectName("workspaceSplitter")' in source
     assert 'setObjectName("sidebarNavigation")' in source
     assert 'setObjectName("pageToolbar")' in source
     assert 'setObjectName("contentSurface")' in source
+    assert 'setObjectName("inspectorPanel")' in source
     assert "class WorkspaceCard" in source
     assert 'setObjectName("workspaceCard")' in source
 
@@ -164,27 +205,31 @@ def test_master_data_panels_use_modern_list_with_detail_layout():
     product_source = Path("src/getraenkeladen_tool/ui/product_panel.py").read_text(encoding="utf-8")
 
     assert "ContentSurface" in customer_source
-    assert "ResponsiveSplitter" in customer_source
     assert "WorkspaceCard" in customer_source
-    assert "setStretchFactor(0, 3)" in customer_source
-    assert "setStretchFactor(1, 2)" in customer_source
+    assert 'kicker="KUNDENKARTE"' in customer_source
+    assert 'kicker="KUNDENSTAMM"' in customer_source
+    assert "layout.addWidget(edit_box)" in customer_source
+    assert "layout.addWidget(list_box, 1)" in customer_source
     assert "ContentSurface" in product_source
-    assert "ResponsiveSplitter" in product_source
     assert "WorkspaceCard" in product_source
-    assert "setStretchFactor(0, 3)" in product_source
-    assert "setStretchFactor(1, 2)" in product_source
+    assert 'kicker="PREISKARTE"' in product_source
+    assert 'kicker="ARTIKELSTAMM"' in product_source
+    assert "layout.addWidget(edit_box)" in product_source
+    assert "layout.addWidget(list_box, 1)" in product_source
 
 
-def test_dashboard_uses_modern_surface_and_action_grid():
+def test_dashboard_uses_guided_workflow_board():
     from pathlib import Path
 
     source = Path("src/getraenkeladen_tool/ui/dashboard_panel.py").read_text(encoding="utf-8")
 
     assert "ContentSurface" in source
     assert "QGridLayout" in source
-    assert "quick_action_grid" in source
+    assert "def _task_queue" in source
+    assert "workflowStepButton" in source
+    assert "Tagesliste" in source
     assert "setColumnStretch" in source
-    assert "Demo-Beispiele" in source
+    assert "Demo-Beispiele" not in source
 
 
 def test_order_form_gives_selection_fields_room_to_grow():
@@ -202,15 +247,12 @@ def test_target_state_navigation_prioritizes_customer_folder_path():
     source = Path("src/getraenkeladen_tool/ui/main_window.py").read_text(encoding="utf-8")
 
     assert '"Heute"' in source
-    assert '"Kundenordner"' in source
-    assert '"Offene Posten"' in source
-    assert '"Pruefliste"' in source
+    assert '"Kunden"' in source
+    assert '"Bestellungen"' in source
+    assert '"Rechnungen"' in source
     assert '"Kunde & Bestellung"' not in source
-    assert '"Belege"' not in source
-    assert '"Tagesliste"' not in source
     assert '"Auftraege"' not in source
-    assert '"Listen"' not in source
-    assert 'MAIN_TABS.index("Kundenordner")' in source
+    assert 'MAIN_TABS.index("Kunden")' in source
 
 
 def test_main_window_uses_real_checklist_panel_for_migration_conflicts():
@@ -220,7 +262,7 @@ def test_main_window_uses_real_checklist_panel_for_migration_conflicts():
 
     assert "from .checklist_panel import ChecklistPanel" in source
     assert "self.checklist_panel = ChecklistPanel(session_factory=session_factory)" in source
-    assert '"Pruefliste": (self.checklist_panel.refresh_issues,)' in source
+    assert 'tabs.addTab(self.checklist_panel, "Pruefpunkte")' in source
     assert 'self._panel(\n            "Pruefliste"' not in source
 
 
@@ -237,6 +279,8 @@ def test_checklist_panel_exposes_concrete_resolution_actions():
     assert '"confirmProductAliasButton": "Artikel zuordnen"' in source
     assert '"useListValueButton": "Zentrale Liste nutzen"' in source
     assert '"useFolderValueButton": "Kunden-Excel nutzen"' in source
+    assert 'CHECKLIST_COLUMNS = ("Prioritaet", "Status", "Kunde", "Problem", "Feld", "Kunden-Excel", "Zentrale Daten", "Naechster Schritt")' in source
+    assert "def _priority_label" in source
     assert "def use_central_price_for_selected_issue" in source
     assert "def keep_excel_price_for_selected_issue" in source
     assert "def confirm_product_alias_for_selected_issue" in source
@@ -262,6 +306,20 @@ def test_date_fields_use_calendar_input():
     assert CUSTOMER_DATE_FIELDS == ("next_contact_date",)
     assert ORDER_DATE_FIELDS == ("delivery_date",)
     assert REPORT_DATE_FIELDS == ("target_date",)
+
+
+def test_open_items_surface_shows_due_date_and_payment_method():
+    from getraenkeladen_tool.ui.report_panel import OPEN_ITEMS_COLUMNS
+
+    assert OPEN_ITEMS_COLUMNS == (
+        "Kunde",
+        "Rechnungsnr.",
+        "Datum",
+        "Faelligkeit",
+        "Zahlart",
+        "Betrag",
+        "Status",
+    )
 
 
 def test_brand_assets_are_available():
@@ -293,8 +351,8 @@ def test_order_tab_exposes_guided_order_actions():
 
     assert ORDER_PANEL_ACTIONS == {
         "orderHelpButton": "?",
-        "newOrderButton": "Bestellung erfassen",
-        "copyOrderButton": "Markierte Bestellung kopieren",
+        "newOrderButton": "Neue Bestellung",
+        "copyOrderButton": "Als Vorlage kopieren",
         "refreshOrderDataButton": "Kunden/Artikel neu laden",
         "addOrderLineButton": "Position hinzufuegen",
         "removeOrderLineButton": "Position entfernen",
@@ -306,12 +364,12 @@ def test_order_tab_exposes_guided_order_actions():
         "createInvoiceFromOrderButton": "Rechnung erstellen",
     }
     assert ORDER_PANEL_SECTIONS == (
-        "Kundenkopf",
-        "Kundensortiment",
-        "Bestellungen verwalten",
+        "Kunde und Lieferdatum",
+        "Mengen erfassen",
+        "Bestellungen",
     )
-    assert "Kundenkopf" in ORDER_HELP_TEXT
-    assert "Kundensortiment" in ORDER_HELP_TEXT
+    assert "Kunde und Lieferdatum" in ORDER_HELP_TEXT
+    assert "Mengen erfassen" in ORDER_HELP_TEXT
     assert ORDER_GUIDANCE_STEPS == (
         "Kunde suchen und letzte Mengen als Vorlage sehen.",
         "Neue Mengen, neue Artikel und Pfand-Rueckgabe erfassen.",
@@ -349,7 +407,7 @@ def test_main_window_embeds_customer_folder_as_second_page_and_wires_actions():
     assert "self.customer_folder_panel.delivery_note_requested.connect(self.open_delivery_note_for_order)" in source
     assert "self.customer_folder_panel.invoice_requested.connect(self.open_invoice_for_order)" in source
     assert '"Lieferscheine"' not in source
-    assert '"Rechnungen"' not in source
+    assert '"Rechnungen"' in source
 
 
 def test_main_window_opens_document_workflows_as_visible_dialogs_from_customer_folder():
@@ -438,10 +496,10 @@ def test_settings_tab_focuses_on_master_data_import_without_number_sequences():
 
     assert SETTINGS_PANEL_ACTIONS == {
         "settingsHelpButton": "?",
-        "chooseInputFolderButton": "Input-Ordner waehlen",
-        "importMasterDataButton": "Stammdaten importieren",
+        "chooseInputFolderButton": "Ordner waehlen",
+        "importMasterDataButton": "Import starten",
     }
-    assert SETTINGS_PANEL_SECTIONS == ("Stammdaten aus Excel importieren",)
+    assert SETTINGS_PANEL_SECTIONS == ("Excel-Stammdaten importieren",)
 
 
 def test_product_panel_hides_unit_maintenance_from_user():
@@ -458,14 +516,14 @@ def test_dashboard_tab_exposes_daily_guidance():
 
     assert DASHBOARD_ACTIONS == {
         "dashboardHelpButton": "?",
-        "newDeliveryButton": "Kundenordner oeffnen",
+        "newDeliveryButton": "Kunden oeffnen",
         "refreshDashboardButton": "Heute aktualisieren",
     }
-    assert DASHBOARD_CARDS == ("Heute zu liefern", "Offene Posten", "Faellige Kontakte")
+    assert DASHBOARD_CARDS == ("Lieferungen", "Rechnungen", "Kontakte")
     assert DASHBOARD_GUIDANCE_STEPS == (
-        "Kunde suchen oder aus der Wiedervorlage oeffnen.",
-        "Letzte Mengen pruefen und nur Abweichungen eintragen.",
-        "Lieferschein oder Rechnung aus der Bestellung erzeugen.",
+        "Faellige Aufgabe auswaehlen.",
+        "Kunde oder Rechnung im Kontext pruefen.",
+        "Naechste Aktion direkt ausfuehren.",
     )
 
 
@@ -475,16 +533,16 @@ def test_dashboard_uses_cockpit_quick_actions_without_calendar():
     source = Path("src/getraenkeladen_tool/ui/dashboard_panel.py").read_text(encoding="utf-8")
 
     assert "QCalendarWidget" not in source
-    assert "ActionCard" in source
-    assert "self.quick_actions" in source
-    assert "Kunde suchen" in source
-    assert "Kundenordner oeffnen" in source
-    assert "Offene Posten pruefen" in source
-    assert "Preis-/Importpruefung" in source
-    assert "heroSearchPanel" in source
-    assert "todayContactList" in source
-    assert "Heute starten" in source
-    assert "Im Kundenordner suchen Sie den Kunden" in source
+    assert "ActionCard" not in source
+    assert "self.quick_action_buttons" in source
+    assert "Kunde oder Lieferung starten" in source
+    assert "Bestellung weiterbearbeiten" in source
+    assert "Rechnung oder Zahlung pruefen" in source
+    assert "Blocker klaeren" in source
+    assert "heroSearchPanel" not in source
+    assert "todayContactList" not in source
+    assert "Heute starten" not in source
+    assert "Im Kundenordner suchen Sie den Kunden" not in source
     assert "Metz..." not in source
     assert "heroSearchQuery" not in source
     assert "Kunde & Bestellung" not in source
@@ -497,10 +555,10 @@ def test_dashboard_copy_matches_customer_folder_workflow():
     source = Path("src/getraenkeladen_tool/ui/dashboard_panel.py").read_text(encoding="utf-8")
 
     assert "Kundenordner öffnen: Startet den normalen Arbeitsablauf" not in source
-    assert "Kundenordner oeffnen: Startet den normalen Arbeitsablauf" in source
-    assert "Kunde oeffnen, alte Excel/PDF sehen und neue Bestellung eintragen." in source
-    assert "Kundenordner" in source
-    assert "Alle wichtigen Wege fuehren jetzt auf unterschiedliche Arbeitsbereiche." in source
+    assert "Kundenordner oeffnen: Startet den normalen Arbeitsablauf" not in source
+    assert "Kunden suchen, Hinweise sehen, Bestellung beginnen." in source
+    assert "Kundenordner" not in source
+    assert "Heute: Hier stehen die Aufgaben" in source
 
 
 def test_dashboard_primary_action_opens_customer_folder_tab():
@@ -509,7 +567,7 @@ def test_dashboard_primary_action_opens_customer_folder_tab():
     source = Path("src/getraenkeladen_tool/ui/main_window.py").read_text(encoding="utf-8")
 
     assert "new_delivery_requested.connect(self.open_customer_folder_tab)" in source
-    assert 'MAIN_TABS.index("Kundenordner")' in source
+    assert 'MAIN_TABS.index("Kunden")' in source
 
 
 def test_dashboard_quick_actions_open_customer_folder_workspace_signals():
@@ -520,13 +578,12 @@ def test_dashboard_quick_actions_open_customer_folder_workspace_signals():
 
     assert "open_items_requested = Signal()" in dashboard_source
     assert "checklist_requested = Signal()" in dashboard_source
-    assert "self.open_items_card.button.clicked.connect(self.open_items_requested.emit)" in dashboard_source
-    assert "self.checklist_card.button.clicked.connect(self.checklist_requested.emit)" in dashboard_source
+    assert "button.clicked.connect(signal.emit)" in dashboard_source
     assert "manage_orders_requested" not in dashboard_source
     assert "invoice_requested = Signal()" not in dashboard_source
     assert "open_items_requested.connect(self.open_open_items_tab)" in main_source
     assert "checklist_requested.connect(self.open_checklist_tab)" in main_source
-    assert 'MAIN_TABS.index("Kundenordner")' in main_source
+    assert 'MAIN_TABS.index("Kunden")' in main_source
 
 
 def test_order_manage_actions_open_delivery_or_invoice_with_selected_order():
@@ -565,11 +622,11 @@ def test_report_tab_exposes_reporting_actions():
 
     assert REPORT_PANEL_ACTIONS == {
         "seedDemoDataButton": "Beispieldaten anlegen",
-        "refreshOpenItemsButton": "Offene Posten aktualisieren",
-        "markPaidButton": "Zahlung markieren",
+        "refreshOpenItemsButton": "Rechnungen aktualisieren",
+        "markPaidButton": "Als bezahlt markieren",
         "refreshDeliveriesButton": "Lieferliste laden",
         "refreshContactsButton": "Kontaktliste laden",
-        "exportOpenItemsButton": "Offene Posten exportieren",
+        "exportOpenItemsButton": "Rechnungen exportieren",
         "exportDeliveriesButton": "Lieferliste exportieren",
         "exportContactsButton": "Kontaktliste exportieren",
     }

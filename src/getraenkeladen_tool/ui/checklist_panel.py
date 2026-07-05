@@ -14,9 +14,9 @@ from .layouts import ContentSurface, PageHeader, WorkspaceCard
 from .searchable_select import SearchableSelect
 
 
-CHECKLIST_COLUMNS = ("Status", "Kunde", "Art", "Feld", "Excel/Kundenordner", "Zentrale Liste", "Hinweis")
+CHECKLIST_COLUMNS = ("Prioritaet", "Status", "Kunde", "Problem", "Feld", "Kunden-Excel", "Zentrale Daten", "Naechster Schritt")
 CHECKLIST_ACTIONS = {
-    "refreshChecklistButton": "Pruefliste aktualisieren",
+    "refreshChecklistButton": "Pruefpunkte aktualisieren",
     "resolveChecklistButton": "Als erledigt markieren",
     "reopenChecklistButton": "Wieder oeffnen",
     "useCentralPriceButton": "Zentralen Preis nutzen",
@@ -33,7 +33,7 @@ class ChecklistPanel(QWidget):
         self.session_factory = session_factory
         self.issue_ids_by_row = {}
 
-        self.summary_label = QLabel("Offene Pruefpunkte werden automatisch aus Import und Kundenordnern gesammelt.")
+        self.summary_label = QLabel("Pruefpunkte werden nach Blockerwirkung gesammelt und priorisiert.")
         self.summary_label.setObjectName("muted")
         self.issue_table = QTableWidget(0, len(CHECKLIST_COLUMNS))
         self.issue_table.setHorizontalHeaderLabels(CHECKLIST_COLUMNS)
@@ -60,7 +60,7 @@ class ChecklistPanel(QWidget):
         )
         self.action_help_label.setObjectName("sectionSubtitle")
         self.action_help_label.setWordWrap(True)
-        self.status_label = QLabel("Pruefliste bereit.")
+        self.status_label = QLabel("Pruefpunkte bereit.")
         self.status_label.setObjectName("muted")
 
         root_layout = QVBoxLayout(self)
@@ -68,9 +68,14 @@ class ChecklistPanel(QWidget):
         surface = ContentSurface()
         root_layout.addWidget(surface)
         layout = surface.layout
-        layout.addWidget(PageHeader("Pruefliste", "Offene Konflikte bewusst entscheiden, statt sie im Alltag zu uebersehen."))
+        layout.addWidget(PageHeader("Pruefpunkte", "Blockierende Konflikte bewusst entscheiden, bevor sie Bestellungen stoeren."))
 
-        card = WorkspaceCard("Offene Punkte", "Preisabweichungen, Artikelzuordnungen und Kundendaten-Konflikte.")
+        card = WorkspaceCard(
+            "Offene Punkte",
+            "Blocker, Preisabweichungen, Artikelzuordnungen und Kundendaten-Konflikte.",
+            tone="audit",
+            kicker="ADMIN",
+        )
         toolbar = QHBoxLayout()
         toolbar.addWidget(self.refresh_button)
         toolbar.addWidget(self.resolve_button)
@@ -147,7 +152,9 @@ class ChecklistPanel(QWidget):
         open_count = sum(1 for row in rows if row.status != "erledigt")
         for row_index, row in enumerate(rows):
             self.issue_ids_by_row[row_index] = row.id
+            priority = self._priority_label(row)
             values = (
+                priority,
                 row.status,
                 row.customer_name,
                 row.issue_type_label,
@@ -158,11 +165,11 @@ class ChecklistPanel(QWidget):
             )
             for column, value in enumerate(values):
                 item = QTableWidgetItem(value)
-                if column == 0 and row.status == "erledigt":
+                if column == 1 and row.status == "erledigt":
                     item.setForeground(Qt.GlobalColor.darkGreen)
                 self.issue_table.setItem(row_index, column, item)
         self.summary_label.setText(f"{open_count} offene Pruefpunkte, {len(rows)} insgesamt.")
-        self.status_label.setText("Pruefliste aktualisiert.")
+        self.status_label.setText("Pruefpunkte aktualisiert.")
 
     def resolve_selected_issue(self) -> None:
         self._update_selected_issue("erledigt")
@@ -266,6 +273,16 @@ class ChecklistPanel(QWidget):
         finally:
             session.close()
         self.show_issues(rows)
+
+    def _priority_label(self, row) -> str:
+        if row.status == "erledigt":
+            return "Erledigt"
+        issue_type = getattr(row, "issue_type", "") or ""
+        if issue_type in {"product_alias", "price_mismatch"}:
+            return "Blocker"
+        if issue_type.startswith("customer_"):
+            return "Pruefen"
+        return "Hinweis"
 
     def _selected_issue_id(self) -> int | None:
         row = self.issue_table.currentRow()

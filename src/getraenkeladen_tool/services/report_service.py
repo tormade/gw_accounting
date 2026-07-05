@@ -30,14 +30,15 @@ def get_dashboard_summary(session: Session, target_date: str) -> DashboardSummar
     )
 
 
-def list_open_items(session: Session) -> list[OpenItem]:
-    return list(
-        session.scalars(
-            select(OpenItem)
-            .where(OpenItem.status == "offen")
-            .order_by(OpenItem.customer_name, OpenItem.document_number)
-        )
+def list_open_items(session: Session, payment_method: str | None = None) -> list[OpenItem]:
+    statement = (
+        select(OpenItem)
+        .where(OpenItem.status == "offen")
+        .order_by(OpenItem.due_date, OpenItem.customer_name, OpenItem.document_number)
     )
+    if payment_method:
+        statement = statement.where(OpenItem.payment_method == payment_method)
+    return list(session.scalars(statement))
 
 
 def mark_open_item_paid(session: Session, open_item_id: int) -> OpenItem:
@@ -74,12 +75,15 @@ def list_daily_deliveries(session: Session, target_date: str) -> list[Document]:
 
 
 def export_open_items_csv(session: Session, output_path: Path) -> Path:
-    rows = [["Kunde", "Rechnungsnr.", "Betrag EUR", "Status"]]
+    rows = [["Kunde", "Rechnungsnr.", "Rechnungsdatum", "Faelligkeit", "Zahlart", "Betrag EUR", "Status"]]
     for item in list_open_items(session):
         rows.append(
             [
                 item.customer_name,
                 item.document_number,
+                item.document_date or "",
+                item.due_date or "",
+                item.payment_method,
                 _format_cents(item.amount_cents),
                 item.status,
             ]

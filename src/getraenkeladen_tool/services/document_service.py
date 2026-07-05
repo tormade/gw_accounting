@@ -1,11 +1,12 @@
 from pathlib import Path
 from shutil import copy2
+from datetime import date, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from ..kern.regeln.beleg import BelegParameter, PfandRueckgabe, Position, berechne_beleg
-from ..models import Customer, Document, OpenItem
+from ..kern.regeln.beleg import BelegParameter, BelegSummen, PfandRueckgabe, Position, berechne_beleg
+from ..models import Customer, Document, DocumentLine, OpenItem
 from ..schemas import DocumentCreate
 from .excel_service import build_delivery_note_workbook, build_invoice_workbook
 from .file_naming_service import build_document_paths
@@ -37,6 +38,8 @@ def create_document(
         raise ValueError("Rechnungsnummer ist bereits vorhanden.")
 
     document_date = payload.delivery_date or "ohne-datum"
+    footer_text = _document_footer_text(document_type, customer, payload)
+    due_date = _invoice_due_date(document_type, customer, document_date)
     paths = build_document_paths(
         customer_folder=Path(customer.folder_path),
         document_type=document_type,
@@ -50,6 +53,11 @@ def create_document(
     if document_type not in {"Rechnung", "Lieferauftrag", "Lieferschein"}:
         raise ValueError("Belegtyp muss Rechnung oder Lieferauftrag sein.")
 
+    if document is not None and is_partial_generation and _has_snapshot(session, document.id):
+        expected_lines = _document_snapshot_lines(document.id, payload)
+        if not _snapshot_matches_payload(session, document.id, expected_lines):
+            raise ValueError("Belegdaten passen nicht zum bereits erzeugten Teil-Export. Bitte Excel und PDF zusammen neu erzeugen.")
+
     datev_export_path = None
     if "excel" in requested_assets:
         if document_type == "Rechnung":
@@ -61,7 +69,7 @@ def create_document(
                 document_date=document_date,
                 deposit_returns=deposit_returns,
                 delivery_fee_enabled=payload.delivery_fee_enabled,
-                invoice_footer_text=payload.footer_text,
+                invoice_footer_text=footer_text,
             )
         else:
             build_delivery_note_workbook(
@@ -73,7 +81,7 @@ def create_document(
                 deposit_returns=deposit_returns,
                 delivery_fee_enabled=payload.delivery_fee_enabled,
                 delivery_comment=payload.delivery_comment,
-                footer_text=payload.footer_text,
+                footer_text=footer_text,
             )
 
     if "pdf" in requested_assets:
@@ -88,7 +96,7 @@ def create_document(
             customer_address=customer.address,
             delivery_fee_enabled=payload.delivery_fee_enabled,
             note_text=payload.delivery_comment,
-            footer_text=payload.footer_text,
+            footer_text=footer_text,
         )
 
     if document_type == "Rechnung" and datev_upload_dir is not None and "pdf" in requested_assets:
@@ -107,7 +115,7 @@ def create_document(
             delivery_slot=payload.delivery_slot,
             delivery_fee_enabled=payload.delivery_fee_enabled,
             delivery_comment=payload.delivery_comment,
-            footer_text=payload.footer_text,
+            footer_text=footer_text,
         )
         session.add(document)
         session.flush()
@@ -120,10 +128,15 @@ def create_document(
         document.delivery_slot = payload.delivery_slot
         document.delivery_fee_enabled = payload.delivery_fee_enabled
         document.delivery_comment = payload.delivery_comment
-        document.footer_text = payload.footer_text
+        document.footer_text = footer_text
+
+    snapshot_lines = _document_snapshot_lines(document.id, payload)
+    session.query(DocumentLine).filter(DocumentLine.document_id == document.id).delete()
+    session.add_all(snapshot_lines)
+    snapshot_total_cents = snapshot_lines[-1].total_cents
 
     if document_type == "Rechnung":
-        amount_cents = _document_total_cents(payload)
+        amount_cents = snapshot_total_cents
         open_item = session.scalar(select(OpenItem).where(OpenItem.document_id == document.id).limit(1))
         if open_item is None:
             session.add(
@@ -131,6 +144,8 @@ def create_document(
                     document_id=document.id,
                     customer_name=customer.name,
                     document_number=document_number,
+                    document_date=payload.delivery_date,
+                    due_date=due_date,
                     amount_cents=amount_cents,
                     payment_method=customer.payment_method or "unbekannt",
                     status="offen",
@@ -139,6 +154,8 @@ def create_document(
         else:
             open_item.customer_name = customer.name
             open_item.document_number = document_number
+            open_item.document_date = payload.delivery_date
+            open_item.due_date = due_date
             open_item.amount_cents = amount_cents
             open_item.payment_method = customer.payment_method or "unbekannt"
 
@@ -174,8 +191,8 @@ def _copy_invoice_pdf_to_datev(pdf_path: Path, datev_upload_dir: Path, document_
     return target_path
 
 
-def _document_total_cents(payload: DocumentCreate) -> int:
-    result = berechne_beleg(
+def _document_calculation(payload: DocumentCreate) -> BelegSummen:
+    return berechne_beleg(
         positionen=[
             Position(item.name, item.quantity, item.unit_price_cents, item.deposit_cents)
             for item in payload.line_items
@@ -186,4 +203,125 @@ def _document_total_cents(payload: DocumentCreate) -> int:
         ],
         parameter=BelegParameter(lieferpauschale_aktiv=payload.delivery_fee_enabled),
     )
-    return result.brutto_cents
+
+
+def _document_snapshot_lines(document_id: int, payload: DocumentCreate) -> list[DocumentLine]:
+    result = _document_calculation(payload)
+    lines: list[DocumentLine] = []
+    sort_order = 0
+    for item, total_cents in zip(payload.line_items, result.positionssummen_cents, strict=True):
+        lines.append(
+            DocumentLine(
+                document_id=document_id,
+                line_type="position",
+                name=item.name,
+                quantity=item.quantity,
+                unit_price_cents=item.unit_price_cents,
+                deposit_cents=item.deposit_cents,
+                total_cents=total_cents,
+                sort_order=sort_order,
+            )
+        )
+        sort_order += 1
+    for item, total_cents in zip(payload.deposit_returns, result.ruecknahme_summen_cents, strict=True):
+        lines.append(
+            DocumentLine(
+                document_id=document_id,
+                line_type="deposit_return",
+                name=item.name,
+                quantity=item.quantity,
+                unit_price_cents=0,
+                deposit_cents=item.deposit_cents,
+                total_cents=total_cents,
+                sort_order=sort_order,
+            )
+        )
+        sort_order += 1
+    if result.lieferpauschale_cents:
+        lines.append(
+            DocumentLine(
+                document_id=document_id,
+                line_type="delivery_fee",
+                name="Lieferpauschale",
+                quantity=1,
+                unit_price_cents=result.lieferpauschale_cents,
+                deposit_cents=0,
+                total_cents=result.lieferpauschale_cents,
+                sort_order=sort_order,
+            )
+        )
+        sort_order += 1
+    lines.append(
+        DocumentLine(
+            document_id=document_id,
+            line_type="summary",
+            name="Brutto",
+            quantity=1,
+            unit_price_cents=result.brutto_cents,
+            deposit_cents=0,
+            total_cents=result.brutto_cents,
+            sort_order=sort_order,
+        )
+    )
+    return lines
+
+
+def _document_footer_text(document_type: str, customer: Customer, payload: DocumentCreate) -> str | None:
+    if payload.footer_text:
+        return payload.footer_text
+    if document_type != "Rechnung":
+        return None
+    if _is_bank_transfer(customer.payment_method):
+        due_date = _invoice_due_date(document_type, customer, payload.delivery_date or "ohne-datum")
+        if due_date is not None:
+            return f"Bitte ueberweisen Sie den Rechnungsbetrag bis zum {due_date}."
+        return "Bitte ueberweisen Sie den Rechnungsbetrag."
+    if _is_sepa(customer.payment_method):
+        return "Rechnungsbetrag wird per Sepa Basis Lastschrift Mandat eingezogen."
+    return None
+
+
+def _invoice_due_date(document_type: str, customer: Customer, document_date: str) -> str | None:
+    if document_type != "Rechnung" or not _is_bank_transfer(customer.payment_method):
+        return None
+    try:
+        return (date.fromisoformat(document_date) + timedelta(days=7)).isoformat()
+    except ValueError:
+        return None
+
+
+def _is_bank_transfer(payment_method: str | None) -> bool:
+    normalized = (payment_method or "").lower().replace("ü", "ue")
+    return "ueberweisung" in normalized
+
+
+def _is_sepa(payment_method: str | None) -> bool:
+    return "sepa" in (payment_method or "").lower() or "lastschrift" in (payment_method or "").lower()
+
+
+def _has_snapshot(session: Session, document_id: int) -> bool:
+    return session.scalar(select(DocumentLine.id).where(DocumentLine.document_id == document_id).limit(1)) is not None
+
+
+def _snapshot_matches_payload(session: Session, document_id: int, expected_lines: list[DocumentLine]) -> bool:
+    existing_lines = list(
+        session.scalars(
+            select(DocumentLine)
+            .where(DocumentLine.document_id == document_id)
+            .order_by(DocumentLine.sort_order)
+        )
+    )
+    return [_snapshot_signature(line) for line in existing_lines] == [
+        _snapshot_signature(line) for line in expected_lines
+    ]
+
+
+def _snapshot_signature(line: DocumentLine) -> tuple[str, str, int, int, int, int]:
+    return (
+        line.line_type,
+        line.name,
+        line.quantity,
+        line.unit_price_cents,
+        line.deposit_cents,
+        line.total_cents,
+    )

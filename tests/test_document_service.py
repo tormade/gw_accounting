@@ -2,7 +2,7 @@ from pathlib import Path
 
 from openpyxl import load_workbook
 
-from getraenkeladen_tool.models import OpenItem
+from getraenkeladen_tool.models import DocumentLine, OpenItem
 from getraenkeladen_tool.schemas import CustomerCreate, DepositReturnCreate, DocumentCreate, DocumentLineItem
 from getraenkeladen_tool.services.customer_service import create_customer
 from getraenkeladen_tool.services.document_service import create_document, latest_invoice_number
@@ -93,6 +93,57 @@ def test_create_invoice_includes_optional_delivery_fee_and_document_texts(sessio
     assert sheet["A31"].value == 1
     assert sheet["E31"].value == 3.9
     assert sheet["F43"].value == 44.64
+
+
+def test_create_invoice_persists_reproducible_document_line_snapshot(session, tmp_path: Path):
+    customer = create_customer(
+        session,
+        CustomerCreate(name="Snapshot Kunde", folder_path=str(tmp_path / "Kunden" / "Snapshot Kunde")),
+    )
+
+    document = create_document(
+        session,
+        DocumentCreate(
+            customer_id=customer.id,
+            document_type="Rechnung",
+            document_number="RG-SNAP-1",
+            delivery_date="2026-06-22",
+            line_items=[
+                DocumentLineItem(name="Frucade Colamix 20x0,5", quantity=3, unit_price_cents=1048, deposit_cents=310),
+                DocumentLineItem(name="Adelholzener Classic 12x0,7", quantity=5, unit_price_cents=1128, deposit_cents=330),
+            ],
+            deposit_returns=[DepositReturnCreate(name="Leergut Kiste 3,10", quantity=3, deposit_cents=310)],
+            delivery_fee_enabled=True,
+        ),
+    )
+
+    snapshot_lines = (
+        session.query(DocumentLine)
+        .filter(DocumentLine.document_id == document.id)
+        .order_by(DocumentLine.sort_order)
+        .all()
+    )
+
+    assert [
+        (
+            line.line_type,
+            line.name,
+            line.quantity,
+            line.unit_price_cents,
+            line.deposit_cents,
+            line.total_cents,
+        )
+        for line in snapshot_lines
+    ] == [
+        ("position", "Frucade Colamix 20x0,5", 3, 1048, 310, 4074),
+        ("position", "Adelholzener Classic 12x0,7", 5, 1128, 330, 7290),
+        ("deposit_return", "Leergut Kiste 3,10", 3, 0, 310, -930),
+        ("delivery_fee", "Lieferpauschale", 1, 390, 0, 390),
+        ("summary", "Brutto", 1, 10824, 0, 10824),
+    ]
+
+    open_item = session.query(OpenItem).one()
+    assert open_item.amount_cents == 10824
 
 
 def test_create_invoice_supports_multiple_line_items(session, tmp_path: Path):
@@ -293,3 +344,61 @@ def test_create_document_can_generate_pdf_later_without_duplicate_invoice(sessio
     assert Path(pdf_document.excel_path).exists()
     assert Path(pdf_document.pdf_path).exists()
     assert session.query(OpenItem).count() == 1
+
+
+def test_invoice_for_bank_transfer_customer_gets_due_footer_and_open_item_due_date(session, tmp_path: Path):
+    customer = create_customer(
+        session,
+        CustomerCreate(
+            name="Ueberweiser Kunde",
+            folder_path=str(tmp_path / "Kunden" / "Ueberweiser Kunde"),
+            payment_method="Ueberweisung",
+        ),
+    )
+
+    document = create_document(
+        session,
+        DocumentCreate(
+            customer_id=customer.id,
+            document_type="Rechnung",
+            document_number="RG-U-1",
+            delivery_date="2026-06-24",
+            line_items=[DocumentLineItem(name="Wasser", quantity=1, unit_price_cents=1000, deposit_cents=0)],
+        ),
+    )
+
+    open_item = session.query(OpenItem).one()
+    assert document.footer_text == "Bitte ueberweisen Sie den Rechnungsbetrag bis zum 2026-07-01."
+    assert open_item.document_date == "2026-06-24"
+    assert open_item.due_date == "2026-07-01"
+    assert open_item.payment_method == "Ueberweisung"
+
+
+def test_partial_document_generation_rejects_changed_payload_after_first_asset(session, tmp_path: Path):
+    customer = create_customer(
+        session,
+        CustomerCreate(name="Teil Export Kunde", folder_path=str(tmp_path / "Kunden" / "Teil Export Kunde")),
+    )
+    first_payload = DocumentCreate(
+        customer_id=customer.id,
+        document_type="Rechnung",
+        document_number="RG-PART-1",
+        delivery_date="2026-06-24",
+        line_items=[DocumentLineItem(name="Wasser", quantity=1, unit_price_cents=1000, deposit_cents=0)],
+    )
+    changed_payload = DocumentCreate(
+        customer_id=customer.id,
+        document_type="Rechnung",
+        document_number="RG-PART-1",
+        delivery_date="2026-06-24",
+        line_items=[DocumentLineItem(name="Wasser", quantity=2, unit_price_cents=1000, deposit_cents=0)],
+    )
+
+    create_document(session, first_payload, assets={"excel"})
+
+    try:
+        create_document(session, changed_payload, assets={"pdf"})
+    except ValueError as error:
+        assert "Belegdaten passen nicht" in str(error)
+    else:
+        raise AssertionError("Changed partial document payload was accepted")
