@@ -14,6 +14,9 @@ from PySide6.QtWidgets import (
 )
 
 
+DEFAULT_ACTION_BUTTON_WIDTH = 190
+
+
 class PageHeader(QWidget):
     def __init__(
         self,
@@ -195,3 +198,8 @@ def configure_form_layout(form: QFormLayout) -> None:
     form.setRowWrapPolicy(QFormLayout.RowWrapPolicy.WrapLongRows)
     form.setLabelAlignment(Qt.AlignmentFlag.AlignLeft)
     form.setFormAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
+
+
+def set_equal_button_widths(buttons: Iterable[QPushButton], width: int = DEFAULT_ACTION_BUTTON_WIDTH) -> None:
+    for button in buttons:
+        button.setFixedWidth(width)

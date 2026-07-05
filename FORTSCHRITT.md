@@ -76,6 +76,7 @@ Das Produktziel steht in `docs/zielbild.md`: ein schlankes lokales Windows-Buero
 - Winklmeier Office 2.0 Schrittfolge umgesetzt: wiederverwendbarer Inspector eingefuehrt, Kundenarbeitsplatz auf Liste + Kontext + `Bestellung starten` umgebaut, Bestelleditor ins Hauptfenster geholt, Rechnungen/Kasse auf Rechnungsliste + Zahlungs-Inspector umgestellt, Heute als Tagesliste statt Demo-/Workflow-Flaeche gebaut und Pruefpunkte/Import sprachlich bereinigt.
 - Volle Regression nach dem 2.0-Umbau ist gruen: 223 Tests bestanden, `compileall src tests` erfolgreich.
 - Winklmeier Office 2.0 wurde von Thomas abgenommen und im Programm erneut geprueft: volle Regression 223 Tests bestanden, `compileall src tests` erfolgreich, Screenshot-Smoke fuer alle fuenf Hauptbereiche unter `/private/tmp/getraenkeladen-design-preview/winklmeier-office-2-accepted`.
+- Visueller Button-/Alignment-Audit nach Computer-Use-Anfrage durchgefuehrt: Hauptbereiche erneut als Screenshots geprueft, Aktionsbuttons in Bestellungen, Kunden-/Artikel-Stammdaten, Tagesliste und Rechnungen vereinheitlicht, zu lange Buttontexte gekuerzt; volle Regression 223 Tests bestanden.
 
 ## In Arbeit
 

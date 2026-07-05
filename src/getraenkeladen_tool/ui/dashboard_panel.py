@@ -132,6 +132,7 @@ class DashboardPanel(QWidget):
 
             button = QPushButton(button_text)
             button.setObjectName("workflowStepButton")
+            button.setFixedWidth(178)
             button.clicked.connect(signal.emit)
             self.quick_action_buttons.append(button)
             row_layout.addWidget(button, 0, 1, 2, 1)

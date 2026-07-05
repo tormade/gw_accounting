@@ -15,7 +15,15 @@ from PySide6.QtWidgets import (
 )
 
 from .date_input import DateInput, to_display_date
-from .layouts import ContentSurface, InspectorPanel, PageHeader, ResponsiveSplitter, WorkspaceCard, configure_form_layout
+from .layouts import (
+    ContentSurface,
+    InspectorPanel,
+    PageHeader,
+    ResponsiveSplitter,
+    WorkspaceCard,
+    configure_form_layout,
+    set_equal_button_widths,
+)
 from ..services.report_service import (
     export_daily_deliveries_csv,
     export_due_contacts_csv,
@@ -115,6 +123,7 @@ class ReportPanel(QWidget):
         self.invoice_inspector.add_section_label("Aktionen")
         self.mark_paid_button = self._button("markPaidButton")
         self.export_open_items_button = self._button("exportOpenItemsButton")
+        set_equal_button_widths((self.mark_paid_button, self.export_open_items_button), 260)
         self.invoice_inspector.body.addWidget(self.mark_paid_button)
         self.invoice_inspector.body.addWidget(self.export_open_items_button)
         invoice_splitter.addWidget(self.invoice_inspector)
@@ -140,6 +149,7 @@ class ReportPanel(QWidget):
         self.refresh_button = self._button("refreshOpenItemsButton")
         self.refresh_deliveries_button = self._button("refreshDeliveriesButton")
         self.refresh_contacts_button = self._button("refreshContactsButton")
+        set_equal_button_widths((self.refresh_button, self.refresh_deliveries_button, self.refresh_contacts_button), 190)
         for button in (self.refresh_button, self.refresh_deliveries_button, self.refresh_contacts_button):
             action_row.addWidget(button)
         action_row.addStretch()
@@ -153,6 +163,7 @@ class ReportPanel(QWidget):
         export_row = QHBoxLayout()
         self.export_deliveries_button = self._button("exportDeliveriesButton")
         self.export_contacts_button = self._button("exportContactsButton")
+        set_equal_button_widths((self.export_deliveries_button, self.export_contacts_button), 190)
         export_row.addWidget(self.export_deliveries_button)
         export_row.addWidget(self.export_contacts_button)
         export_row.addStretch()

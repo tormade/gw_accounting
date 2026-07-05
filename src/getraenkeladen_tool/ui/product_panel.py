@@ -26,15 +26,15 @@ from ..services.product_service import (
     restore_product,
     update_product,
 )
-from .layouts import ContentSurface, PageHeader, WorkspaceCard, configure_form_layout
+from .layouts import ContentSurface, PageHeader, WorkspaceCard, configure_form_layout, set_equal_button_widths
 
 
 PRODUCT_PANEL_ACTIONS = {
     "productHelpButton": "?",
     "newProductButton": "Neu",
     "saveProductButton": "Produkt speichern",
-    "discardProductChangesButton": "Aenderungen verwerfen",
-    "undoProductChangeButton": "Letzte Aenderung rueckgaengig",
+    "discardProductChangesButton": "Verwerfen",
+    "undoProductChangeButton": "Rueckgaengig",
     "refreshProductsButton": "Produktliste laden",
     "loadProductButton": "Auswahl bearbeiten",
     "deactivateProductButton": "Produkt deaktivieren",
@@ -114,6 +114,8 @@ class ProductPanel(QWidget):
         self.discard_button = self._button("discardProductChangesButton")
         self.undo_change_button = self._button("undoProductChangeButton")
         self.load_button = self._button("loadProductButton")
+        set_equal_button_widths((self.new_button, self.save_button, self.load_button), 190)
+        set_equal_button_widths((self.discard_button, self.undo_change_button), 230)
         action_row.addWidget(self.new_button)
         action_row.addWidget(self.save_button)
         action_row.addWidget(self.load_button)
@@ -135,6 +137,7 @@ class ProductPanel(QWidget):
         self.refresh_button = self._button("refreshProductsButton")
         self.deactivate_button = self._button("deactivateProductButton")
         self.restore_button = self._button("restoreProductButton")
+        set_equal_button_widths((self.refresh_button, self.deactivate_button, self.restore_button), 190)
         for button in (
             self.refresh_button,
             self.deactivate_button,

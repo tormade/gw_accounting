@@ -33,7 +33,14 @@ from ..services.order_service import (
 from ..services.product_service import list_active_products
 from .date_input import DateInput, to_display_date
 from .deposit_return_presets import DEPOSIT_RETURN_PRESETS
-from .layouts import ContentSurface, PageHeader, ResponsiveSplitter, WorkspaceCard, configure_form_layout
+from .layouts import (
+    ContentSurface,
+    PageHeader,
+    ResponsiveSplitter,
+    WorkspaceCard,
+    configure_form_layout,
+    set_equal_button_widths,
+)
 from .searchable_select import SearchableSelect
 
 
@@ -41,7 +48,7 @@ ORDER_PANEL_ACTIONS = {
     "orderHelpButton": "?",
     "newOrderButton": "Neue Bestellung",
     "copyOrderButton": "Als Vorlage kopieren",
-    "refreshOrderDataButton": "Kunden/Artikel neu laden",
+    "refreshOrderDataButton": "Daten neu laden",
     "addOrderLineButton": "Position hinzufuegen",
     "removeOrderLineButton": "Position entfernen",
     "addDepositReturnButton": "Pfand-Rueckgabe eintragen",
@@ -177,6 +184,24 @@ class OrderPanel(QWidget):
         self.create_delivery_note_button = self._button("createDeliveryNoteFromOrderButton")
         self.create_invoice_button = self._button("createInvoiceFromOrderButton")
         self.use_assortment_button = QPushButton("Aus Sortiment uebernehmen")
+        set_equal_button_widths(
+            (
+                self.refresh_data_button,
+                self.save_order_button,
+                self.cancel_order_dialog_button,
+                self.add_line_button,
+                self.remove_line_button,
+                self.add_deposit_return_button,
+                self.remove_deposit_return_button,
+                self.new_order_button,
+                self.refresh_orders_button,
+                self.copy_order_button,
+                self.create_delivery_note_button,
+                self.create_invoice_button,
+                self.use_assortment_button,
+            ),
+            190,
+        )
 
         self.order_dialog: QDialog | None = None
         self.order_editor_scroll: QScrollArea | None = None

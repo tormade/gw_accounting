@@ -27,15 +27,15 @@ from ..services.customer_service import (
     update_customer,
 )
 from .date_input import DateInput, to_display_date
-from .layouts import ContentSurface, PageHeader, WorkspaceCard, configure_form_layout
+from .layouts import ContentSurface, PageHeader, WorkspaceCard, configure_form_layout, set_equal_button_widths
 
 
 CUSTOMER_PANEL_ACTIONS = {
     "customerHelpButton": "?",
     "newCustomerButton": "Neu",
     "saveCustomerButton": "Kunde speichern",
-    "discardCustomerChangesButton": "Aenderungen verwerfen",
-    "undoCustomerChangeButton": "Letzte Aenderung rueckgaengig",
+    "discardCustomerChangesButton": "Verwerfen",
+    "undoCustomerChangeButton": "Rueckgaengig",
     "refreshCustomersButton": "Kundenliste laden",
     "loadCustomerButton": "Auswahl bearbeiten",
     "archiveCustomerButton": "Kunde archivieren",
@@ -115,6 +115,8 @@ class CustomerPanel(QWidget):
         self.discard_button = self._button("discardCustomerChangesButton")
         self.undo_change_button = self._button("undoCustomerChangeButton")
         self.load_button = self._button("loadCustomerButton")
+        set_equal_button_widths((self.new_button, self.save_button, self.load_button), 190)
+        set_equal_button_widths((self.discard_button, self.undo_change_button), 230)
         action_row.addWidget(self.new_button)
         action_row.addWidget(self.save_button)
         action_row.addWidget(self.load_button)
@@ -135,6 +137,7 @@ class CustomerPanel(QWidget):
         self.refresh_button = self._button("refreshCustomersButton")
         self.archive_button = self._button("archiveCustomerButton")
         self.restore_button = self._button("restoreCustomerButton")
+        set_equal_button_widths((self.refresh_button, self.archive_button, self.restore_button), 190)
         for button in (
             self.refresh_button,
             self.archive_button,
