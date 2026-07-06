@@ -21,6 +21,7 @@ def test_customer_folder_panel_exposes_real_folder_workflow():
     assert "Kunden finden" in source
     assert "InspectorPanel" in source
     assert "Kundenlage" in source
+    assert "Rechnungswarnung" in source
     assert "Naechster Schritt" in source
     assert "Bestellung starten" in source
     assert "Liste aktualisieren" in source
@@ -30,6 +31,7 @@ def test_customer_folder_panel_exposes_real_folder_workflow():
     assert "Lieferschein erstellen" in source
     assert "Rechnung erstellen" in source
     assert "get_customer_folder_snapshot" in source
+    assert "get_customer_invoice_warning" in source
 
 
 def test_customer_folder_panel_disables_actions_until_customer_context_exists():
@@ -93,6 +95,7 @@ def test_customer_folder_panel_enables_actions_from_snapshot_state(tmp_path: Pat
     assert panel.seed_file_hint.text() == "Letzte Mengen sind vorbereitet. Neue Bestellung starten und Mengen anpassen."
     assert panel.inspector.title_label.text() == "Cafe Nord"
     assert panel.customer_next_step_label.text() == "Naechster Schritt: Neue Bestellung starten; die letzten Mengen sind vorbereitet."
+    assert panel.customer_invoice_warning_label.text() == "Offene Rechnungen: -"
     assert panel.delivery_note_button.isEnabled() is False
     assert panel.invoice_button.isEnabled() is False
 

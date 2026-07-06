@@ -39,6 +39,14 @@ class DeliveryReturnWorkItem:
     delivery_note_number: str
 
 
+@dataclass(frozen=True, slots=True)
+class CustomerInvoiceWarning:
+    open_count: int
+    due_count: int
+    overdue_count: int
+    amount_cents: int
+
+
 def get_dashboard_summary(session: Session, target_date: str) -> DashboardSummary:
     return DashboardSummary(
         target_date=target_date,
@@ -75,6 +83,31 @@ def list_invoice_worklist(session: Session, status_filter: str = "offen", target
     if status_filter == "alle":
         return items
     return [item for item in items if item.status_bucket == status_filter or item.status == status_filter]
+
+
+def get_customer_invoice_warning(session: Session, customer_name: str, target_date: str | None = None) -> CustomerInvoiceWarning:
+    items = list(
+        session.scalars(
+            select(OpenItem)
+            .where(OpenItem.customer_name == customer_name)
+            .where(OpenItem.status != "bezahlt")
+            .order_by(OpenItem.due_date, OpenItem.document_number)
+        )
+    )
+    due_count = 0
+    overdue_count = 0
+    if target_date:
+        for item in items:
+            if item.due_date == target_date:
+                due_count += 1
+            elif item.due_date and item.due_date < target_date:
+                overdue_count += 1
+    return CustomerInvoiceWarning(
+        open_count=len(items),
+        due_count=due_count,
+        overdue_count=overdue_count,
+        amount_cents=sum(item.amount_cents for item in items),
+    )
 
 
 def list_open_delivery_returns(session: Session) -> list[DeliveryReturnWorkItem]:

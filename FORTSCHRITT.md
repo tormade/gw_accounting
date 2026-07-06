@@ -105,6 +105,7 @@ Das Produktziel steht in `docs/zielbild.md`: ein schlankes lokales Windows-Buero
 - UAT-Fehler aus sichtbarem 60+-Test behoben: Nach Speichern/Neuladen wird die aktuell bearbeitete Bestellung im Bestellstapel wieder markiert, damit Lieferschein/Rechnung nicht versehentlich fuer eine alte Tabellenzeile erzeugt werden. Manuelles Artikel-Hinzufuegen leert danach den Produktpicker, Menge, Preis und Pfand, sodass der naechste Artikel wieder direkt per Maus aus der Vorschlagsliste gewaehlt werden kann. Volle Regression 281 Tests erfolgreich.
 - PRD-Meilenstein 1 begonnen: Die Hauptnavigation zeigt jetzt nur noch `Arbeiten`, `Rechnungen` und `Verwaltung`. `Heute` und `Kunden` liegen intern unter `Arbeiten`, das Belegarchiv liegt unter `Verwaltung`; Rechnungen/offene Posten bleiben direkt erreichbar. Volle Regression 281 Tests und `compileall src tests` erfolgreich.
 - `Arbeiten` hat eine neue Startfläche: links Kundensuche/Bestellaufnahme, rechts offene Lieferschein-Rückläufe aus Bestellungen mit erzeugtem Lieferschein und noch ohne Rechnung. Rückläufe können von dort direkt in den bestehenden Rechnungsdialog geöffnet werden; leere Zustände erklären den nächsten Schritt. Volle Regression 284 Tests und `compileall src tests` erfolgreich.
+- Kundenfokus in `Arbeiten` nachgeschärft: Im Kunden-Inspector stehen jetzt neben Adresse, Kontakt, Zahlart, Lieferhinweisen, letzten Mengen und Bestellungen auch kompakte Rechnungswarnungen für offene, fällige und überfällige Posten. Volle Regression 285 Tests und `compileall src tests` erfolgreich.
 
 ## In Arbeit
 

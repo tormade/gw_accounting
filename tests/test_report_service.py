@@ -12,6 +12,7 @@ from getraenkeladen_tool.services.report_service import (
     get_dashboard_summary,
     list_daily_deliveries,
     list_due_contacts,
+    get_customer_invoice_warning,
     list_invoice_worklist,
     list_open_delivery_returns,
     list_open_items,
@@ -118,6 +119,44 @@ def test_invoice_worklist_filters_due_overdue_paid_and_partial_status(session, t
     assert [item.document_number for item in overdue_items] == ["RG-ALT"]
     assert [item.document_number for item in due_items] == ["RG-HEUTE"]
     assert [item.document_number for item in partial_items] == ["RG-SEPA"]
+
+
+def test_customer_invoice_warning_counts_open_due_and_overdue_items(session, tmp_path: Path):
+    customer = create_customer(
+        session,
+        CustomerCreate(
+            name="Gasthof Süd",
+            folder_path=str(tmp_path / "Kunden" / "Gasthof Sued"),
+            payment_method="Ueberweisung",
+        ),
+    )
+    create_document(
+        session,
+        DocumentCreate(
+            customer_id=customer.id,
+            document_type="Rechnung",
+            document_number="RG-ALT",
+            delivery_date="2026-06-20",
+            line_items=[DocumentLineItem(name="Wasser", quantity=1, unit_price_cents=1000)],
+        ),
+    )
+    create_document(
+        session,
+        DocumentCreate(
+            customer_id=customer.id,
+            document_type="Rechnung",
+            document_number="RG-HEUTE",
+            delivery_date="2026-06-28",
+            line_items=[DocumentLineItem(name="Limo", quantity=1, unit_price_cents=1400)],
+        ),
+    )
+
+    warning = get_customer_invoice_warning(session, "Gasthof Süd", target_date="2026-07-05")
+
+    assert warning.open_count == 2
+    assert warning.overdue_count == 1
+    assert warning.due_count == 1
+    assert warning.amount_cents == 2400
 
 
 def test_list_open_delivery_returns_shows_delivery_notes_without_invoice(session, tmp_path: Path):

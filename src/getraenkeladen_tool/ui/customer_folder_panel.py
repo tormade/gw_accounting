@@ -1,4 +1,5 @@
 from pathlib import Path
+from datetime import date
 
 from PySide6.QtCore import QUrl, Signal
 from PySide6.QtGui import QDesktopServices
@@ -20,6 +21,7 @@ from ..services.customer_assortment_service import list_customer_assortment_with
 from ..services.automation_service import get_customer_quickstart, list_customer_folder_excel_previews
 from ..services.customer_folder_service import CustomerFolderFile, get_customer_folder_snapshot
 from ..services.customer_service import list_active_customers
+from ..services.report_service import CustomerInvoiceWarning, get_customer_invoice_warning
 from .date_input import to_display_date
 from .layouts import ContentSurface, InspectorPanel, PageHeader, ResponsiveSplitter, WorkspaceCard
 from .searchable_select import SearchableSelect
@@ -79,6 +81,7 @@ class CustomerFolderPanel(QWidget):
         self.customer_delivery_notes_label = QLabel("Lieferhinweise: -")
         self.customer_folder_label = QLabel("Ablage: -")
         self.customer_documents_label = QLabel("Belege: -")
+        self.customer_invoice_warning_label = QLabel("Offene Rechnungen: -")
         self.customer_next_step_label = QLabel("Naechster Schritt: Kunde suchen.")
         self.customer_next_step_label.setObjectName("nextStepValue")
         self.customer_next_step_label.setMinimumHeight(72)
@@ -89,6 +92,7 @@ class CustomerFolderPanel(QWidget):
             self.customer_delivery_notes_label,
             self.customer_folder_label,
             self.customer_documents_label,
+            self.customer_invoice_warning_label,
         ):
             label.setObjectName("inspectorValue")
             label.setWordWrap(True)
@@ -152,6 +156,8 @@ class CustomerFolderPanel(QWidget):
         self.inspector.add_section_label("Ablage und Belege")
         self.inspector.body.addWidget(self.customer_folder_label)
         self.inspector.body.addWidget(self.customer_documents_label)
+        self.inspector.add_section_label("Rechnungswarnung")
+        self.inspector.body.addWidget(self.customer_invoice_warning_label)
         self.inspector.add_section_label("Naechster Schritt")
         self.inspector.body.addWidget(self.customer_next_step_label)
         self.inspector.body.addWidget(self.new_order_button)
@@ -237,6 +243,7 @@ class CustomerFolderPanel(QWidget):
         self.customer_delivery_notes_label.setText("Lieferhinweise: -")
         self.customer_folder_label.setText("Ablage: -")
         self.customer_documents_label.setText("Belege: -")
+        self.customer_invoice_warning_label.setText("Offene Rechnungen: -")
         self.customer_next_step_label.setText("Naechster Schritt: Kunde suchen.")
         self.seed_file_hint.setText("Letzte Mengen erscheinen nach der Kundenauswahl.")
         self.status_label.setText(message)
@@ -306,6 +313,8 @@ class CustomerFolderPanel(QWidget):
             try:
                 quickstart = get_customer_quickstart(session, customer.id)
                 excel_previews = list_customer_folder_excel_previews(session, customer.id)
+                invoice_warning = get_customer_invoice_warning(session, customer.name, target_date=date.today().isoformat())
+                self.customer_invoice_warning_label.setText(self._invoice_warning_text(invoice_warning))
             finally:
                 session.close()
         if quickstart is not None and quickstart.suggestions:
@@ -423,6 +432,16 @@ class CustomerFolderPanel(QWidget):
 
     def _money(self, cents: int | None) -> str:
         return f"{(cents or 0) / 100:.2f} EUR".replace(".", ",")
+
+    def _invoice_warning_text(self, warning: CustomerInvoiceWarning) -> str:
+        if warning.open_count == 0:
+            return "Offene Rechnungen: keine"
+        parts = [f"{warning.open_count} offen"]
+        if warning.overdue_count:
+            parts.append(f"{warning.overdue_count} überfällig")
+        if warning.due_count:
+            parts.append(f"{warning.due_count} heute fällig")
+        return f"Offene Rechnungen: {', '.join(parts)} · {self._money(warning.amount_cents)}"
 
     def _text(self, value: object) -> str:
         return str(value or "").strip()
