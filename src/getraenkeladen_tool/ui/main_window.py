@@ -32,8 +32,8 @@ MAIN_TABS = (
     "Rechnungen",
     "Verwaltung",
 )
-MAIN_WINDOW_INITIAL_SIZE = (1180, 760)
-MAIN_WINDOW_MINIMUM_SIZE = (900, 560)
+MAIN_WINDOW_INITIAL_SIZE = (1440, 860)
+MAIN_WINDOW_MINIMUM_SIZE = (1100, 680)
 BRAND_DIR = Path(__file__).resolve().parents[3] / "assets" / "brand"
 LOGO_PATH = BRAND_DIR / "logo_winklmeier.png"
 CLAIM_PATH = BRAND_DIR / "wir-bringens-einfach-schwarz.png"

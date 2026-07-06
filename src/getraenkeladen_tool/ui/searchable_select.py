@@ -31,7 +31,7 @@ class SearchableSelect(QWidget):
         self._current_value = None
         self.search_input = QLineEdit()
         self.search_input.setPlaceholderText(placeholder)
-        self.help_label = QLabel("Aus Liste waehlen oder Namen tippen.")
+        self.help_label = QLabel("Aus Liste wählen oder Namen tippen.")
         self.help_label.setObjectName("sectionSubtitle")
         self.result_list = QListWidget()
         self.result_list.setMaximumHeight(0)
@@ -89,7 +89,7 @@ class SearchableSelect(QWidget):
                 self.search_input.blockSignals(False)
                 self.result_list.clear()
                 self.result_list.setMaximumHeight(0)
-                self.help_label.setText("Ausgewaehlt. Zum Aendern einfach neuen Namen tippen.")
+                self.help_label.setText("Ausgewählt. Zum Ändern einfach neuen Namen tippen.")
                 self.selection_changed.emit()
                 return
         for row in range(self.result_list.count()):
@@ -107,12 +107,12 @@ class SearchableSelect(QWidget):
             if item.flags() & Qt.ItemFlag.ItemIsEnabled:
                 self._select_item(item)
                 return
-        self.help_label.setText("Kein Treffer gefunden. Bitte Suchtext pruefen.")
+        self.help_label.setText("Kein Treffer gefunden. Bitte Suchtext prüfen.")
 
     def _filter_items(self, text: str) -> None:
         self.result_list.clear()
         self.result_list.setMaximumHeight(self.DEFAULT_LIST_HEIGHT)
-        self.help_label.setText("Treffer in der Liste anklicken." if text.strip() else "Aus Liste waehlen oder Namen tippen.")
+        self.help_label.setText("Treffer in der Liste anklicken." if text.strip() else "Aus Liste wählen oder Namen tippen.")
         matches = filter_searchable_items(self._items, text)
         current_group = None
         for item in matches:
@@ -139,7 +139,7 @@ class SearchableSelect(QWidget):
 
         self._current_value = matches[0].value if len(matches) == 1 and text.strip() else None
         if len(matches) == 1 and text.strip():
-            self.help_label.setText("Eindeutiger Treffer. Sie koennen direkt weiterarbeiten.")
+            self.help_label.setText("Eindeutiger Treffer. Sie können direkt weiterarbeiten.")
         self.selection_changed.emit()
 
     def _select_item(self, item: QListWidgetItem) -> None:
@@ -150,5 +150,5 @@ class SearchableSelect(QWidget):
         self.search_input.setText(item.text())
         self.search_input.blockSignals(False)
         self.result_list.setMaximumHeight(0)
-        self.help_label.setText("Ausgewaehlt. Zum Aendern einfach neuen Namen tippen.")
+        self.help_label.setText("Ausgewählt. Zum Ändern einfach neuen Namen tippen.")
         self.selection_changed.emit()

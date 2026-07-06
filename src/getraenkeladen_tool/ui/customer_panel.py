@@ -40,7 +40,7 @@ CUSTOMER_PANEL_ACTIONS = {
     "loadCustomerButton": "Auswahl bearbeiten",
     "archiveCustomerButton": "Kunde archivieren",
     "restoreCustomerButton": "Kunde wiederherstellen",
-    "chooseCustomerFolderButton": "Ordner waehlen",
+    "chooseCustomerFolderButton": "Ordner wählen",
 }
 CUSTOMER_HELP_TEXT = (
     "Kunden: Hier pflegen Sie Stammdaten, Lieferhinweise und Kontakttermine.\n\n"
@@ -76,6 +76,7 @@ class CustomerPanel(QWidget):
         self.customer_name.setPlaceholderText("z. B. Cafe Nord")
         self.folder_path = QLineEdit()
         self.folder_path.setPlaceholderText("Kundenordner")
+        self.folder_path.setMinimumWidth(0)
         self.address = QLineEdit()
         self.next_contact_date = DateInput()
         self.delivery_notes = QLineEdit()
@@ -179,8 +180,10 @@ class CustomerPanel(QWidget):
         row = QWidget()
         layout = QHBoxLayout(row)
         layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(8)
         layout.addWidget(self.folder_path)
         self.choose_folder_button = self._button("chooseCustomerFolderButton")
+        self.choose_folder_button.setFixedWidth(150)
         self.choose_folder_button.clicked.connect(self.choose_folder)
         layout.addWidget(self.choose_folder_button)
         return row
@@ -212,7 +215,7 @@ class CustomerPanel(QWidget):
         return box, box.layout
 
     def choose_folder(self) -> None:
-        folder = QFileDialog.getExistingDirectory(self, "Kundenordner waehlen")
+        folder = QFileDialog.getExistingDirectory(self, "Kundenordner wählen")
         if folder:
             self.folder_path.setText(folder)
 

@@ -9,8 +9,8 @@ def test_main_window_exposes_task_oriented_tabs():
 
 
 def test_main_window_uses_resizable_screen_friendly_size():
-    assert MAIN_WINDOW_INITIAL_SIZE == (1180, 760)
-    assert MAIN_WINDOW_MINIMUM_SIZE == (900, 560)
+    assert MAIN_WINDOW_INITIAL_SIZE == (1440, 860)
+    assert MAIN_WINDOW_MINIMUM_SIZE == (1100, 680)
 
 
 def test_main_window_wraps_large_tabs_in_scroll_areas():
@@ -74,6 +74,7 @@ def test_theme_uses_winklmeier_work_tool_direction():
     assert "#c4312f" in APP_STYLESHEET
     assert "guidanceBox" in APP_STYLESHEET
     assert "sectionBox" in APP_STYLESHEET
+    assert "workTaskPanel" in APP_STYLESHEET
     assert "helpButton" in APP_STYLESHEET
     assert "sectionTitle" in APP_STYLESHEET
     assert "documentHeaderCard" in APP_STYLESHEET
@@ -480,7 +481,7 @@ def test_customer_tab_exposes_master_data_actions():
         "loadCustomerButton": "Auswahl bearbeiten",
         "archiveCustomerButton": "Kunde archivieren",
         "restoreCustomerButton": "Kunde wiederherstellen",
-        "chooseCustomerFolderButton": "Ordner waehlen",
+        "chooseCustomerFolderButton": "Ordner wählen",
     }
     assert CUSTOMER_PANEL_SECTIONS == ("1. Kunden erfassen", "2. Bestehende Kunden pruefen")
     assert CUSTOMER_GUIDANCE_STEPS == (

@@ -14,7 +14,7 @@ from PySide6.QtWidgets import (
 from ..services.customer_service import list_active_customers
 from ..services.report_service import DeliveryReturnWorkItem, list_open_delivery_returns
 from .date_input import to_display_date
-from .layouts import ContentSurface, PageHeader, WorkspaceCard
+from .layouts import ContentSurface, PageHeader
 from .searchable_select import SearchableSelect
 
 
@@ -31,7 +31,6 @@ class WorkStartPanel(QWidget):
         self.session_factory = session_factory
         self.return_items: list[DeliveryReturnWorkItem] = []
         self.customer_select = SearchableSelect("Kundenname eingeben, z. B. Metzgerei oder Cafe")
-        self.customer_select.setMinimumWidth(420)
         self.customer_select.selection_changed.connect(self.open_selected_customer)
 
         root_layout = QVBoxLayout(self)
@@ -51,62 +50,84 @@ class WorkStartPanel(QWidget):
         task_grid.setSpacing(16)
         task_grid.addWidget(self._customer_task(), 0, 0)
         task_grid.addWidget(self._returns_task(), 0, 1)
-        task_grid.setColumnStretch(0, 1)
+        task_grid.setColumnStretch(0, 2)
         task_grid.setColumnStretch(1, 1)
         layout.addLayout(task_grid)
         layout.addStretch()
 
         self.refresh()
 
+    def _task_panel(self, title: str, subtitle: str, kicker: str) -> tuple[QWidget, QVBoxLayout]:
+        panel = QWidget()
+        panel.setObjectName("workTaskPanel")
+        panel_layout = QVBoxLayout(panel)
+        panel_layout.setContentsMargins(18, 16, 18, 18)
+        panel_layout.setSpacing(10)
+
+        kicker_label = QLabel(kicker)
+        kicker_label.setObjectName("cardKicker")
+        panel_layout.addWidget(kicker_label)
+
+        title_label = QLabel(title)
+        title_label.setObjectName("sectionTitle")
+        panel_layout.addWidget(title_label)
+
+        subtitle_label = QLabel(subtitle)
+        subtitle_label.setObjectName("sectionSubtitle")
+        subtitle_label.setWordWrap(True)
+        panel_layout.addWidget(subtitle_label)
+        return panel, panel_layout
+
     def _customer_task(self) -> QWidget:
-        card = WorkspaceCard(
+        panel, panel_layout = self._task_panel(
             "Bestellung aufnehmen",
             "Kunde suchen, Hinweise prüfen und direkt eine neue Bestellung starten.",
-            tone="route",
-            kicker="KUNDENSUCHE",
+            "KUNDENSUCHE",
         )
         self.customer_empty_label = QLabel("Bitte erst Kunden importieren oder unter Verwaltung anlegen.")
         self.customer_empty_label.setObjectName("muted")
         self.customer_empty_label.setWordWrap(True)
-        card.layout.addWidget(self.customer_empty_label)
-        card.layout.addWidget(self.customer_select)
+        panel_layout.addWidget(self.customer_empty_label)
+        panel_layout.addWidget(self.customer_select)
 
         self.customer_search_button = QPushButton("Kundenbereich öffnen")
         self.customer_search_button.setObjectName("newOrderButton")
         self.customer_search_button.clicked.connect(self.customer_search_requested.emit)
-        card.layout.addWidget(self.customer_search_button)
-        return card
+        panel_layout.addWidget(self.customer_search_button)
+        panel_layout.addStretch()
+        return panel
 
     def _returns_task(self) -> QWidget:
-        card = WorkspaceCard(
+        panel, panel_layout = self._task_panel(
             "Offene Lieferschein-Rückläufe",
             "Zurückgebrachte Lieferscheine auswählen, Mengen prüfen und Rechnung erstellen.",
-            tone="document",
-            kicker="RÜCKLAUF",
+            "RÜCKLAUF",
         )
         self.returns_table = QTableWidget(0, len(RETURN_COLUMNS))
         self.returns_table.setHorizontalHeaderLabels(RETURN_COLUMNS)
+        self.returns_table.setMinimumWidth(320)
+        self.returns_table.setMinimumHeight(210)
         self.returns_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.returns_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.returns_table.verticalHeader().setVisible(False)
         self.returns_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
-        self.returns_table.setColumnWidth(1, 150)
-        self.returns_table.setColumnWidth(2, 110)
-        self.returns_table.setColumnWidth(3, 90)
+        self.returns_table.setColumnWidth(1, 118)
+        self.returns_table.setColumnWidth(2, 94)
+        self.returns_table.setColumnWidth(3, 72)
         self.returns_table.itemSelectionChanged.connect(self.update_return_button)
         self.returns_table.doubleClicked.connect(self.open_selected_return)
-        card.layout.addWidget(self.returns_table)
+        panel_layout.addWidget(self.returns_table)
 
         self.returns_empty_label = QLabel("Keine offenen Rückläufe.")
         self.returns_empty_label.setObjectName("muted")
         self.returns_empty_label.setWordWrap(True)
-        card.layout.addWidget(self.returns_empty_label)
+        panel_layout.addWidget(self.returns_empty_label)
 
         self.open_return_button = QPushButton("Rücklauf bearbeiten")
         self.open_return_button.setEnabled(False)
         self.open_return_button.clicked.connect(self.open_selected_return)
-        card.layout.addWidget(self.open_return_button)
-        return card
+        panel_layout.addWidget(self.open_return_button)
+        return panel
 
     def refresh(self) -> None:
         if self.session_factory is None:

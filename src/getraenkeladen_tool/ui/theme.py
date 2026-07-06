@@ -128,6 +128,7 @@ QListWidget#sidebarNavigation::item:hover {
 }
 
 QWidget#workspaceCard,
+QWidget#workTaskPanel,
 QWidget#sectionBox,
 QWidget#documentHeaderCard,
 QWidget#actionCard,
@@ -158,6 +159,13 @@ QWidget#dailyCockpitCard[tone="audit"],
 QWidget#workspaceCard[tone="document"] {
     border-top: 1px solid #d2d2d7;
     border-left: 1px solid #d2d2d7;
+}
+
+QWidget#workTaskPanel {
+    background: #ffffff;
+    border: 1px solid #d2d2d7;
+    border-radius: 10px;
+    padding: 0;
 }
 
 QWidget#workspaceCard:hover,

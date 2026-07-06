@@ -64,7 +64,7 @@ def test_searchable_select_guides_uncertain_users_to_click_a_result():
     select = SearchableSelect("Kunde suchen")
     select.set_items([("Cafe Nord", 1, "Muenchen"), ("Hotel Sued", 2, "Rosenheim")])
 
-    assert select.help_label.text() == "Aus Liste waehlen oder Namen tippen."
+    assert select.help_label.text() == "Aus Liste wählen oder Namen tippen."
 
     select.set_search_text("xyz")
 
@@ -84,7 +84,7 @@ def test_searchable_select_shows_initial_options_before_typing():
     assert select.result_list.count() == 2
     assert select.result_list.maximumHeight() == 190
     assert select.visible_labels() == ["Cafe Nord", "Hotel Sued"]
-    assert select.help_label.text() == "Aus Liste waehlen oder Namen tippen."
+    assert select.help_label.text() == "Aus Liste wählen oder Namen tippen."
 
 
 def test_searchable_select_does_not_auto_select_single_initial_option():
@@ -108,12 +108,12 @@ def test_searchable_select_collapses_results_after_selection_and_reopens_while_t
     select.select_value(1)
 
     assert select.search_input.text() == "Cafe Nord"
-    assert select.help_label.text() == "Ausgewaehlt. Zum Aendern einfach neuen Namen tippen."
+    assert select.help_label.text() == "Ausgewählt. Zum Ändern einfach neuen Namen tippen."
     assert select.result_list.maximumHeight() == 0
 
     select.set_search_text("Hotel")
 
-    assert select.help_label.text() == "Eindeutiger Treffer. Sie koennen direkt weiterarbeiten."
+    assert select.help_label.text() == "Eindeutiger Treffer. Sie können direkt weiterarbeiten."
     assert select.result_list.maximumHeight() == 190
     assert select.visible_labels() == ["Hotel Sued"]
 
@@ -131,7 +131,7 @@ def test_searchable_select_enter_accepts_first_visible_result():
     assert select.current_value() == 1
     assert select.search_input.text() == "Cafe Nord"
     assert select.result_list.maximumHeight() == 0
-    assert select.help_label.text() == "Ausgewaehlt. Zum Aendern einfach neuen Namen tippen."
+    assert select.help_label.text() == "Ausgewählt. Zum Ändern einfach neuen Namen tippen."
 
 
 def test_searchable_select_explains_single_match_is_ready_to_use():
@@ -144,7 +144,7 @@ def test_searchable_select_explains_single_match_is_ready_to_use():
     select.set_search_text("Classic")
 
     assert select.current_value() == 1
-    assert select.help_label.text() == "Eindeutiger Treffer. Sie koennen direkt weiterarbeiten."
+    assert select.help_label.text() == "Eindeutiger Treffer. Sie können direkt weiterarbeiten."
 
 
 def test_searchable_select_can_show_grouped_recommendations_before_all_items():

@@ -17,6 +17,16 @@ def test_work_start_panel_shows_customer_search_and_open_returns_tasks():
     assert "list_open_delivery_returns" in source
 
 
+def test_work_start_panel_uses_compact_task_panels_without_card_stretch():
+    source = Path("src/getraenkeladen_tool/ui/work_start_panel.py").read_text(encoding="utf-8")
+
+    assert "WorkspaceCard" not in source
+    assert 'panel.setObjectName("workTaskPanel")' in source
+    assert "task_grid.setColumnStretch(0, 2)" in source
+    assert "self.customer_select.setMinimumWidth" not in source
+    assert "self.returns_table.setMinimumWidth(320)" in source
+
+
 def test_main_window_opens_work_start_as_first_arbeiten_screen():
     source = Path("src/getraenkeladen_tool/ui/main_window.py").read_text(encoding="utf-8")
 
