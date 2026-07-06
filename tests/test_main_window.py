@@ -418,8 +418,20 @@ def test_customer_folder_request_opens_order_tab_not_customer_tab():
 
     assert "def open_new_order_for_customer" in source
     assert "self.open_orders_tab()" in source
+    assert "self.work_workspace.setCurrentWidget(self.order_panel)" in source
     assert "self.order_panel.open_new_order_for_customer(customer_id)" in source
     assert "self.open_customer_folder_tab()\n        self.order_panel.open_new_order_for_customer(customer_id)" not in source
+
+
+def test_main_window_embeds_order_intake_inside_arbeiten_workspace():
+    from pathlib import Path
+
+    source = Path("src/getraenkeladen_tool/ui/main_window.py").read_text(encoding="utf-8")
+
+    assert 'tabs.addTab(self.order_panel, "Bestellung")' in source
+    assert '"Bestellungen"' not in MAIN_TABS
+    assert '"Arbeiten": (self.refresh_active_work_panel,)' in source
+    assert "self.order_panel: (self.order_panel.refresh_orders,)" in source
 
 
 def test_main_window_opens_document_workflows_as_visible_dialogs_from_customer_folder():

@@ -106,6 +106,7 @@ Das Produktziel steht in `docs/zielbild.md`: ein schlankes lokales Windows-Buero
 - PRD-Meilenstein 1 begonnen: Die Hauptnavigation zeigt jetzt nur noch `Arbeiten`, `Rechnungen` und `Verwaltung`. `Heute` und `Kunden` liegen intern unter `Arbeiten`, das Belegarchiv liegt unter `Verwaltung`; Rechnungen/offene Posten bleiben direkt erreichbar. Volle Regression 281 Tests und `compileall src tests` erfolgreich.
 - `Arbeiten` hat eine neue Startfläche: links Kundensuche/Bestellaufnahme, rechts offene Lieferschein-Rückläufe aus Bestellungen mit erzeugtem Lieferschein und noch ohne Rechnung. Rückläufe können von dort direkt in den bestehenden Rechnungsdialog geöffnet werden; leere Zustände erklären den nächsten Schritt. Volle Regression 284 Tests und `compileall src tests` erfolgreich.
 - Kundenfokus in `Arbeiten` nachgeschärft: Im Kunden-Inspector stehen jetzt neben Adresse, Kontakt, Zahlart, Lieferhinweisen, letzten Mengen und Bestellungen auch kompakte Rechnungswarnungen für offene, fällige und überfällige Posten. Volle Regression 285 Tests und `compileall src tests` erfolgreich.
+- Bestellaufnahme ist jetzt inline in `Arbeiten`: `Neue Bestellung starten`, bestehende Bestellungen und Belegaktionen wechseln in den internen Tab `Bestellung`, ohne einen alten Top-Level-Bereich `Bestellungen` zu brauchen. Die vorhandene Erfassung mit empfohlenen Artikeln, 0-Mengen, Pfand-Rückgabe und Lieferschein/Rechnung bleibt erhalten. Volle Regression 286 Tests und `compileall src tests` erfolgreich.
 
 ## In Arbeit
 

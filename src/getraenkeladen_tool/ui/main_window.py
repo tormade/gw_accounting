@@ -120,6 +120,7 @@ class MainWindow(QMainWindow):
         self.navigation.setCurrentRow(MAIN_TABS.index("Verwaltung"))
 
     def open_orders_tab(self) -> None:
+        self.work_workspace.setCurrentWidget(self.order_panel)
         self.navigation.setCurrentRow(MAIN_TABS.index("Arbeiten"))
 
     def open_new_order_dialog(self) -> None:
@@ -181,6 +182,7 @@ class MainWindow(QMainWindow):
             self.work_start_panel: (self.work_start_panel.refresh,),
             self.dashboard_panel: (self.dashboard_panel.refresh_dashboard,),
             self.customer_folder_panel: (self.customer_folder_panel.refresh_customers,),
+            self.order_panel: (self.order_panel.refresh_orders,),
         }
         for refresh in refresh_handlers.get(current_panel, ()):
             refresh()
@@ -217,6 +219,7 @@ class MainWindow(QMainWindow):
         tabs.addTab(self.work_start_panel, "Start")
         tabs.addTab(self.dashboard_panel, "Heute")
         tabs.addTab(self.customer_folder_panel, "Kunden")
+        tabs.addTab(self.order_panel, "Bestellung")
         return tabs
 
     def _management_workspace(self) -> QTabWidget:
