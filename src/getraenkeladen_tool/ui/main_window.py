@@ -25,6 +25,7 @@ from .order_panel import OrderPanel
 from .product_panel import ProductPanel
 from .report_panel import ReportPanel
 from .settings_panel import SettingsPanel
+from .work_start_panel import WorkStartPanel
 
 
 MAIN_TABS = (
@@ -54,6 +55,7 @@ class MainWindow(QMainWindow):
         root_layout.setSpacing(0)
 
         self.dashboard_panel = DashboardPanel(session_factory=session_factory)
+        self.work_start_panel = WorkStartPanel(session_factory=session_factory)
         self.customer_folder_panel = CustomerFolderPanel(session_factory=session_factory)
         self.order_panel = OrderPanel(session_factory=session_factory)
         self.delivery_note_panel = DeliveryNotePanel(session_factory=session_factory)
@@ -84,6 +86,8 @@ class MainWindow(QMainWindow):
         self.order_panel.invoice_requested.connect(self.open_invoice_for_order)
         self.document_archive_panel.document_open_requested.connect(self.open_document_from_archive)
         self.document_archive_panel.order_open_requested.connect(self.open_order_for_id)
+        self.work_start_panel.customer_search_requested.connect(self.open_customer_folder_tab)
+        self.work_start_panel.return_selected.connect(self.open_invoice_for_order)
 
         app_shell = QWidget()
         app_shell.setObjectName("appShell")
@@ -174,6 +178,7 @@ class MainWindow(QMainWindow):
     def refresh_active_work_panel(self, _index: int | None = None) -> None:
         current_panel = self.work_workspace.currentWidget()
         refresh_handlers = {
+            self.work_start_panel: (self.work_start_panel.refresh,),
             self.dashboard_panel: (self.dashboard_panel.refresh_dashboard,),
             self.customer_folder_panel: (self.customer_folder_panel.refresh_customers,),
         }
@@ -209,6 +214,7 @@ class MainWindow(QMainWindow):
     def _work_workspace(self) -> QTabWidget:
         tabs = QTabWidget()
         tabs.setObjectName("workspaceTabs")
+        tabs.addTab(self.work_start_panel, "Start")
         tabs.addTab(self.dashboard_panel, "Heute")
         tabs.addTab(self.customer_folder_panel, "Kunden")
         return tabs

@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from pathlib import Path
 from dataclasses import dataclass
 
-from ..models import Customer, Document, OpenItem
+from ..models import Customer, Document, OpenItem, Order
 from .file_service import ensure_parent_folder
 
 
@@ -27,6 +27,16 @@ class InvoiceWorkItem:
     payment_method: str
     status: str
     status_bucket: str
+
+
+@dataclass(frozen=True, slots=True)
+class DeliveryReturnWorkItem:
+    order_id: int
+    order_number: str
+    customer_name: str
+    delivery_date: str
+    delivery_slot: str | None
+    delivery_note_number: str
 
 
 def get_dashboard_summary(session: Session, target_date: str) -> DashboardSummary:
@@ -65,6 +75,44 @@ def list_invoice_worklist(session: Session, status_filter: str = "offen", target
     if status_filter == "alle":
         return items
     return [item for item in items if item.status_bucket == status_filter or item.status == status_filter]
+
+
+def list_open_delivery_returns(session: Session) -> list[DeliveryReturnWorkItem]:
+    orders = session.scalars(
+        select(Order)
+        .where(Order.status == "lieferauftrag_erstellt")
+        .order_by(Order.delivery_date, Order.delivery_slot, Order.customer_id, Order.order_number)
+    )
+    items: list[DeliveryReturnWorkItem] = []
+    for order in orders:
+        invoice_exists = session.scalar(
+            select(Document.id)
+            .where(Document.order_id == order.id)
+            .where(Document.document_type == "Rechnung")
+            .limit(1)
+        )
+        if invoice_exists is not None:
+            continue
+        delivery_note = session.scalar(
+            select(Document)
+            .where(Document.order_id == order.id)
+            .where(Document.document_type == "Lieferschein")
+            .order_by(Document.id.desc())
+            .limit(1)
+        )
+        if delivery_note is None:
+            continue
+        items.append(
+            DeliveryReturnWorkItem(
+                order_id=order.id,
+                order_number=order.order_number,
+                customer_name=order.customer.name,
+                delivery_date=order.delivery_date,
+                delivery_slot=order.delivery_slot,
+                delivery_note_number=delivery_note.document_number,
+            )
+        )
+    return items
 
 
 def mark_open_item_paid(session: Session, open_item_id: int) -> OpenItem:

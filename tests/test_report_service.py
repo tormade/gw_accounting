@@ -1,8 +1,10 @@
 from pathlib import Path
 
-from getraenkeladen_tool.schemas import CustomerCreate, DocumentCreate, DocumentLineItem
+from getraenkeladen_tool.schemas import CustomerCreate, DocumentCreate, DocumentLineItem, OrderCreate, OrderLineCreate, ProductCreate
 from getraenkeladen_tool.services.customer_service import create_customer
 from getraenkeladen_tool.services.document_service import create_document
+from getraenkeladen_tool.services.order_service import create_order, create_order_delivery_order, create_order_invoice
+from getraenkeladen_tool.services.product_service import create_product
 from getraenkeladen_tool.services.report_service import (
     export_daily_deliveries_csv,
     export_due_contacts_csv,
@@ -11,6 +13,7 @@ from getraenkeladen_tool.services.report_service import (
     list_daily_deliveries,
     list_due_contacts,
     list_invoice_worklist,
+    list_open_delivery_returns,
     list_open_items,
     mark_open_item_partially_paid,
     mark_open_item_paid,
@@ -115,6 +118,45 @@ def test_invoice_worklist_filters_due_overdue_paid_and_partial_status(session, t
     assert [item.document_number for item in overdue_items] == ["RG-ALT"]
     assert [item.document_number for item in due_items] == ["RG-HEUTE"]
     assert [item.document_number for item in partial_items] == ["RG-SEPA"]
+
+
+def test_list_open_delivery_returns_shows_delivery_notes_without_invoice(session, tmp_path: Path):
+    customer = create_customer(
+        session,
+        CustomerCreate(name="Metzgerei Karl", folder_path=str(tmp_path / "Kunden" / "Metzgerei Karl")),
+    )
+    product = create_product(session, ProductCreate(name="Wasser 12x0,7", unit="Kiste", standard_price_cents=1299))
+    open_order = create_order(
+        session,
+        OrderCreate(
+            order_number="B-1001",
+            customer_id=customer.id,
+            order_date="2026-07-06",
+            delivery_date="2026-07-06",
+            delivery_slot="vormittag",
+            lines=[OrderLineCreate(product_id=product.id, quantity=4)],
+        ),
+    )
+    invoiced_order = create_order(
+        session,
+        OrderCreate(
+            order_number="B-1002",
+            customer_id=customer.id,
+            order_date="2026-07-06",
+            delivery_date="2026-07-06",
+            delivery_slot="nachmittag",
+            lines=[OrderLineCreate(product_id=product.id, quantity=2)],
+        ),
+    )
+    create_order_delivery_order(session, open_order.id, "LS-1001")
+    create_order_delivery_order(session, invoiced_order.id, "LS-1002")
+    create_order_invoice(session, invoiced_order.id, "RG-1002")
+
+    returns = list_open_delivery_returns(session)
+
+    assert [(item.order_number, item.customer_name, item.delivery_note_number, item.delivery_date) for item in returns] == [
+        ("B-1001", "Metzgerei Karl", "LS-1001", "2026-07-06")
+    ]
 
 
 def test_list_due_contacts_filters_by_target_date(session, tmp_path: Path):
