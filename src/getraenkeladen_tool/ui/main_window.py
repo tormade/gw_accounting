@@ -28,12 +28,9 @@ from .settings_panel import SettingsPanel
 
 
 MAIN_TABS = (
-    "Heute",
-    "Kunden",
-    "Bestellungen",
-    "Belege",
+    "Arbeiten",
     "Rechnungen",
-    "Stammdaten",
+    "Verwaltung",
 )
 MAIN_WINDOW_INITIAL_SIZE = (1180, 760)
 MAIN_WINDOW_MINIMUM_SIZE = (900, 560)
@@ -46,7 +43,7 @@ class MainWindow(QMainWindow):
     def __init__(self, session_factory=None) -> None:
         super().__init__()
         self.session_factory = session_factory
-        self.setWindowTitle("Getraenke Winklmeier")
+        self.setWindowTitle("Getränke Winklmeier")
         self.resize(*MAIN_WINDOW_INITIAL_SIZE)
         self.setMinimumSize(*MAIN_WINDOW_MINIMUM_SIZE)
         self.document_dialogs: list[QDialog] = []
@@ -67,15 +64,13 @@ class MainWindow(QMainWindow):
         self.document_archive_panel = DocumentArchivePanel(session_factory=session_factory)
         self.settings_panel = SettingsPanel(session_factory=session_factory)
         self.checklist_panel = ChecklistPanel(session_factory=session_factory)
-        self.master_data_workspace = self._master_data_workspace()
-        self._loaded_master_data_panels: set[QWidget] = set()
+        self.work_workspace = self._work_workspace()
+        self.management_workspace = self._management_workspace()
+        self._loaded_management_panels: set[QWidget] = set()
         self.refreshable_panels = {
-            "Heute": (self.dashboard_panel.refresh_dashboard,),
-            "Kunden": (self.customer_folder_panel.refresh_customers,),
-            "Bestellungen": (self.order_panel.refresh_orders,),
-            "Belege": (self.document_archive_panel.refresh_archive,),
+            "Arbeiten": (self.refresh_active_work_panel,),
             "Rechnungen": (self.open_items_panel.refresh_all_lists,),
-            "Stammdaten": (self.refresh_active_master_data_panel,),
+            "Verwaltung": (self.refresh_active_management_panel,),
         }
 
         self.dashboard_panel.new_delivery_requested.connect(self.open_customer_folder_tab)
@@ -97,32 +92,31 @@ class MainWindow(QMainWindow):
         shell_layout.setSpacing(0)
         self.navigation = SidebarNavigation(MAIN_TABS)
         self.pages = QStackedWidget()
-        self.pages.addWidget(self._scrollable_tab(self.dashboard_panel))
-        self.pages.addWidget(self._scrollable_tab(self.customer_folder_panel))
-        self.pages.addWidget(self._scrollable_tab(self.order_panel))
-        self.pages.addWidget(self._scrollable_tab(self.document_archive_panel))
+        self.pages.addWidget(self._scrollable_tab(self.work_workspace))
         self.pages.addWidget(self._scrollable_tab(self.open_items_panel))
-        self.pages.addWidget(self._scrollable_tab(self.master_data_workspace))
+        self.pages.addWidget(self._scrollable_tab(self.management_workspace))
         self.navigation.currentRowChanged.connect(self.pages.setCurrentIndex)
         self.navigation.currentRowChanged.connect(self.refresh_current_tab)
-        self.master_data_workspace.currentChanged.connect(self.refresh_active_master_data_panel)
+        self.work_workspace.currentChanged.connect(self.refresh_active_work_panel)
+        self.management_workspace.currentChanged.connect(self.refresh_active_management_panel)
         shell_layout.addWidget(self.navigation)
         shell_layout.addWidget(self.pages, 1)
         root_layout.addWidget(app_shell, 1)
         self.setCentralWidget(root)
 
     def open_customer_folder_tab(self) -> None:
-        self.navigation.setCurrentRow(MAIN_TABS.index("Kunden"))
+        self.work_workspace.setCurrentWidget(self.customer_folder_panel)
+        self.navigation.setCurrentRow(MAIN_TABS.index("Arbeiten"))
 
     def open_open_items_tab(self) -> None:
         self.navigation.setCurrentRow(MAIN_TABS.index("Rechnungen"))
 
     def open_checklist_tab(self) -> None:
-        self.master_data_workspace.setCurrentWidget(self.checklist_panel)
-        self.navigation.setCurrentRow(MAIN_TABS.index("Stammdaten"))
+        self.management_workspace.setCurrentWidget(self.checklist_panel)
+        self.navigation.setCurrentRow(MAIN_TABS.index("Verwaltung"))
 
     def open_orders_tab(self) -> None:
-        self.navigation.setCurrentRow(MAIN_TABS.index("Bestellungen"))
+        self.navigation.setCurrentRow(MAIN_TABS.index("Arbeiten"))
 
     def open_new_order_dialog(self) -> None:
         self.open_orders_tab()
@@ -177,22 +171,32 @@ class MainWindow(QMainWindow):
         for refresh in self.refreshable_panels.get(tab_name, ()):
             refresh()
 
-    def refresh_active_master_data_panel(self, _index: int | None = None) -> None:
-        current_panel = self.master_data_workspace.currentWidget()
-        if current_panel in self._loaded_master_data_panels:
+    def refresh_active_work_panel(self, _index: int | None = None) -> None:
+        current_panel = self.work_workspace.currentWidget()
+        refresh_handlers = {
+            self.dashboard_panel: (self.dashboard_panel.refresh_dashboard,),
+            self.customer_folder_panel: (self.customer_folder_panel.refresh_customers,),
+        }
+        for refresh in refresh_handlers.get(current_panel, ()):
+            refresh()
+
+    def refresh_active_management_panel(self, _index: int | None = None) -> None:
+        current_panel = self.management_workspace.currentWidget()
+        if current_panel in self._loaded_management_panels:
             return
         if hasattr(current_panel, "ensure_loaded"):
             current_panel.ensure_loaded()
-            self._loaded_master_data_panels.add(current_panel)
+            self._loaded_management_panels.add(current_panel)
             return
         refresh_handlers = {
             self.customer_panel: (self.customer_panel.refresh_customers,),
             self.product_panel: (self.product_panel.refresh_products,),
             self.checklist_panel: (self.checklist_panel.refresh_products, self.checklist_panel.refresh_issues),
+            self.document_archive_panel: (self.document_archive_panel.refresh_archive,),
         }
         for refresh in refresh_handlers.get(current_panel, ()):
             refresh()
-        self._loaded_master_data_panels.add(current_panel)
+        self._loaded_management_panels.add(current_panel)
 
     def _scrollable_tab(self, panel: QWidget) -> QScrollArea:
         scroll_area = QScrollArea()
@@ -202,13 +206,21 @@ class MainWindow(QMainWindow):
         scroll_area.setWidget(panel)
         return scroll_area
 
-    def _master_data_workspace(self) -> QTabWidget:
+    def _work_workspace(self) -> QTabWidget:
+        tabs = QTabWidget()
+        tabs.setObjectName("workspaceTabs")
+        tabs.addTab(self.dashboard_panel, "Heute")
+        tabs.addTab(self.customer_folder_panel, "Kunden")
+        return tabs
+
+    def _management_workspace(self) -> QTabWidget:
         tabs = QTabWidget()
         tabs.setObjectName("workspaceTabs")
         tabs.addTab(self.customer_panel, "Kunden")
         tabs.addTab(self.product_panel, "Artikel")
-        tabs.addTab(self.checklist_panel, "Pruefpunkte")
+        tabs.addTab(self.checklist_panel, "Prüfpunkte")
         tabs.addTab(self.settings_panel, "Import")
+        tabs.addTab(self.document_archive_panel, "Belegarchiv")
         return tabs
 
     def _panel(self, title: str, subtitle: str) -> QWidget:

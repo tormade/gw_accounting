@@ -42,9 +42,10 @@ def test_document_archive_panel_exposes_one_combined_document_list_and_actions()
 def test_main_window_wires_document_archive_workspace_for_users():
     source = Path("src/getraenkeladen_tool/ui/main_window.py").read_text(encoding="utf-8")
 
-    assert '"Belege"' in source
+    assert 'tabs.addTab(self.document_archive_panel, "Belegarchiv")' in source
+    assert '"Belege"' not in source
     assert "from .document_archive_panel import DocumentArchivePanel" in source
     assert "self.document_archive_panel = DocumentArchivePanel" in source
-    assert "self.pages.addWidget(self._scrollable_tab(self.document_archive_panel))" in source
+    assert "self.pages.addWidget(self._scrollable_tab(self.document_archive_panel))" not in source
     assert "self.document_archive_panel.document_open_requested.connect(self.open_document_from_archive)" in source
     assert "self.document_archive_panel.order_open_requested.connect(self.open_order_for_id)" in source

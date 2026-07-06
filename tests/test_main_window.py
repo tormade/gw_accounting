@@ -2,15 +2,10 @@ from getraenkeladen_tool.ui.main_window import CLAIM_PATH, LOGO_PATH, MAIN_TABS,
 from getraenkeladen_tool.ui.theme import APP_STYLESHEET
 
 
-def test_main_window_exposes_first_version_tabs():
-    assert MAIN_TABS == (
-        "Heute",
-        "Kunden",
-        "Bestellungen",
-        "Belege",
-        "Rechnungen",
-        "Stammdaten",
-    )
+def test_main_window_exposes_task_oriented_tabs():
+    assert MAIN_TABS == ("Arbeiten", "Rechnungen", "Verwaltung")
+    assert "Bestellungen" not in MAIN_TABS
+    assert "Belege" not in MAIN_TABS
 
 
 def test_main_window_uses_resizable_screen_friendly_size():
@@ -53,9 +48,9 @@ def test_dashboard_quick_actions_open_customer_folder_workspace():
     assert "def open_customer_folder_tab" in source
     assert "def open_open_items_tab" in source
     assert "def open_checklist_tab" in source
-    assert 'MAIN_TABS.index("Kunden")' in source
+    assert 'MAIN_TABS.index("Arbeiten")' in source
     assert 'MAIN_TABS.index("Rechnungen")' in source
-    assert 'MAIN_TABS.index("Stammdaten")' in source
+    assert 'MAIN_TABS.index("Verwaltung")' in source
 
 
 def test_main_window_removes_global_header_toolbar_in_favor_of_page_headers():
@@ -244,14 +239,15 @@ def test_target_state_navigation_prioritizes_customer_folder_path():
 
     source = Path("src/getraenkeladen_tool/ui/main_window.py").read_text(encoding="utf-8")
 
-    assert '"Heute"' in source
-    assert '"Kunden"' in source
-    assert '"Bestellungen"' in source
-    assert '"Belege"' in source
-    assert '"Rechnungen"' in source
+    assert MAIN_TABS == ("Arbeiten", "Rechnungen", "Verwaltung")
+    assert "Heute" not in MAIN_TABS
+    assert "Bestellungen" not in MAIN_TABS
+    assert "Belege" not in MAIN_TABS
+    assert 'tabs.addTab(self.dashboard_panel, "Heute")' in source
+    assert 'tabs.addTab(self.customer_folder_panel, "Kunden")' in source
     assert '"Kunde & Bestellung"' not in source
     assert '"Auftraege"' not in source
-    assert 'MAIN_TABS.index("Kunden")' in source
+    assert 'MAIN_TABS.index("Arbeiten")' in source
 
 
 def test_main_window_uses_real_checklist_panel_for_migration_conflicts():
@@ -261,7 +257,7 @@ def test_main_window_uses_real_checklist_panel_for_migration_conflicts():
 
     assert "from .checklist_panel import ChecklistPanel" in source
     assert "self.checklist_panel = ChecklistPanel(session_factory=session_factory)" in source
-    assert 'tabs.addTab(self.checklist_panel, "Pruefpunkte")' in source
+    assert 'tabs.addTab(self.checklist_panel, "Prüfpunkte")' in source
     assert 'self._panel(\n            "Pruefliste"' not in source
 
 
@@ -404,7 +400,8 @@ def test_main_window_embeds_customer_folder_as_second_page_and_wires_actions():
 
     assert "from .customer_folder_panel import CustomerFolderPanel" in source
     assert "self.customer_folder_panel = CustomerFolderPanel(session_factory=session_factory)" in source
-    assert "self.pages.addWidget(self._scrollable_tab(self.customer_folder_panel))" in source
+    assert "self.pages.addWidget(self._scrollable_tab(self.work_workspace))" in source
+    assert 'tabs.addTab(self.customer_folder_panel, "Kunden")' in source
     assert "self.customer_folder_panel.new_order_requested.connect(self.open_new_order_for_customer)" in source
     assert "self.order_panel.open_new_order_for_customer(customer_id)" in source
     assert "self.customer_folder_panel.delivery_note_requested.connect(self.open_delivery_note_for_order)" in source
@@ -601,7 +598,7 @@ def test_dashboard_primary_action_opens_customer_folder_tab():
     source = Path("src/getraenkeladen_tool/ui/main_window.py").read_text(encoding="utf-8")
 
     assert "new_delivery_requested.connect(self.open_customer_folder_tab)" in source
-    assert 'MAIN_TABS.index("Kunden")' in source
+    assert 'MAIN_TABS.index("Arbeiten")' in source
 
 
 def test_dashboard_quick_actions_open_customer_folder_workspace_signals():
@@ -617,7 +614,7 @@ def test_dashboard_quick_actions_open_customer_folder_workspace_signals():
     assert "invoice_requested = Signal()" not in dashboard_source
     assert "open_items_requested.connect(self.open_open_items_tab)" in main_source
     assert "checklist_requested.connect(self.open_checklist_tab)" in main_source
-    assert 'MAIN_TABS.index("Kunden")' in main_source
+    assert 'MAIN_TABS.index("Arbeiten")' in main_source
 
 
 def test_order_manage_actions_open_delivery_or_invoice_with_selected_order():
@@ -651,18 +648,18 @@ def test_main_window_refreshes_tab_data_when_user_switches_tabs():
     assert "refresh_customers" in source
 
 
-def test_main_window_refreshes_only_active_master_data_panel():
+def test_main_window_refreshes_only_active_management_panel():
     from pathlib import Path
 
     source = Path("src/getraenkeladen_tool/ui/main_window.py").read_text(encoding="utf-8")
 
-    assert '"Stammdaten": (self.refresh_active_master_data_panel,)' in source
-    assert "self.master_data_workspace.currentChanged.connect(self.refresh_active_master_data_panel)" in source
-    assert "def refresh_active_master_data_panel" in source
-    assert '"Stammdaten": (self.customer_panel.refresh_customers, self.product_panel.refresh_products)' not in source
+    assert '"Verwaltung": (self.refresh_active_management_panel,)' in source
+    assert "self.management_workspace.currentChanged.connect(self.refresh_active_management_panel)" in source
+    assert "def refresh_active_management_panel" in source
+    assert '"Verwaltung": (self.customer_panel.refresh_customers, self.product_panel.refresh_products)' not in source
 
 
-def test_master_data_panels_load_lazily_once_to_keep_tab_switch_fast():
+def test_management_panels_load_lazily_once_to_keep_tab_switch_fast():
     import ast
     from pathlib import Path
 
@@ -686,10 +683,10 @@ def test_master_data_panels_load_lazily_once_to_keep_tab_switch_fast():
     product_source = Path("src/getraenkeladen_tool/ui/product_panel.py").read_text(encoding="utf-8")
     checklist_source = Path("src/getraenkeladen_tool/ui/checklist_panel.py").read_text(encoding="utf-8")
 
-    assert "self._loaded_master_data_panels: set[QWidget] = set()" in main_source
-    assert "if current_panel in self._loaded_master_data_panels:" in main_source
+    assert "self._loaded_management_panels: set[QWidget] = set()" in main_source
+    assert "if current_panel in self._loaded_management_panels:" in main_source
     assert "current_panel.ensure_loaded()" in main_source
-    assert "self._loaded_master_data_panels.add(current_panel)" in main_source
+    assert "self._loaded_management_panels.add(current_panel)" in main_source
 
     assert "self.has_loaded = False" in customer_source
     assert "def ensure_loaded" in customer_source
@@ -705,7 +702,7 @@ def test_master_data_panels_load_lazily_once_to_keep_tab_switch_fast():
     assert not init_calls_refresh(checklist_source, "ChecklistPanel", "refresh_issues")
 
 
-def test_checklist_shortcut_selects_subtab_before_master_data_refresh():
+def test_checklist_shortcut_selects_subtab_before_management_refresh():
     from pathlib import Path
 
     source = Path("src/getraenkeladen_tool/ui/main_window.py").read_text(encoding="utf-8")
@@ -713,8 +710,8 @@ def test_checklist_shortcut_selects_subtab_before_master_data_refresh():
     method_end = source.index("    def open_orders_tab", method_start)
     method_source = source[method_start:method_end]
 
-    assert method_source.index("self.master_data_workspace.setCurrentWidget(self.checklist_panel)") < method_source.index(
-        'self.navigation.setCurrentRow(MAIN_TABS.index("Stammdaten"))'
+    assert method_source.index("self.management_workspace.setCurrentWidget(self.checklist_panel)") < method_source.index(
+        'self.navigation.setCurrentRow(MAIN_TABS.index("Verwaltung"))'
     )
 
 
