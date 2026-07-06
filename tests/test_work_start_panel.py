@@ -22,4 +22,16 @@ def test_main_window_opens_work_start_as_first_arbeiten_screen():
     assert "self.work_start_panel = WorkStartPanel(session_factory=session_factory)" in source
     assert 'tabs.addTab(self.work_start_panel, "Start")' in source
     assert "self.work_start_panel.customer_search_requested.connect(self.open_customer_folder_tab)" in source
-    assert "self.work_start_panel.return_selected.connect(self.open_invoice_for_order)" in source
+    assert "self.work_start_panel.return_selected.connect(self.open_return_for_order)" in source
+    assert "self.return_invoice_panel = ReturnInvoicePanel(session_factory=session_factory)" in source
+    assert 'tabs.addTab(self.return_invoice_panel, "Rücklauf")' in source
+    assert "def open_return_for_order" in source
+    assert "self.return_invoice_panel.select_order(order_id)" in source
+
+
+def test_return_invoice_panel_uses_return_language():
+    source = Path("src/getraenkeladen_tool/ui/document_workflow_panel.py").read_text(encoding="utf-8")
+
+    assert "class ReturnInvoicePanel(InvoicePanel)" in source
+    assert 'page_title = "Rücklauf bearbeiten und Rechnung erstellen"' in source
+    assert 'create_both_button_text = "Rechnung aus Rücklauf als Excel + PDF erstellen"' in source

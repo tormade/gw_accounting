@@ -448,6 +448,17 @@ def test_main_window_opens_document_workflows_as_visible_dialogs_from_customer_f
     assert "self._open_document_dialog(InvoicePanel, order_id, \"Rechnung erstellen\")" in source
 
 
+def test_main_window_opens_returns_inside_arbeiten_workspace():
+    from pathlib import Path
+
+    source = Path("src/getraenkeladen_tool/ui/main_window.py").read_text(encoding="utf-8")
+
+    assert "def open_return_for_order" in source
+    assert "self.work_workspace.setCurrentWidget(self.return_invoice_panel)" in source
+    assert "self.return_invoice_panel.select_order(order_id)" in source
+    assert "self.return_invoice_panel.document_created.connect(self.open_work_start_tab)" in source
+
+
 def test_customer_tab_exposes_master_data_actions():
     from getraenkeladen_tool.ui.customer_panel import (
         CUSTOMER_COLUMNS,

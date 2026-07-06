@@ -19,7 +19,7 @@ from .customer_folder_panel import CustomerFolderPanel
 from .customer_panel import CustomerPanel
 from .dashboard_panel import DashboardPanel
 from .document_archive_panel import DocumentArchivePanel
-from .document_workflow_panel import DeliveryNotePanel, InvoicePanel
+from .document_workflow_panel import DeliveryNotePanel, InvoicePanel, ReturnInvoicePanel
 from .layouts import SidebarNavigation
 from .order_panel import OrderPanel
 from .product_panel import ProductPanel
@@ -60,6 +60,7 @@ class MainWindow(QMainWindow):
         self.order_panel = OrderPanel(session_factory=session_factory)
         self.delivery_note_panel = DeliveryNotePanel(session_factory=session_factory)
         self.invoice_panel = InvoicePanel(session_factory=session_factory)
+        self.return_invoice_panel = ReturnInvoicePanel(session_factory=session_factory)
         self.customer_panel = CustomerPanel(session_factory=session_factory)
         self.product_panel = ProductPanel(session_factory=session_factory)
         self.open_items_panel = ReportPanel(session_factory=session_factory)
@@ -87,7 +88,8 @@ class MainWindow(QMainWindow):
         self.document_archive_panel.document_open_requested.connect(self.open_document_from_archive)
         self.document_archive_panel.order_open_requested.connect(self.open_order_for_id)
         self.work_start_panel.customer_search_requested.connect(self.open_customer_folder_tab)
-        self.work_start_panel.return_selected.connect(self.open_invoice_for_order)
+        self.work_start_panel.return_selected.connect(self.open_return_for_order)
+        self.return_invoice_panel.document_created.connect(self.open_work_start_tab)
 
         app_shell = QWidget()
         app_shell.setObjectName("appShell")
@@ -110,6 +112,11 @@ class MainWindow(QMainWindow):
 
     def open_customer_folder_tab(self) -> None:
         self.work_workspace.setCurrentWidget(self.customer_folder_panel)
+        self.navigation.setCurrentRow(MAIN_TABS.index("Arbeiten"))
+
+    def open_work_start_tab(self) -> None:
+        self.work_workspace.setCurrentWidget(self.work_start_panel)
+        self.work_start_panel.refresh()
         self.navigation.setCurrentRow(MAIN_TABS.index("Arbeiten"))
 
     def open_open_items_tab(self) -> None:
@@ -145,6 +152,11 @@ class MainWindow(QMainWindow):
     def open_invoice_for_order(self, order_id: int) -> None:
         self.open_orders_tab()
         self._open_document_dialog(InvoicePanel, order_id, "Rechnung erstellen")
+
+    def open_return_for_order(self, order_id: int) -> None:
+        self.work_workspace.setCurrentWidget(self.return_invoice_panel)
+        self.navigation.setCurrentRow(MAIN_TABS.index("Arbeiten"))
+        self.return_invoice_panel.select_order(order_id)
 
     def _open_document_dialog(self, panel_class, order_id: int, title: str) -> None:
         dialog = QDialog(self)
@@ -183,6 +195,7 @@ class MainWindow(QMainWindow):
             self.dashboard_panel: (self.dashboard_panel.refresh_dashboard,),
             self.customer_folder_panel: (self.customer_folder_panel.refresh_customers,),
             self.order_panel: (self.order_panel.refresh_orders,),
+            self.return_invoice_panel: (self.return_invoice_panel.refresh_orders,),
         }
         for refresh in refresh_handlers.get(current_panel, ()):
             refresh()
@@ -220,6 +233,7 @@ class MainWindow(QMainWindow):
         tabs.addTab(self.dashboard_panel, "Heute")
         tabs.addTab(self.customer_folder_panel, "Kunden")
         tabs.addTab(self.order_panel, "Bestellung")
+        tabs.addTab(self.return_invoice_panel, "Rücklauf")
         return tabs
 
     def _management_workspace(self) -> QTabWidget:

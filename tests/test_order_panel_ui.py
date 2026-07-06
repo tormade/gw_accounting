@@ -167,6 +167,16 @@ def test_order_panel_uses_single_editable_quantity_list_for_new_order():
     assert "new_order_layout.addWidget(line_box)" not in source
 
 
+def test_order_panel_confirms_direct_invoice_before_emitting_signal():
+    source = Path("src/getraenkeladen_tool/ui/order_panel.py").read_text(encoding="utf-8")
+
+    assert "def confirm_instant_invoice" in source
+    assert "Sofort-Rechnung erstellen?" in source
+    assert "überspringt den Rücklauf" in source
+    assert "Mengen und Pfand-Rückgabe bereits final" in source
+    assert "if not self.confirm_instant_invoice():" in source
+
+
 def test_order_panel_prefills_zero_quantity_assortment_lines_as_empty_order_placeholders(session):
     _app()
     from getraenkeladen_tool.models import Customer, CustomerAssortmentItem, Product
@@ -501,6 +511,7 @@ def test_order_panel_document_actions_use_loaded_order_when_table_selection_is_e
     emitted_invoice_order_ids = []
     panel.current_order_id = 42
     panel.orders_table.clearSelection()
+    panel.confirm_instant_invoice = lambda: True
     panel.delivery_note_requested.connect(emitted_delivery_order_ids.append)
     panel.invoice_requested.connect(emitted_invoice_order_ids.append)
 

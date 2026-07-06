@@ -462,9 +462,23 @@ class OrderPanel(QWidget):
         if selected_button == delivery_button:
             self.delivery_note_requested.emit(order_id)
         elif selected_button == invoice_button:
-            self.invoice_requested.emit(order_id)
+            if self.confirm_instant_invoice():
+                self.invoice_requested.emit(order_id)
         elif selected_button == new_order_button:
             self.open_new_order_dialog()
+
+    def confirm_instant_invoice(self) -> bool:
+        answer = QMessageBox.question(
+            self,
+            "Sofort-Rechnung erstellen?",
+            "Diese Rechnung überspringt den Rücklauf. Bitte nur fortfahren, wenn Mengen und Pfand-Rückgabe bereits final sind.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if answer != QMessageBox.StandardButton.Yes:
+            self.status_label.setText("Sofort-Rechnung abgebrochen. Standardweg: Lieferschein erstellen.")
+            return False
+        return True
 
     def reset_order_form(self) -> None:
         self.current_order_id = None
@@ -1036,6 +1050,8 @@ class OrderPanel(QWidget):
         order_id = self._selected_or_loaded_order_id()
         if order_id is None:
             self.status_label.setText("Bitte zuerst eine Bestellung aus der Liste auswaehlen.")
+            return
+        if not self.confirm_instant_invoice():
             return
         self.invoice_requested.emit(order_id)
 

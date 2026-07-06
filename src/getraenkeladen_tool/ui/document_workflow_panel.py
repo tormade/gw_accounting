@@ -1,7 +1,7 @@
 from pathlib import Path
 from datetime import date, timedelta
 
-from PySide6.QtCore import Qt, QUrl
+from PySide6.QtCore import Qt, QUrl, Signal
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
     QComboBox,
@@ -41,6 +41,7 @@ DOCUMENT_LINE_COLUMNS = ("Artikel", "Menge", "Preis je Einheit EUR", "Pfand je E
 DOCUMENT_RETURN_COLUMNS = ("Pfandart", "Menge", "Pfand EUR", "Gutschrift EUR")
 
 class DocumentWorkflowPanel(QWidget):
+    document_created = Signal(int)
     document_type = ""
     document_singular = ""
     page_title = ""
@@ -372,6 +373,7 @@ class DocumentWorkflowPanel(QWidget):
         self.status_label.setText(
             f"Erfolgreich erstellt: {self._document_name()} {document.document_number} als {asset_label}. {check_text}"
         )
+        self.document_created.emit(document.id)
         QMessageBox.information(
             self,
             f"{self._document_name()} erstellt",
@@ -677,3 +679,8 @@ class InvoicePanel(DocumentWorkflowPanel):
             datev_upload_dir=Path.cwd() / "outputs" / "datev_upload",
             assets=assets,
         )
+
+
+class ReturnInvoicePanel(InvoicePanel):
+    page_title = "Rücklauf bearbeiten und Rechnung erstellen"
+    create_both_button_text = "Rechnung aus Rücklauf als Excel + PDF erstellen"
