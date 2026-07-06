@@ -67,6 +67,12 @@ class SearchableSelect(QWidget):
     def set_search_text(self, text: str) -> None:
         self.search_input.setText(text)
 
+    def clear_selection(self, help_text: str | None = None) -> None:
+        self._current_value = None
+        self.search_input.setText("")
+        if help_text is not None:
+            self.help_label.setText(help_text)
+
     def visible_labels(self) -> list[str]:
         return [
             self.result_list.item(row).text()

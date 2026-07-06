@@ -59,3 +59,17 @@ Plan -> Entwickeln -> Testen -> Review -> Debuggen -> Anwender-Smoke -> Commit -
 - Erwartete Golden-Werte: Lieferwert 234,28 EUR, Pfand-Rueckgabe -47,90 EUR, Brutto 186,38 EUR, Netto 156,62 EUR, MwSt 29,76 EUR, Lieferpauschale 0.
 - Zeilenprobe: Frucade Colamix, Menge 3, Pfand 3,10 EUR, Preis 10,48 EUR -> 40,74 EUR.
 - Ueberweiser-Beispiel muss spaeter Fusstext Ueberweisung und Faelligkeit Datum + 7 erkennen.
+
+## Agent skills
+
+### Issue tracker
+
+Issues and PRDs are tracked in GitHub Issues for `tormade/gw_accounting`; external pull requests are not a triage request surface. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+The repo uses the standard Matt Pocock skill label vocabulary: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, and `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+This is a single-context repo: engineering skills should read root-level `CONTEXT.md` when present and ADRs in `docs/adr/` when relevant. See `docs/agents/domain.md`.

@@ -511,6 +511,73 @@ def test_order_panel_document_actions_use_loaded_order_when_table_selection_is_e
     assert emitted_invoice_order_ids == [42]
 
 
+def test_order_panel_reselects_saved_order_after_refresh_even_when_old_row_was_selected(session):
+    _app()
+    from getraenkeladen_tool.models import Customer, Order
+    from getraenkeladen_tool.ui.order_panel import OrderPanel
+
+    customer = Customer(name="Cafe Nord", folder_path="/tmp/Cafe Nord", is_active=True)
+    session.add(customer)
+    session.flush()
+    old_order = Order(
+        order_number="AUF-1010",
+        customer_id=customer.id,
+        order_date="2026-06-23",
+        delivery_date="2026-06-23",
+        status="geplant",
+    )
+    saved_order = Order(
+        order_number="1237",
+        customer_id=customer.id,
+        order_date="2026-07-05",
+        delivery_date="2026-07-05",
+        status="lieferauftrag_erstellt",
+    )
+    session.add_all([old_order, saved_order])
+    session.flush()
+    saved_order_id = saved_order.id
+    session.commit()
+
+    panel = OrderPanel(session_factory=lambda: session)
+    panel.orders_table.setCurrentCell(0, 0)
+    panel.current_order_id = saved_order_id
+
+    panel.refresh_orders()
+
+    selected_order_number = panel.orders_table.item(panel.orders_table.currentRow(), 0).text()
+    assert selected_order_number == "1237"
+
+
+def test_order_panel_clears_product_picker_after_adding_line_for_next_mouse_selection(session):
+    _app()
+    from getraenkeladen_tool.models import Product
+    from getraenkeladen_tool.ui.order_panel import OrderPanel
+
+    product = Product(
+        name="Wasser 12x0,7",
+        unit="Kiste",
+        standard_price_cents=1299,
+        default_deposit_cents=330,
+        is_active=True,
+    )
+    session.add(product)
+    session.commit()
+
+    panel = OrderPanel(session_factory=lambda: session)
+    panel.product_select.select_value(product.id)
+    panel.quantity.setValue(2)
+
+    panel.add_order_line()
+
+    assert panel.order_lines_table.rowCount() == 1
+    assert panel.product_select.current_value() is None
+    assert panel.product_select.search_input.text() == ""
+    assert panel.product_select.result_list.maximumHeight() == panel.product_select.DEFAULT_LIST_HEIGHT
+    assert panel.quantity.value() == 0
+    assert panel.unit_price_eur.text() == ""
+    assert panel.deposit_eur.text() == ""
+
+
 def test_document_workflow_uses_compact_order_search_instead_of_large_order_list():
     source = Path("src/getraenkeladen_tool/ui/document_workflow_panel.py").read_text(encoding="utf-8")
 

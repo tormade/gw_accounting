@@ -782,6 +782,10 @@ class OrderPanel(QWidget):
             deposit_cents,
             product.id,
         )
+        self.product_select.clear_selection("Naechsten Artikel aus der Liste anklicken.")
+        self.quantity.setValue(0)
+        self.unit_price_eur.clear()
+        self.deposit_eur.clear()
         self.status_label.setText("Position hinzugefuegt. Weitere Positionen erfassen oder Bestellung speichern.")
 
     def apply_suggested_order_number(self) -> None:
@@ -944,6 +948,7 @@ class OrderPanel(QWidget):
             for column, value in enumerate(values):
                 self.orders_table.setItem(row, column, QTableWidgetItem(value))
         self.apply_order_table_search()
+        self._select_order_row(self.current_order_id)
         self.status_label.setText(f"{len(orders)} Bestellungen geladen.")
 
     def apply_order_table_search(self) -> None:
@@ -1121,6 +1126,17 @@ class OrderPanel(QWidget):
     def _selected_order_id(self) -> int | None:
         row = self.orders_table.currentRow()
         return self.order_ids_by_row.get(row)
+
+    def _select_order_row(self, order_id: int | None) -> None:
+        if order_id is None:
+            return
+        for row, candidate_order_id in self.order_ids_by_row.items():
+            if candidate_order_id == order_id and not self.orders_table.isRowHidden(row):
+                self.orders_table.setCurrentCell(row, 0)
+                item = self.orders_table.item(row, 0)
+                if item is not None:
+                    self.orders_table.scrollToItem(item)
+                return
 
     def _selected_or_loaded_order_id(self) -> int | None:
         return self._selected_order_id() or self.current_order_id
