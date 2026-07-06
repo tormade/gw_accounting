@@ -35,7 +35,7 @@ CUSTOMER_PANEL_ACTIONS = {
     "newCustomerButton": "Neu",
     "saveCustomerButton": "Kunde speichern",
     "discardCustomerChangesButton": "Verwerfen",
-    "undoCustomerChangeButton": "Rueckgaengig",
+    "undoCustomerChangeButton": "Rückgängig",
     "refreshCustomersButton": "Kundenliste laden",
     "loadCustomerButton": "Auswahl bearbeiten",
     "archiveCustomerButton": "Kunde archivieren",
@@ -45,15 +45,15 @@ CUSTOMER_PANEL_ACTIONS = {
 CUSTOMER_HELP_TEXT = (
     "Kunden: Hier pflegen Sie Stammdaten, Lieferhinweise und Kontakttermine.\n\n"
     "Links erfassen oder bearbeiten Sie einen Kunden. Rechts finden Sie bestehende Kunden.\n\n"
-    "Archivieren blendet Kunden aus dem Alltag aus, loescht sie aber nicht endgueltig."
+    "Archivieren blendet Kunden aus dem Alltag aus, löscht sie aber nicht endgültig."
 )
 
-CUSTOMER_COLUMNS = ("Name", "Adresse", "Naechster Kontakt", "Status")
-CUSTOMER_PANEL_SECTIONS = ("1. Kunden erfassen", "2. Bestehende Kunden pruefen")
+CUSTOMER_COLUMNS = ("Name", "Adresse", "Nächster Kontakt", "Status")
+CUSTOMER_PANEL_SECTIONS = ("1. Kunden erfassen", "2. Bestehende Kunden prüfen")
 CUSTOMER_GUIDANCE_STEPS = (
-    "Neuen Kunden links eintragen oder unten einen Kunden auswaehlen.",
+    "Neuen Kunden links eintragen oder unten einen Kunden auswählen.",
     "Mit Auswahl bearbeiten Stammdaten in das Formular laden.",
-    "Aenderungen koennen vor dem Speichern verworfen werden.",
+    "Änderungen können vor dem Speichern verworfen werden.",
 )
 CUSTOMER_CONTEXT_ACTIONS = {
     "edit": "Kunde bearbeiten",
@@ -102,7 +102,7 @@ class CustomerPanel(QWidget):
 
         edit_box, edit_layout = self._section(
             CUSTOMER_PANEL_SECTIONS[0],
-            "Pflicht ist der Kundenname. Ordner, Lieferhinweise und Kontakttermin helfen spaeter beim Tagesablauf.",
+            "Pflicht ist der Kundenname. Ordner, Lieferhinweise und Kontakttermin helfen später beim Tagesablauf.",
             tone="route",
             kicker="KUNDENKARTE",
         )
@@ -112,7 +112,7 @@ class CustomerPanel(QWidget):
         form.addRow("Kunde", self.customer_name)
         form.addRow("Kundenordner", self._folder_row())
         form.addRow("Adresse", self.address)
-        form.addRow("Naechster Kontakt", self.next_contact_date)
+        form.addRow("Nächster Kontakt", self.next_contact_date)
         form.addRow("Lieferhinweise", self.delivery_notes)
         edit_layout.addLayout(form)
 
@@ -136,7 +136,7 @@ class CustomerPanel(QWidget):
         edit_layout.addLayout(correction_row)
         list_box, list_layout = self._section(
             CUSTOMER_PANEL_SECTIONS[1],
-            "Kunden unten anklicken. Archivieren blendet sie aus dem Alltag aus, Wiederherstellen holt sie zurueck.",
+            "Kunden unten anklicken. Archivieren blendet sie aus dem Alltag aus, Wiederherstellen holt sie zurück.",
             tone="document",
             kicker="KUNDENSTAMM",
         )
@@ -272,7 +272,7 @@ class CustomerPanel(QWidget):
     def load_selected_customer(self) -> None:
         customer_id = self._selected_customer_id()
         if customer_id is None or self.session_factory is None:
-            self.status_label.setText("Bitte zuerst einen Kunden auswaehlen.")
+            self.status_label.setText("Bitte zuerst einen Kunden auswählen.")
             return
 
         session = self.session_factory()
@@ -301,27 +301,27 @@ class CustomerPanel(QWidget):
     def undo_last_change(self) -> None:
         customer_id = self.current_customer_id or self._selected_customer_id()
         if customer_id is None or self.session_factory is None:
-            self.status_label.setText("Bitte zuerst einen Kunden auswaehlen.")
+            self.status_label.setText("Bitte zuerst einen Kunden auswählen.")
             return
 
         session = self.session_factory()
         try:
             changes = [change for change in list_customer_changes(session, customer_id) if change.action != "revert"]
             if not changes:
-                self.status_label.setText("Keine Aenderung zum Rueckgaengigmachen gefunden.")
+                self.status_label.setText("Keine Änderung zum Rückgängigmachen gefunden.")
                 return
             customer = revert_customer_change(session, changes[0].id)
             self.current_customer_id = customer.id
             self.show_customers(list_customers(session))
             self.loaded_form_snapshot = self._snapshot_from_customer(customer)
-            self.status_label.setText(f"Letzte Aenderung rueckgaengig gemacht: {customer.name}")
+            self.status_label.setText(f"Letzte Änderung rückgängig gemacht: {customer.name}")
         finally:
             session.close()
 
     def _set_selected_customer_active(self, active: bool) -> None:
         customer_id = self._selected_customer_id()
         if customer_id is None or self.session_factory is None:
-            self.status_label.setText("Bitte zuerst einen Kunden auswaehlen.")
+            self.status_label.setText("Bitte zuerst einen Kunden auswählen.")
             return
 
         session = self.session_factory()
@@ -355,14 +355,14 @@ class CustomerPanel(QWidget):
         self.next_contact_date.set_iso_date(None)
         self.delivery_notes.clear()
         self.loaded_form_snapshot = self._form_snapshot()
-        self.status_label.setText("Neuer Kunde. Erst Speichern uebernimmt die Angaben.")
+        self.status_label.setText("Neuer Kunde. Erst Speichern übernimmt die Angaben.")
 
     def discard_changes(self) -> None:
         if self.loaded_form_snapshot is None:
             self.new_customer()
             return
         self._apply_snapshot(self.loaded_form_snapshot)
-        self.status_label.setText("Aenderungen verworfen. Der zuletzt geladene Stand ist wiederhergestellt.")
+        self.status_label.setText("Änderungen verworfen. Der zuletzt geladene Stand ist wiederhergestellt.")
 
     def show_customer_context_menu(self, position) -> None:
         if self.customers_table.currentRow() < 0:

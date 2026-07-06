@@ -25,9 +25,9 @@ from .layouts import ContentSurface, PageHeader, WorkspaceCard
 
 DOCUMENT_ARCHIVE_COLUMNS = ("Art", "Lieferdatum", "Belegnummer", "Kunde", "Excel-Datei", "PDF-Datei", "Kundenordner", "Status")
 DOCUMENT_ARCHIVE_ACTIONS = {
-    "openExcelButton": "Excel oeffnen",
-    "openPdfButton": "PDF oeffnen",
-    "openFolderButton": "Ordner oeffnen",
+    "openExcelButton": "Excel öffnen",
+    "openPdfButton": "PDF öffnen",
+    "openFolderButton": "Ordner öffnen",
 }
 
 
@@ -50,7 +50,7 @@ class DocumentArchivePanel(QWidget):
         layout.addWidget(
             PageHeader(
                 "Belegarchiv",
-                "Bisher erstellte Rechnungen und Lieferscheine finden, Excel/PDF oeffnen oder direkt in den Kundenordner springen.",
+                "Bisher erstellte Rechnungen und Lieferscheine finden, Excel/PDF öffnen oder direkt in den Kundenordner springen.",
             )
         )
 
@@ -79,7 +79,7 @@ class DocumentArchivePanel(QWidget):
         )
         archive_box = WorkspaceCard(
             "Alle Belege",
-            "Eine gemeinsame Liste fuer Rechnungen und Lieferscheine. Beleg markieren und Aktion waehlen.",
+            "Eine gemeinsame Liste für Rechnungen und Lieferscheine. Beleg markieren und Aktion wählen.",
         )
         archive_box.layout.addWidget(self.document_table)
         archive_box.layout.addLayout(self._action_row(self.document_table, self.document_ids_by_row, self.document_action_buttons))
@@ -264,9 +264,9 @@ class DocumentArchivePanel(QWidget):
         if document is None:
             return
         menu = QMenu(self)
-        pdf_action = menu.addAction("PDF oeffnen")
-        excel_action = menu.addAction("Excel oeffnen")
-        folder_action = menu.addAction("Kundenordner oeffnen")
+        pdf_action = menu.addAction("PDF öffnen")
+        excel_action = menu.addAction("Excel öffnen")
+        folder_action = menu.addAction("Kundenordner öffnen")
         menu.addSeparator()
         regenerate_pdf_action = menu.addAction("PDF neu erzeugen")
         regenerate_excel_action = menu.addAction("Excel neu erzeugen")
@@ -275,9 +275,9 @@ class DocumentArchivePanel(QWidget):
         regenerate_pdf_action.setToolTip("Nur aktiv, wenn die PDF-Datei fehlt.")
         regenerate_excel_action.setToolTip("Nur aktiv, wenn die Excel-Datei fehlt.")
         menu.addSeparator()
-        document_label = "Im Belegbereich oeffnen"
+        document_label = "Im Belegbereich öffnen"
         open_document_action = menu.addAction(document_label)
-        open_order_action = menu.addAction("Zugehoerige Bestellung oeffnen")
+        open_order_action = menu.addAction("Zugehörige Bestellung öffnen")
         open_order_action.setEnabled(document["order_id"] is not None)
         selected = menu.exec(table.viewport().mapToGlobal(position))
         if selected == pdf_action:
@@ -311,7 +311,7 @@ class DocumentArchivePanel(QWidget):
                 self,
                 "Datei konnte nicht neu erstellt werden",
                 f"Die Datei konnte nicht neu erstellt werden.\n\nGrund: {error}\n\n"
-                "Die vorhandenen Belegdaten wurden nicht veraendert.",
+                "Die vorhandenen Belegdaten wurden nicht verändert.",
             )
             self.status_label.setText(f"Neu-Erzeugung fehlgeschlagen: {error}")
             return
@@ -323,7 +323,7 @@ class DocumentArchivePanel(QWidget):
         QMessageBox.information(
             self,
             f"{asset_label} neu erstellt",
-            f"{asset_label} fuer {document_number} wurde neu erstellt und im Kundenordner abgelegt.",
+            f"{asset_label} für {document_number} wurde neu erstellt und im Kundenordner abgelegt.",
         )
 
     def open_selected_document_workflow(self, document: dict) -> None:
@@ -332,7 +332,7 @@ class DocumentArchivePanel(QWidget):
             QMessageBox.warning(
                 self,
                 "Bestellung nicht gefunden",
-                "Die urspruengliche Bestellung wurde nicht gefunden. Bitte Datei manuell pruefen.",
+                "Die ursprüngliche Bestellung wurde nicht gefunden. Bitte Datei manuell prüfen.",
             )
             return
         self.document_open_requested.emit(document["document_type"], order_id)
@@ -352,7 +352,7 @@ class DocumentArchivePanel(QWidget):
         document_id = row_map.get(row)
         if document_id is None or not table.selectedItems() or table.isRowHidden(row):
             if warn:
-                QMessageBox.warning(self, "Beleg auswaehlen", "Bitte zuerst einen Beleg in der Tabelle auswaehlen.")
+                QMessageBox.warning(self, "Beleg auswählen", "Bitte zuerst einen Beleg in der Tabelle auswählen.")
             return None
         return document_id
 
@@ -382,7 +382,7 @@ class DocumentArchivePanel(QWidget):
 
     def _open_url(self, path: Path, label: str) -> None:
         if not QDesktopServices.openUrl(QUrl.fromLocalFile(str(path))):
-            self._show_missing_file(f"{label} konnte nicht geoeffnet werden.")
+            self._show_missing_file(f"{label} konnte nicht geöffnet werden.")
             return
         self.status_label.setText(f"Geoeffnet: {label}")
 
@@ -391,5 +391,5 @@ class DocumentArchivePanel(QWidget):
         QMessageBox.warning(
             self,
             "Datei nicht gefunden",
-            f"{message}\n\nBitte pruefen, ob der Kundenordner verschoben wurde oder die Datei neu erstellt werden muss.",
+            f"{message}\n\nBitte prüfen, ob der Kundenordner verschoben wurde oder die Datei neu erstellt werden muss.",
         )

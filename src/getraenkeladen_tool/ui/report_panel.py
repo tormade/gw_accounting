@@ -53,7 +53,7 @@ REPORT_PANEL_ACTIONS = {
     "exportContactsButton": "Kontaktliste exportieren",
 }
 
-OPEN_ITEMS_COLUMNS = ("Kunde", "Rechnungsnr.", "Datum", "Faelligkeit", "Zahlart", "Betrag", "Status")
+OPEN_ITEMS_COLUMNS = ("Kunde", "Rechnungsnr.", "Datum", "Fälligkeit", "Zahlart", "Betrag", "Status")
 DELIVERY_COLUMNS = ("Datum", "Zeitfenster", "Belegnr.", "Kunde", "Adresse", "Hinweise")
 CONTACT_COLUMNS = ("Kontakttermin", "Kunde", "E-Mail", "Hinweise")
 DATE_FIELD_WIDGETS = ("target_date",)
@@ -71,7 +71,7 @@ class ReportPanel(QWidget):
         surface = ContentSurface()
         root_layout.addWidget(surface)
         layout = surface.layout
-        layout.addWidget(PageHeader("Rechnungen", "Offene Rechnungen, Faelligkeiten und Zahlungseingaenge pruefen."))
+        layout.addWidget(PageHeader("Rechnungen", "Offene Rechnungen, Fälligkeiten und Zahlungseingänge prüfen."))
 
         self.target_date = DateInput(date.today().isoformat())
         form = QFormLayout()
@@ -79,14 +79,14 @@ class ReportPanel(QWidget):
         form.addRow("Stichtag", self.target_date)
         self.invoice_status_filter = QComboBox()
         self.invoice_status_filter.addItem("Alle offenen", "alle")
-        self.invoice_status_filter.addItem("Faellig", "faellig")
-        self.invoice_status_filter.addItem("Ueberfaellig", "ueberfaellig")
+        self.invoice_status_filter.addItem("Fällig", "faellig")
+        self.invoice_status_filter.addItem("Überfällig", "überfällig")
         self.invoice_status_filter.addItem("Teilbezahlt", "teilbezahlt")
         self.invoice_status_filter.addItem("Normal offen", "offen")
         form.addRow("Rechnungen", self.invoice_status_filter)
         filter_box = WorkspaceCard(
             "Filter",
-            "Stichtag fuer Lieferungen und Wiedervorlagen waehlen.",
+            "Stichtag für Lieferungen und Wiedervorlagen wählen.",
             tone="route",
             kicker="STICHTAG",
         )
@@ -107,7 +107,7 @@ class ReportPanel(QWidget):
         self.open_items_table.horizontalHeader().setSectionResizeMode(6, QHeaderView.ResizeMode.ResizeToContents)
         open_items_box = WorkspaceCard(
             "Rechnungsliste",
-            "Offene und faellige Rechnungen nach Status pruefen.",
+            "Offene und fällige Rechnungen nach Status prüfen.",
             tone="cash",
             kicker="KASSE",
         )
@@ -116,7 +116,7 @@ class ReportPanel(QWidget):
 
         self.invoice_customer_label = QLabel("Kunde: -")
         self.invoice_number_label = QLabel("Rechnung: -")
-        self.invoice_due_label = QLabel("Faelligkeit: -")
+        self.invoice_due_label = QLabel("Fälligkeit: -")
         self.invoice_payment_label = QLabel("Zahlart: -")
         self.invoice_amount_label = QLabel("Betrag: -")
         self.invoice_status_label = QLabel("Status: -")
@@ -131,7 +131,7 @@ class ReportPanel(QWidget):
             label.setObjectName("inspectorValue")
             label.setWordWrap(True)
 
-        self.invoice_inspector = InspectorPanel("Rechnung auswaehlen", "Details und naechster Zahlungsschritt erscheinen hier.")
+        self.invoice_inspector = InspectorPanel("Rechnung auswählen", "Details und nächster Zahlungsschritt erscheinen hier.")
         self.invoice_inspector.setMaximumWidth(16777215)
         self.invoice_inspector.add_section_label("Rechnung")
         self.invoice_inspector.body.addWidget(self.invoice_customer_label)
@@ -165,13 +165,13 @@ class ReportPanel(QWidget):
         self.deliveries_table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeMode.Stretch)
         self.deliveries_table.horizontalHeader().setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch)
         self.deliveries_table.horizontalHeader().setSectionResizeMode(5, QHeaderView.ResizeMode.Stretch)
-        deliveries_box = WorkspaceCard("Tageslieferungen", "Nebenliste fuer Tour und Export.", tone="route", kicker="TOUR")
+        deliveries_box = WorkspaceCard("Tageslieferungen", "Nebenliste für Tour und Export.", tone="route", kicker="TOUR")
         deliveries_box.layout.addWidget(self.deliveries_table)
 
         self.contacts_table = QTableWidget(0, len(CONTACT_COLUMNS))
         self.contacts_table.setHorizontalHeaderLabels(CONTACT_COLUMNS)
         self.contacts_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-        contacts_box = WorkspaceCard("Kontaktliste", "Nebenliste fuer Wiedervorlagen und Export.", tone="audit", kicker="WIEDERVORLAGE")
+        contacts_box = WorkspaceCard("Kontaktliste", "Nebenliste für Wiedervorlagen und Export.", tone="audit", kicker="WIEDERVORLAGE")
         contacts_box.layout.addWidget(self.contacts_table)
 
         action_row = QHBoxLayout()
@@ -343,7 +343,7 @@ class ReportPanel(QWidget):
         row = self.open_items_table.currentRow()
         open_item_id = self.open_item_ids_by_row.get(row)
         if open_item_id is None:
-            self.status_label.setText("Bitte zuerst eine Rechnung auswaehlen.")
+            self.status_label.setText("Bitte zuerst eine Rechnung auswählen.")
             return
         item = self.open_items_by_row.get(row)
         invoice_text = getattr(item, "document_number", "diese Rechnung")
@@ -357,7 +357,7 @@ class ReportPanel(QWidget):
             QMessageBox.StandardButton.No,
         )
         if answer != QMessageBox.StandardButton.Yes:
-            self.status_label.setText("Zahlung nicht geaendert.")
+            self.status_label.setText("Zahlung nicht geändert.")
             return
 
         session = self.session_factory()
@@ -377,7 +377,7 @@ class ReportPanel(QWidget):
         row = self.open_items_table.currentRow()
         open_item_id = self.open_item_ids_by_row.get(row)
         if open_item_id is None:
-            self.status_label.setText("Bitte zuerst eine Rechnung auswaehlen.")
+            self.status_label.setText("Bitte zuerst eine Rechnung auswählen.")
             return
         session = self.session_factory()
         try:
@@ -449,12 +449,12 @@ class ReportPanel(QWidget):
         item = self.open_items_by_row.get(self.open_items_table.currentRow())
         if item is None:
             self.invoice_inspector.set_heading(
-                "Rechnung auswaehlen",
-                "Details und naechster Zahlungsschritt erscheinen hier.",
+                "Rechnung auswählen",
+                "Details und nächster Zahlungsschritt erscheinen hier.",
             )
             self.invoice_customer_label.setText("Kunde: -")
             self.invoice_number_label.setText("Rechnung: -")
-            self.invoice_due_label.setText("Faelligkeit: -")
+            self.invoice_due_label.setText("Fälligkeit: -")
             self.invoice_payment_label.setText("Zahlart: -")
             self.invoice_amount_label.setText("Betrag: -")
             self.invoice_status_label.setText("Status: -")
@@ -466,7 +466,7 @@ class ReportPanel(QWidget):
         self.invoice_inspector.set_heading(item.document_number, item.customer_name)
         self.invoice_customer_label.setText(f"Kunde: {item.customer_name}")
         self.invoice_number_label.setText(f"Rechnung: {item.document_number}")
-        self.invoice_due_label.setText(f"Faelligkeit: {to_display_date(item.due_date) or '-'}")
+        self.invoice_due_label.setText(f"Fälligkeit: {to_display_date(item.due_date) or '-'}")
         self.invoice_payment_label.setText(f"Zahlart: {item.payment_method}")
         self.invoice_amount_label.setText(f"Betrag: {amount}")
         self.invoice_status_label.setText(f"Status: {item.status}")

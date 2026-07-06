@@ -18,14 +18,14 @@ from .layouts import ContentSurface, PageHeader, WorkspaceCard, configure_form_l
 
 SETTINGS_PANEL_ACTIONS = {
     "settingsHelpButton": "?",
-    "chooseInputFolderButton": "Ordner waehlen",
-    "previewMasterDataButton": "Import pruefen",
+    "chooseInputFolderButton": "Ordner wählen",
+    "previewMasterDataButton": "Import prüfen",
     "importMasterDataButton": "Import starten",
 }
 SETTINGS_PANEL_SECTIONS = ("Excel-Stammdaten importieren",)
 SETTINGS_HELP_TEXT = (
-    "Import: Hier koennen Sie die erhaltenen Excel-Stammdaten einlesen.\n\n"
-    "Die Originaldateien werden nicht veraendert. Aenderungen in der App werden intern protokolliert."
+    "Import: Hier können Sie die erhaltenen Excel-Stammdaten einlesen.\n\n"
+    "Die Originaldateien werden nicht verändert. Änderungen in der App werden intern protokolliert."
 )
 
 
@@ -36,7 +36,7 @@ class SettingsPanel(QWidget):
 
         self.input_folder = QLineEdit(str(Path.cwd().parent / "Input"))
         self.input_folder.setPlaceholderText("Ordner mit Artikel Liste Preise.xlsx und Lieferkunden Liste.xlsx")
-        self.status_label = QLabel("Input-Ordner waehlen und Import pruefen.")
+        self.status_label = QLabel("Input-Ordner wählen und Import prüfen.")
         self.status_label.setObjectName("muted")
 
         root_layout = QVBoxLayout(self)
@@ -50,14 +50,14 @@ class SettingsPanel(QWidget):
         layout.addWidget(
             PageHeader(
                 "Einstellungen",
-                "Excel-Dateien einlesen und Pruefpunkte erzeugen.",
+                "Excel-Dateien einlesen und Prüfpunkte erzeugen.",
                 self.help_button,
             )
         )
 
         import_box = WorkspaceCard(
             SETTINGS_PANEL_SECTIONS[0],
-            "Die Excel-Dateien werden nur gelesen. Aenderungen landen in der Datenbank und werden protokolliert.",
+            "Die Excel-Dateien werden nur gelesen. Änderungen landen in der Datenbank und werden protokolliert.",
             tone="audit",
             kicker="IMPORT",
         )
@@ -100,7 +100,7 @@ class SettingsPanel(QWidget):
         QMessageBox.information(self, "Hilfe: Einstellungen", SETTINGS_HELP_TEXT)
 
     def choose_input_folder(self) -> None:
-        folder = QFileDialog.getExistingDirectory(self, "Input-Ordner waehlen", self.input_folder.text())
+        folder = QFileDialog.getExistingDirectory(self, "Input-Ordner wählen", self.input_folder.text())
         if folder:
             self.input_folder.setText(folder)
 
@@ -117,15 +117,15 @@ class SettingsPanel(QWidget):
             preview = preview_master_data_from_folder(session, input_dir)
             answer = QMessageBox.question(
                 self,
-                "Import bestaetigen",
-                "Diese Aenderungen wurden gefunden:\n\n"
+                "Import bestätigen",
+                "Diese Änderungen wurden gefunden:\n\n"
                 f"{preview.safety_report_text}\n\n"
-                "Import jetzt ausfuehren?",
+                "Import jetzt ausführen?",
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
                 QMessageBox.StandardButton.No,
             )
             if answer != QMessageBox.StandardButton.Yes:
-                self.status_label.setText(f"Import nicht ausgefuehrt. Vorschau: {preview.summary_text}")
+                self.status_label.setText(f"Import nicht ausgeführt. Vorschau: {preview.summary_text}")
                 return
             result = import_master_data_from_folder(session, input_dir)
         finally:

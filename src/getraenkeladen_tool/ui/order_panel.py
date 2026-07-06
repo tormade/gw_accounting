@@ -54,10 +54,10 @@ ORDER_PANEL_ACTIONS = {
     "copyOrderButton": "Als Vorlage kopieren",
     "refreshOrderDataButton": "Daten neu laden",
     "suggestOrderNumberButton": "Nummer vorschlagen",
-    "addOrderLineButton": "Position hinzufuegen",
+    "addOrderLineButton": "Position hinzufügen",
     "removeOrderLineButton": "Position entfernen",
-    "addDepositReturnButton": "Pfand-Rueckgabe eintragen",
-    "removeDepositReturnButton": "Pfand-Rueckgabe entfernen",
+    "addDepositReturnButton": "Pfand-Rückgabe eintragen",
+    "removeDepositReturnButton": "Pfand-Rückgabe entfernen",
     "saveOrderButton": "Bestellung speichern",
     "refreshOrdersButton": "Bestellungen laden",
     "createDeliveryNoteFromOrderButton": "Lieferschein erstellen",
@@ -74,17 +74,17 @@ ORDER_PANEL_SECTIONS = (
     "Bestellungen",
 )
 ORDER_HELP_TEXT = (
-    "Kunde und Lieferdatum: Kunde, Lieferdatum, Zeitfenster und Bestellnummer pruefen.\n\n"
-    "Mengen erfassen: letzte Mengen sehen, neue Mengen eintragen und Artikel hinzufuegen.\n\n"
-    "Bestellungen: Vorhandene Bestellungen oeffnen, archivieren oder als Vorlage kopieren."
+    "Kunde und Lieferdatum: Kunde, Lieferdatum, Zeitfenster und Bestellnummer prüfen.\n\n"
+    "Mengen erfassen: letzte Mengen sehen, neue Mengen eintragen und Artikel hinzufügen.\n\n"
+    "Bestellungen: Vorhandene Bestellungen öffnen, archivieren oder als Vorlage kopieren."
 )
 ORDER_GUIDANCE_STEPS = (
     "Kunde suchen und letzte Mengen als Vorlage sehen.",
-    "Neue Mengen, neue Artikel und Pfand-Rueckgabe erfassen.",
+    "Neue Mengen, neue Artikel und Pfand-Rückgabe erfassen.",
     "Bestellung speichern und daraus Lieferschein oder Rechnung erzeugen.",
 )
 ORDER_CONTEXT_ACTIONS = {
-    "open": "Bestellung oeffnen",
+    "open": "Bestellung öffnen",
     "copy": "Als neue Bestellung kopieren",
     "create_delivery_note": "Lieferschein erstellen",
     "create_invoice": "Rechnung erstellen",
@@ -127,7 +127,7 @@ class OrderPanel(QWidget):
         self.order_mode_label.setObjectName("stepTitle")
         self.customer_select = SearchableSelect("Kunde suchen, z. B. Cafe oder Hotel")
         self.customer_select.setMinimumWidth(420)
-        self.customer_summary = QLabel("Noch kein Kunde ausgewaehlt.")
+        self.customer_summary = QLabel("Noch kein Kunde ausgewählt.")
         self.customer_summary.setObjectName("sectionSubtitle")
         self.customer_summary.setWordWrap(True)
         self.product_select = SearchableSelect("Produkt suchen, z. B. Spezi oder Wasser")
@@ -185,7 +185,7 @@ class OrderPanel(QWidget):
         self.order_table_search = QLineEdit()
         self.order_table_search.setObjectName("tableSearchField")
         self.order_table_search.setPlaceholderText("In den Bestellungen suchen, z. B. Kunde, Nummer oder Datum")
-        self.status_label = QLabel("Kunde suchen, letzte Mengen pruefen, Bestellung speichern.")
+        self.status_label = QLabel("Kunde suchen, letzte Mengen prüfen, Bestellung speichern.")
         self.status_label.setObjectName("muted")
 
         root_layout = QVBoxLayout(self)
@@ -199,7 +199,7 @@ class OrderPanel(QWidget):
         layout.addWidget(
             PageHeader(
                 "Bestellungen",
-                "Kunde waehlen, Mengen erfassen und direkt den naechsten Beleg vorbereiten.",
+                "Kunde wählen, Mengen erfassen und direkt den nächsten Beleg vorbereiten.",
                 self.help_button,
             )
         )
@@ -210,13 +210,13 @@ class OrderPanel(QWidget):
         self.add_deposit_return_button = self._button("addDepositReturnButton")
         self.remove_deposit_return_button = self._button("removeDepositReturnButton")
         self.save_order_button = self._button("saveOrderButton")
-        self.cancel_order_dialog_button = QPushButton("Eingabe zuruecksetzen")
+        self.cancel_order_dialog_button = QPushButton("Eingabe zurücksetzen")
         self.refresh_orders_button = self._button("refreshOrdersButton")
         self.new_order_button = self._button("newOrderButton")
         self.copy_order_button = self._button("copyOrderButton")
         self.create_delivery_note_button = self._button("createDeliveryNoteFromOrderButton")
         self.create_invoice_button = self._button("createInvoiceFromOrderButton")
-        self.use_assortment_button = QPushButton("Aus Sortiment uebernehmen")
+        self.use_assortment_button = QPushButton("Aus Sortiment übernehmen")
         set_equal_button_widths(
             (
                 self.refresh_data_button,
@@ -246,7 +246,7 @@ class OrderPanel(QWidget):
 
         customer_box, customer_layout = self._section(
             ORDER_PANEL_SECTIONS[0],
-            "Oben stehen die Angaben, die beim Telefonat und fuer den Beleg wichtig sind.",
+            "Oben stehen die Angaben, die beim Telefonat und für den Beleg wichtig sind.",
             tone="route",
             kicker="TELEFON",
         )
@@ -276,7 +276,7 @@ class OrderPanel(QWidget):
             tone="document",
             kicker="BESTELLUNG",
         )
-        quantity_hint = QLabel("Die Liste wird nach Kundenauswahl automatisch mit den letzten Artikeln gefuellt.")
+        quantity_hint = QLabel("Die Liste wird nach Kundenauswahl automatisch mit den letzten Artikeln gefüllt.")
         quantity_hint.setObjectName("sectionSubtitle")
         quantity_hint.setWordWrap(True)
         quantity_layout.addWidget(quantity_hint)
@@ -287,7 +287,7 @@ class OrderPanel(QWidget):
         line_actions.addStretch()
         quantity_layout.addLayout(line_actions)
 
-        self.add_product_toggle = QPushButton("Weiteren Artikel hinzufuegen")
+        self.add_product_toggle = QPushButton("Weiteren Artikel hinzufügen")
         self.add_product_toggle.setObjectName("disclosureButton")
         self.add_product_toggle.setCheckable(True)
         self.add_product_toggle.setChecked(False)
@@ -309,7 +309,7 @@ class OrderPanel(QWidget):
         add_product_layout.addLayout(position_actions)
         quantity_layout.addWidget(self.add_product_content)
 
-        return_title = QLabel("Pfand zurueck")
+        return_title = QLabel("Pfand zurück")
         return_title.setObjectName("sectionTitle")
         quantity_layout.addWidget(return_title)
         deposit_return_form = QFormLayout()
@@ -338,7 +338,7 @@ class OrderPanel(QWidget):
 
         orders_box, orders_layout = self._section(
             ORDER_PANEL_SECTIONS[2],
-            "Vorhandene Bestellung auswaehlen. Die Details werden oben im Arbeitsbereich bearbeitet.",
+            "Vorhandene Bestellung auswählen. Die Details werden oben im Arbeitsbereich bearbeitet.",
             tone="route",
             kicker="BESTELLSTAPEL",
         )
@@ -429,7 +429,7 @@ class OrderPanel(QWidget):
 
     def open_order_dialog(self, title: str = "Bestellung bearbeiten") -> None:
         self.order_mode_label.setText(title)
-        self.status_label.setText(f"{title}: Angaben oben pruefen, Mengen erfassen und speichern.")
+        self.status_label.setText(f"{title}: Angaben oben prüfen, Mengen erfassen und speichern.")
 
     def _restore_order_editor_parent(self) -> None:
         if self.order_editor_scroll is not None:
@@ -452,7 +452,7 @@ class OrderPanel(QWidget):
         message.setIcon(QMessageBox.Icon.Information)
         message.setWindowTitle("Bestellung gespeichert")
         message.setText(f"Bestellung {order_number} wurde gespeichert.")
-        message.setInformativeText("Was moechten Sie als Naechstes tun?")
+        message.setInformativeText("Was möchten Sie als Nächstes tun?")
         message.addButton("Nur speichern", QMessageBox.ButtonRole.RejectRole)
         delivery_button = message.addButton("Lieferschein erstellen", QMessageBox.ButtonRole.ActionRole)
         invoice_button = message.addButton("Rechnung erstellen", QMessageBox.ButtonRole.ActionRole)
@@ -502,12 +502,12 @@ class OrderPanel(QWidget):
             self,
             "Bestellung wurde bereits verwendet",
             "Aus dieser Bestellung wurde bereits ein Lieferschein oder eine Rechnung erstellt. "
-            "Wenn Sie die Bestellung aendern, bitte die Dateien danach neu erstellen. Fortfahren?",
+            "Wenn Sie die Bestellung ändern, bitte die Dateien danach neu erstellen. Fortfahren?",
         )
         if answer != QMessageBox.StandardButton.Yes:
-            self.status_label.setText("Aenderung abgebrochen. Belege bleiben unveraendert.")
+            self.status_label.setText("Änderung abgebrochen. Belege bleiben unverändert.")
             return False
-        self.status_label.setText("Bestellung geaendert. Dateien bitte neu erstellen.")
+        self.status_label.setText("Bestellung geändert. Dateien bitte neu erstellen.")
         return True
 
     def confirm_price_mismatch(
@@ -524,8 +524,8 @@ class OrderPanel(QWidget):
             f" | Pfand: {self._format_euro_cents(excel_deposit_cents)}\n"
             f"Zentral gepflegter Preis: {self._format_euro_cents(central_price_cents)}"
             f" | Pfand: {self._format_euro_cents(central_deposit_cents)}\n\n"
-            "Ja = zentral gepflegten Preis uebernehmen.\n"
-            "Nein = Preis aus Excel fuer diesen Vorgang behalten."
+            "Ja = zentral gepflegten Preis übernehmen.\n"
+            "Nein = Preis aus Excel für diesen Vorgang behalten."
         )
         answer = QMessageBox.question(
             self,
@@ -582,7 +582,7 @@ class OrderPanel(QWidget):
         for row in recommended_rows:
             product_name = row.product_name or row.source_product_name
             detail = f"Letzte Menge {row.last_quantity} | {self._format_euro_cents(row.current_price_cents)}"
-            items.append((product_name, row.product_id, detail, "Empfohlen fuer diesen Kunden"))
+            items.append((product_name, row.product_id, detail, "Empfohlen für diesen Kunden"))
         for product in sorted(self.products_by_id.values(), key=lambda product: product.name.casefold()):
             if product.id in recommended_ids:
                 continue
@@ -610,7 +610,7 @@ class OrderPanel(QWidget):
         customer_id = self.customer_select.current_value()
         customer = self.customers_by_id.get(customer_id)
         if customer is None:
-            self.customer_summary.setText("Noch kein Kunde ausgewaehlt.")
+            self.customer_summary.setText("Noch kein Kunde ausgewählt.")
             self.show_customer_assortment([])
             return
         details = [
@@ -640,9 +640,9 @@ class OrderPanel(QWidget):
             self.assortment_rows_by_row[row_index] = row
             hint = ""
             if row.product_id is None:
-                hint = "Artikel pruefen"
+                hint = "Artikel prüfen"
             elif row.price_differs_from_central:
-                hint = "Preis pruefen"
+                hint = "Preis prüfen"
             values = (
                 row.product_name or row.source_product_name,
                 str(row.last_quantity),
@@ -676,9 +676,9 @@ class OrderPanel(QWidget):
             added_count += 1
         self.update_order_total()
         if added_count:
-            message = f"{added_count} Positionen aus den letzten Mengen uebernommen."
+            message = f"{added_count} Positionen aus den letzten Mengen übernommen."
             if skipped_count:
-                message += " Ungeklaerte Artikel wurden ausgelassen."
+                message += " Ungeklärte Artikel wurden ausgelassen."
             if skipped_price_count:
                 message += " Preisabweichungen wurden ausgelassen."
             self.status_label.setText(message)
@@ -688,13 +688,13 @@ class OrderPanel(QWidget):
     def prefill_order_lines_from_latest_order(self) -> None:
         customer_id = self.customer_select.current_value()
         if customer_id is None or self.session_factory is None:
-            self.status_label.setText("Keine letzten Mengen zum Uebernehmen gefunden. Bitte Positionen manuell erfassen.")
+            self.status_label.setText("Keine letzten Mengen zum Übernehmen gefunden. Bitte Positionen manuell erfassen.")
             return
         session = self.session_factory()
         try:
             latest_order = latest_order_for_customer(session, int(customer_id))
             if latest_order is None:
-                self.status_label.setText("Keine letzten Mengen zum Uebernehmen gefunden. Bitte Positionen manuell erfassen.")
+                self.status_label.setText("Keine letzten Mengen zum Übernehmen gefunden. Bitte Positionen manuell erfassen.")
                 return
             self.show_previous_order_suggestions(latest_order.lines)
             for line in latest_order.lines:
@@ -708,7 +708,7 @@ class OrderPanel(QWidget):
         finally:
             session.close()
         if self.order_lines_table.rowCount():
-            self.status_label.setText("Positionen aus letzter Bestellung uebernommen.")
+            self.status_label.setText("Positionen aus letzter Bestellung übernommen.")
         else:
             self.status_label.setText("Letzte Bestellung hatte keine Mengen. Bitte Positionen manuell erfassen.")
 
@@ -731,10 +731,10 @@ class OrderPanel(QWidget):
     def add_selected_assortment_item(self) -> None:
         row = self.assortment_rows_by_row.get(self.assortment_table.currentRow())
         if row is None:
-            self.status_label.setText("Bitte zuerst einen Artikel aus dem Kundensortiment auswaehlen.")
+            self.status_label.setText("Bitte zuerst einen Artikel aus dem Kundensortiment auswählen.")
             return
         if row.product_id is None:
-            self.status_label.setText("Artikel ist noch nicht sicher zugeordnet. Bitte zuerst in der Pruefliste klaeren.")
+            self.status_label.setText("Artikel ist noch nicht sicher zugeordnet. Bitte zuerst in der Prüfliste klären.")
             return
         unit_price_cents = row.current_price_cents
         deposit_cents = row.current_deposit_cents
@@ -756,7 +756,7 @@ class OrderPanel(QWidget):
             deposit_cents,
             row.product_id,
         )
-        self.status_label.setText("Position aus Kundensortiment uebernommen.")
+        self.status_label.setText("Position aus Kundensortiment übernommen.")
 
     def apply_selected_product(self) -> None:
         product_id = self.product_select.current_value()
@@ -772,7 +772,7 @@ class OrderPanel(QWidget):
         product_id = self.product_select.current_value()
         product = self.products_by_id.get(product_id)
         if product is None:
-            self.status_label.setText("Bitte zuerst ein Produkt auswaehlen.")
+            self.status_label.setText("Bitte zuerst ein Produkt auswählen.")
             return
         unit_price_cents = self._parse_euro_cents(self.unit_price_eur.text().strip())
         deposit_cents = self._parse_euro_cents(self.deposit_eur.text().strip() or "0")
@@ -796,11 +796,11 @@ class OrderPanel(QWidget):
             deposit_cents,
             product.id,
         )
-        self.product_select.clear_selection("Naechsten Artikel aus der Liste anklicken.")
+        self.product_select.clear_selection("Nächsten Artikel aus der Liste anklicken.")
         self.quantity.setValue(0)
         self.unit_price_eur.clear()
         self.deposit_eur.clear()
-        self.status_label.setText("Position hinzugefuegt. Weitere Positionen erfassen oder Bestellung speichern.")
+        self.status_label.setText("Position hinzugefügt. Weitere Positionen erfassen oder Bestellung speichern.")
 
     def apply_suggested_order_number(self) -> None:
         if self.session_factory is None:
@@ -812,23 +812,23 @@ class OrderPanel(QWidget):
         finally:
             session.close()
         self.order_number.setText(suggestion)
-        self.status_label.setText(f"Vorschlag uebernommen: {suggestion}. Die Nummer kann frei geaendert werden.")
+        self.status_label.setText(f"Vorschlag übernommen: {suggestion}. Die Nummer kann frei geändert werden.")
 
     def add_deposit_return(self) -> None:
         name = self.deposit_return_select.currentText().strip()
         if not name:
-            self.status_label.setText("Bitte eine Pfandart fuer die Rueckgabe eintragen.")
+            self.status_label.setText("Bitte eine Pfandart für die Rückgabe eintragen.")
             return
         deposit_cents = self._parse_euro_cents_or_zero(self.deposit_return_eur.text())
         if deposit_cents <= 0:
-            self.status_label.setText("Bitte einen Pfandwert groesser 0 eintragen.")
+            self.status_label.setText("Bitte einen Pfandwert größer 0 eintragen.")
             return
         self._append_deposit_return_to_table(
             name,
             self.deposit_return_quantity.value(),
             deposit_cents,
         )
-        self.status_label.setText("Pfandrueckgabe hinzugefuegt.")
+        self.status_label.setText("Pfandrückgabe hinzugefügt.")
 
     def apply_selected_deposit_return(self) -> None:
         cents = self.deposit_return_select.currentData()
@@ -854,14 +854,14 @@ class OrderPanel(QWidget):
             return
         customer_id = self.customer_select.current_value()
         if customer_id is None:
-            self.warn_invalid_order_save("Bitte zuerst einen Kunden auswaehlen.")
+            self.warn_invalid_order_save("Bitte zuerst einen Kunden auswählen.")
             return
         if not self.order_number.text().strip():
             self.warn_invalid_order_save("Bitte eine Bestellnummer eintragen.")
             return
         order_lines = self._order_lines_from_table()
         if not order_lines:
-            self.warn_invalid_order_save("Bitte mindestens eine Position hinzufuegen.")
+            self.warn_invalid_order_save("Bitte mindestens eine Position hinzufügen.")
             return
         if self.current_order_id is not None and not self.confirm_documented_order_change():
             return
@@ -882,7 +882,7 @@ class OrderPanel(QWidget):
                 *validate_deposit_returns(payload),
             ]
             if warnings and not self.confirm_automation_warnings(warnings):
-                self.status_label.setText("Speichern abgebrochen. Hinweise bitte pruefen.")
+                self.status_label.setText("Speichern abgebrochen. Hinweise bitte prüfen.")
                 return
             if self.current_order_id is None:
                 order = create_order(session, payload)
@@ -916,7 +916,7 @@ class OrderPanel(QWidget):
                 if getattr(warning, "severity", "") not in {"error", "warning"}
             ],
         }
-        message = "Pruefung vor dem Speichern:\n\n"
+        message = "Prüfung vor dem Speichern:\n\n"
         for title, entries in grouped.items():
             if not entries:
                 continue
@@ -926,7 +926,7 @@ class OrderPanel(QWidget):
         message += "\n\nTrotzdem speichern?"
         answer = QMessageBox.question(
             self,
-            "Bestellung pruefen",
+            "Bestellung prüfen",
             message,
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
@@ -1028,7 +1028,7 @@ class OrderPanel(QWidget):
         if selected_order_id is not None and selected_order_id != self.current_order_id:
             self.load_order_by_id(selected_order_id)
         if self.current_order_id is None:
-            self.status_label.setText("Bitte zuerst eine Bestellung aus der Liste auswaehlen.")
+            self.status_label.setText("Bitte zuerst eine Bestellung aus der Liste auswählen.")
             return
         original_number = self.order_number.text().strip()
         self.current_order_id = None
@@ -1037,19 +1037,19 @@ class OrderPanel(QWidget):
         self.order_number.clear()
         self.delivery_date.set_iso_date(date.today().isoformat())
         self.open_order_dialog(f"Bestellung aus {original_number} kopieren")
-        self.status_label.setText("Bestellung kopiert. Bitte neue Bestellnummer und Datum pruefen.")
+        self.status_label.setText("Bestellung kopiert. Bitte neue Bestellnummer und Datum prüfen.")
 
     def request_delivery_note_for_selected_order(self) -> None:
         order_id = self._selected_or_loaded_order_id()
         if order_id is None:
-            self.status_label.setText("Bitte zuerst eine Bestellung aus der Liste auswaehlen.")
+            self.status_label.setText("Bitte zuerst eine Bestellung aus der Liste auswählen.")
             return
         self.delivery_note_requested.emit(order_id)
 
     def request_invoice_for_selected_order(self) -> None:
         order_id = self._selected_or_loaded_order_id()
         if order_id is None:
-            self.status_label.setText("Bitte zuerst eine Bestellung aus der Liste auswaehlen.")
+            self.status_label.setText("Bitte zuerst eine Bestellung aus der Liste auswählen.")
             return
         if not self.confirm_instant_invoice():
             return
@@ -1062,7 +1062,7 @@ class OrderPanel(QWidget):
         if self.current_order_id is None:
             self.current_order_id = self._selected_order_id()
         if self.current_order_id is None:
-            self.status_label.setText("Bitte zuerst eine Bestellung auswaehlen.")
+            self.status_label.setText("Bitte zuerst eine Bestellung auswählen.")
             return
 
         session = self.session_factory()
@@ -1104,7 +1104,7 @@ class OrderPanel(QWidget):
         if self.order_lines_table.currentRow() < 0:
             return
         menu = QMenu(self)
-        copy_action = menu.addAction("Position in neue Bestellung uebernehmen")
+        copy_action = menu.addAction("Position in neue Bestellung übernehmen")
         remove_action = menu.addAction("Position entfernen")
         selected = menu.exec(self.order_lines_table.viewport().mapToGlobal(position))
         if selected == copy_action:
@@ -1115,14 +1115,14 @@ class OrderPanel(QWidget):
     def copy_selected_order_line(self) -> None:
         row = self.order_lines_table.currentRow()
         if row < 0:
-            self.status_label.setText("Bitte zuerst eine Position auswaehlen.")
+            self.status_label.setText("Bitte zuerst eine Position auswählen.")
             return
         product_item = self.order_lines_table.item(row, 0)
         quantity_item = self.order_lines_table.item(row, 1)
         price_item = self.order_lines_table.item(row, 2)
         deposit_item = self.order_lines_table.item(row, 3)
         if product_item is None:
-            self.status_label.setText("Diese Position kann nicht uebernommen werden.")
+            self.status_label.setText("Diese Position kann nicht übernommen werden.")
             return
         product_name = product_item.text().strip()
         product_id = product_item.data(Qt.ItemDataRole.UserRole) or self._product_id_for_name(product_name)
@@ -1137,7 +1137,7 @@ class OrderPanel(QWidget):
             self._parse_euro_cents_or_zero(deposit_item.text() if deposit_item is not None else "0"),
             product_id,
         )
-        self.status_label.setText("Position in die neue Bestellung uebernommen. Menge kann angepasst werden.")
+        self.status_label.setText("Position in die neue Bestellung übernommen. Menge kann angepasst werden.")
 
     def _selected_order_id(self) -> int | None:
         row = self.orders_table.currentRow()

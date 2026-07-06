@@ -33,8 +33,25 @@ def test_main_window_uses_sidebar_app_shell_instead_of_top_tabs():
     assert "SidebarNavigation" in source
     assert "self.navigation = SidebarNavigation(MAIN_TABS)" in source
     assert "self.pages = QStackedWidget()" in source
-    assert "self.navigation.currentRowChanged.connect(self.pages.setCurrentIndex)" in source
+    assert "self.navigation.currentRowChanged.connect(self.show_main_page)" in source
+    assert "def show_main_page" in source
     assert "self.tabs = QTabWidget()" not in source
+
+
+def test_management_uses_home_screen_instead_of_visible_admin_tabs():
+    from pathlib import Path
+
+    main_source = Path("src/getraenkeladen_tool/ui/main_window.py").read_text(encoding="utf-8")
+    home_source = Path("src/getraenkeladen_tool/ui/management_home_panel.py").read_text(encoding="utf-8")
+
+    assert "ManagementHomePanel" in main_source
+    assert "managementStateStack" in main_source
+    assert "tabs.addTab(self.customer_panel" not in main_source
+    assert "Kunden bearbeiten" in home_source
+    assert "Artikel und Preise" in home_source
+    assert "Prüfpunkte" in home_source
+    assert "Excel-Import" in home_source
+    assert "Belegarchiv" in home_source
 
 
 def test_arbeiten_shell_no_longer_wires_dashboard_as_workflow_entry():
@@ -171,9 +188,9 @@ def test_sidebar_navigation_is_named_for_keyboard_and_accessibility():
 
     assert 'self.setAccessibleName("Hauptnavigation")' in source
     assert "Qt.FocusPolicy.StrongFocus" in source
-    assert 'item.setToolTip(f"{label} oeffnen")' in source
+    assert 'item.setToolTip(f"{label} öffnen")' in source
     assert "item.setData(Qt.ItemDataRole.AccessibleTextRole, label)" in source
-    assert "item.setData(Qt.ItemDataRole.AccessibleDescriptionRole, f\"{label} oeffnen\")" in source
+    assert "item.setData(Qt.ItemDataRole.AccessibleDescriptionRole, f\"{label} öffnen\")" in source
 
 
 def test_order_and_document_workspaces_use_named_layout_regions():
@@ -261,7 +278,9 @@ def test_main_window_uses_real_checklist_panel_for_migration_conflicts():
 
     assert "from .checklist_panel import ChecklistPanel" in source
     assert "self.checklist_panel = ChecklistPanel(session_factory=session_factory)" in source
-    assert 'tabs.addTab(self.checklist_panel, "Prüfpunkte")' in source
+    assert "from .management_home_panel import ManagementHomePanel" in source
+    assert "self.management_home_panel = ManagementHomePanel()" in source
+    assert "stack.addWidget(self.checklist_panel)" in source
     assert 'self._panel(\n            "Pruefliste"' not in source
 
 
@@ -278,7 +297,7 @@ def test_checklist_panel_exposes_concrete_resolution_actions():
     assert '"confirmProductAliasButton": "Artikel zuordnen"' in source
     assert '"useListValueButton": "Zentrale Liste nutzen"' in source
     assert '"useFolderValueButton": "Kunden-Excel nutzen"' in source
-    assert 'CHECKLIST_COLUMNS = ("Prioritaet", "Kunde", "Problem", "Naechster Schritt")' in source
+    assert 'CHECKLIST_COLUMNS = ("Priorität", "Kunde", "Problem", "Nächster Schritt")' in source
     assert "self.issue_detail_panel = InspectorPanel" in source
     assert "def update_issue_context" in source
     assert "def _set_issue_action_visibility" in source
@@ -295,9 +314,9 @@ def test_checklist_panel_explains_data_changing_actions_for_uncertain_users():
 
     source = Path("src/getraenkeladen_tool/ui/checklist_panel.py").read_text(encoding="utf-8")
 
-    assert "Pruefpunkt auswaehlen" in source
+    assert "Prüfpunkt auswählen" in source
     assert "Nur die passenden Aktionen werden angezeigt." in source
-    assert "Diese Entscheidung aendert Stammdaten oder Kundensortiment dauerhaft." in source
+    assert "Diese Entscheidung ändert Stammdaten oder Kundensortiment dauerhaft." in source
 
 
 def test_date_fields_use_calendar_input():
@@ -317,7 +336,7 @@ def test_open_items_surface_shows_due_date_and_payment_method():
         "Kunde",
         "Rechnungsnr.",
         "Datum",
-        "Faelligkeit",
+        "Fälligkeit",
         "Zahlart",
         "Betrag",
         "Status",
@@ -357,10 +376,10 @@ def test_order_tab_exposes_guided_order_actions():
         "copyOrderButton": "Als Vorlage kopieren",
         "refreshOrderDataButton": "Daten neu laden",
         "suggestOrderNumberButton": "Nummer vorschlagen",
-        "addOrderLineButton": "Position hinzufuegen",
+        "addOrderLineButton": "Position hinzufügen",
         "removeOrderLineButton": "Position entfernen",
-        "addDepositReturnButton": "Pfand-Rueckgabe eintragen",
-        "removeDepositReturnButton": "Pfand-Rueckgabe entfernen",
+        "addDepositReturnButton": "Pfand-Rückgabe eintragen",
+        "removeDepositReturnButton": "Pfand-Rückgabe entfernen",
         "saveOrderButton": "Bestellung speichern",
         "refreshOrdersButton": "Bestellungen laden",
         "createDeliveryNoteFromOrderButton": "Lieferschein erstellen",
@@ -375,11 +394,11 @@ def test_order_tab_exposes_guided_order_actions():
     assert "Mengen erfassen" in ORDER_HELP_TEXT
     assert ORDER_GUIDANCE_STEPS == (
         "Kunde suchen und letzte Mengen als Vorlage sehen.",
-        "Neue Mengen, neue Artikel und Pfand-Rueckgabe erfassen.",
+        "Neue Mengen, neue Artikel und Pfand-Rückgabe erfassen.",
         "Bestellung speichern und daraus Lieferschein oder Rechnung erzeugen.",
     )
     assert ORDER_CONTEXT_ACTIONS == {
-        "open": "Bestellung oeffnen",
+        "open": "Bestellung öffnen",
         "copy": "Als neue Bestellung kopieren",
         "create_delivery_note": "Lieferschein erstellen",
         "create_invoice": "Rechnung erstellen",
@@ -477,25 +496,25 @@ def test_customer_tab_exposes_master_data_actions():
         "newCustomerButton": "Neu",
         "saveCustomerButton": "Kunde speichern",
         "discardCustomerChangesButton": "Verwerfen",
-        "undoCustomerChangeButton": "Rueckgaengig",
+        "undoCustomerChangeButton": "Rückgängig",
         "refreshCustomersButton": "Kundenliste laden",
         "loadCustomerButton": "Auswahl bearbeiten",
         "archiveCustomerButton": "Kunde archivieren",
         "restoreCustomerButton": "Kunde wiederherstellen",
         "chooseCustomerFolderButton": "Ordner wählen",
     }
-    assert CUSTOMER_PANEL_SECTIONS == ("1. Kunden erfassen", "2. Bestehende Kunden pruefen")
+    assert CUSTOMER_PANEL_SECTIONS == ("1. Kunden erfassen", "2. Bestehende Kunden prüfen")
     assert CUSTOMER_GUIDANCE_STEPS == (
-        "Neuen Kunden links eintragen oder unten einen Kunden auswaehlen.",
+        "Neuen Kunden links eintragen oder unten einen Kunden auswählen.",
         "Mit Auswahl bearbeiten Stammdaten in das Formular laden.",
-        "Aenderungen koennen vor dem Speichern verworfen werden.",
+        "Änderungen können vor dem Speichern verworfen werden.",
     )
     assert CUSTOMER_CONTEXT_ACTIONS == {
         "edit": "Kunde bearbeiten",
         "archive": "Kunde archivieren",
         "restore": "Kunde wiederherstellen",
     }
-    assert CUSTOMER_COLUMNS == ("Name", "Adresse", "Naechster Kontakt", "Status")
+    assert CUSTOMER_COLUMNS == ("Name", "Adresse", "Nächster Kontakt", "Status")
 
 
 def test_product_tab_exposes_price_list_actions():
@@ -511,17 +530,17 @@ def test_product_tab_exposes_price_list_actions():
         "newProductButton": "Neu",
         "saveProductButton": "Produkt speichern",
         "discardProductChangesButton": "Verwerfen",
-        "undoProductChangeButton": "Rueckgaengig",
+        "undoProductChangeButton": "Rückgängig",
         "refreshProductsButton": "Produktliste laden",
         "loadProductButton": "Auswahl bearbeiten",
         "deactivateProductButton": "Produkt deaktivieren",
         "restoreProductButton": "Produkt wiederherstellen",
     }
-    assert PRODUCT_PANEL_SECTIONS == ("1. Produkt erfassen", "2. Preisliste pruefen")
+    assert PRODUCT_PANEL_SECTIONS == ("1. Produkt erfassen", "2. Preisliste prüfen")
     assert PRODUCT_GUIDANCE_STEPS == (
         "Artikel mit Standardpreis pflegen.",
-        "Vorhandene Artikel unten auswaehlen und zur Bearbeitung laden.",
-        "Aenderungen koennen vor dem Speichern verworfen werden.",
+        "Vorhandene Artikel unten auswählen und zur Bearbeitung laden.",
+        "Änderungen können vor dem Speichern verworfen werden.",
     )
     assert PRODUCT_CONTEXT_ACTIONS == {
         "edit": "Produkt bearbeiten",
@@ -537,14 +556,14 @@ def test_settings_tab_focuses_on_master_data_import_without_number_sequences():
 
     assert SETTINGS_PANEL_ACTIONS == {
         "settingsHelpButton": "?",
-        "chooseInputFolderButton": "Ordner waehlen",
-        "previewMasterDataButton": "Import pruefen",
+        "chooseInputFolderButton": "Ordner wählen",
+        "previewMasterDataButton": "Import prüfen",
         "importMasterDataButton": "Import starten",
     }
     assert SETTINGS_PANEL_SECTIONS == ("Excel-Stammdaten importieren",)
     source = Path("src/getraenkeladen_tool/ui/settings_panel.py").read_text(encoding="utf-8")
     assert "preview_master_data_from_folder" in source
-    assert "Import bestaetigen" in source
+    assert "Import bestätigen" in source
     assert "preview.safety_report_text" in source
 
 
@@ -562,14 +581,14 @@ def test_dashboard_tab_exposes_daily_guidance():
 
     assert DASHBOARD_ACTIONS == {
         "dashboardHelpButton": "?",
-        "newDeliveryButton": "Kunden oeffnen",
+        "newDeliveryButton": "Kunden öffnen",
         "refreshDashboardButton": "Heute aktualisieren",
     }
     assert DASHBOARD_CARDS == ("Lieferungen", "Rechnungen", "Kontakte")
     assert DASHBOARD_GUIDANCE_STEPS == (
-        "Faellige Aufgabe auswaehlen.",
-        "Kunde oder Rechnung im Kontext pruefen.",
-        "Naechste Aktion direkt ausfuehren.",
+        "Fällige Aufgabe auswählen.",
+        "Kunde oder Rechnung im Kontext prüfen.",
+        "Nächste Aktion direkt ausführen.",
     )
 
 
@@ -583,8 +602,8 @@ def test_dashboard_uses_cockpit_quick_actions_without_calendar():
     assert "self.quick_action_buttons" in source
     assert "Kunde oder Lieferung starten" in source
     assert "Bestellung weiterbearbeiten" in source
-    assert "Rechnung oder Zahlung pruefen" in source
-    assert "Blocker klaeren" in source
+    assert "Rechnung oder Zahlung prüfen" in source
+    assert "Blocker klären" in source
     assert "heroSearchPanel" not in source
     assert "todayContactList" not in source
     assert "Heute starten" not in source
@@ -602,7 +621,7 @@ def test_dashboard_uses_compact_summary_rows_instead_of_tall_metric_cards():
 
     assert "def _summary_panel" in source
     assert "todaySummaryPanel" in source
-    assert "Ueberblick" in source
+    assert "Überblick" in source
     assert "metricHint" in source
     assert "addLayout(self._cards_grid()" not in source
 
@@ -613,7 +632,7 @@ def test_dashboard_copy_matches_customer_folder_workflow():
     source = Path("src/getraenkeladen_tool/ui/dashboard_panel.py").read_text(encoding="utf-8")
 
     assert "Kundenordner öffnen: Startet den normalen Arbeitsablauf" not in source
-    assert "Kundenordner oeffnen: Startet den normalen Arbeitsablauf" not in source
+    assert "Kundenordner öffnen: Startet den normalen Arbeitsablauf" not in source
     assert "Kunden suchen, Hinweise sehen, Bestellung beginnen." in source
     assert "Kundenordner" not in source
     assert "Heute: Hier stehen die Aufgaben" in source
@@ -738,8 +757,8 @@ def test_checklist_shortcut_selects_subtab_before_management_refresh():
     method_end = source.index("    def open_orders_tab", method_start)
     method_source = source[method_start:method_end]
 
-    assert method_source.index("self.management_workspace.setCurrentWidget(self.checklist_panel)") < method_source.index(
-        'self.navigation.setCurrentRow(MAIN_TABS.index("Verwaltung"))'
+    assert method_source.index('self.navigation.setCurrentRow(MAIN_TABS.index("Verwaltung"))') < method_source.index(
+        "self.management_workspace.setCurrentWidget(self.checklist_panel)"
     )
 
 

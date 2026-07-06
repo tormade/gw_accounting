@@ -277,7 +277,7 @@ def test_order_panel_product_picker_shows_customer_recommendations_before_all_pr
     panel.customer_select.select_value(customer.id)
 
     assert panel.product_select.visible_labels() == [
-        "Empfohlen fuer diesen Kunden",
+        "Empfohlen für diesen Kunden",
         "Wasser 12x0,7",
         "Alle Artikel",
         "Spezi 20x0,5",
@@ -394,7 +394,7 @@ def test_order_panel_skips_unresolved_assortment_items_when_prefilling_from_cust
 
     assert panel.order_lines_table.rowCount() == 1
     assert panel.order_lines_table.item(0, 0).text() == water.name
-    assert "Ungeklaerte Artikel wurden ausgelassen." in panel.status_label.text()
+    assert "Ungeklärte Artikel wurden ausgelassen." in panel.status_label.text()
     panel.close_order_dialog()
 
 
@@ -496,7 +496,7 @@ def test_document_workflow_panels_make_excel_pdf_generation_flow_visible():
     assert "PDF:" in source
     assert "Nummer vorschlagen" in source
     assert "suggest_document_number" in source
-    assert "Lieferpauschale hinzufuegen?" in source
+    assert "Lieferpauschale hinzufügen?" in source
     assert "self.delivery_fee_choice = QComboBox()" in source
     assert "self.document_note = QLineEdit()" in source
     assert "rote Hauptbutton" not in source
@@ -594,8 +594,8 @@ def test_document_workflow_uses_compact_order_search_instead_of_large_order_list
 
     assert "SearchableSelect" in source
     assert "Diese Bestellung verwenden" in source
-    assert "Suche zuruecksetzen" in source
-    assert "Ausgewaehlte Bestellung" in source
+    assert "Suche zurücksetzen" in source
+    assert "Ausgewählte Bestellung" in source
     assert "Kunde, Bestellnummer oder Lieferdatum suchen" in source
 
 
@@ -604,7 +604,7 @@ def test_document_workflow_keeps_main_excel_pdf_action_always_visible():
 
     assert "self.document_tabs = QTabWidget()" in source
     assert "self.document_tabs.setUsesScrollButtons(False)" in source
-    assert 'addTab(positions_tab, "Artikel pruefen")' in source
+    assert 'addTab(positions_tab, "Artikel prüfen")' in source
     assert 'addTab(deposit_tab, "Pfand")' in source
     assert 'addTab(output_tab, "Ausgabe")' in source
     assert "finish_bar.setObjectName(\"documentFinishBar\")" in source
@@ -620,7 +620,7 @@ def test_document_workflow_hides_order_search_after_preselected_order_is_loaded(
     assert "self.order_box = order_box" in source
     assert "self.order_box.setVisible(False)" in source
     assert "self.order_box.setVisible(True)" in source
-    assert 'self.status_label.setText("Bestellung verwendet. Artikel pruefen und danach Excel oder PDF erstellen.")' in source
+    assert 'self.status_label.setText("Bestellung verwendet. Artikel prüfen und danach Excel oder PDF erstellen.")' in source
 
 
 def test_document_workflow_allows_editing_lines_and_deposit_returns():
@@ -637,8 +637,8 @@ def test_document_workflow_allows_editing_lines_and_deposit_returns():
     assert "self.deposit_return_select = QComboBox()" in source
     assert "self.deposit_return_select.currentIndexChanged.connect(self.apply_selected_deposit_return)" in source
     assert '"removeDocumentLineButton": "Position entfernen"' in source
-    assert '"addDocumentDepositReturnButton": "Pfand-Rueckgabe eintragen"' in source
-    assert '"removeDocumentDepositReturnButton": "Pfand-Rueckgabe entfernen"' in source
+    assert '"addDocumentDepositReturnButton": "Pfand-Rückgabe eintragen"' in source
+    assert '"removeDocumentDepositReturnButton": "Pfand-Rückgabe entfernen"' in source
     assert "self.remove_line_button.clicked.connect(self.remove_selected_line)" in source
     assert "self.add_return_button.clicked.connect(self.add_deposit_return)" in source
     assert "self.remove_return_button.clicked.connect(self.remove_selected_deposit_return)" in source
@@ -660,10 +660,10 @@ def test_document_workflow_uses_clearer_deposit_and_delivery_fee_labels():
     source = Path("src/getraenkeladen_tool/ui/document_workflow_panel.py").read_text(encoding="utf-8")
 
     assert 'DOCUMENT_LINE_COLUMNS = ("Artikel", "Menge", "Preis je Einheit EUR", "Pfand je Einheit EUR", "Summe EUR")' in source
-    assert '"addDocumentDepositReturnButton": "Pfand-Rueckgabe eintragen"' in source
-    assert "Lieferpauschale hinzufuegen?" in source
+    assert '"addDocumentDepositReturnButton": "Pfand-Rückgabe eintragen"' in source
+    assert "Lieferpauschale hinzufügen?" in source
     assert "Keine Pauschale" in source
-    assert "3,90 EUR hinzufuegen" in source
+    assert "3,90 EUR hinzufügen" in source
     assert "Nur Beleg-Korrektur" in source
     assert "Lieferschein-Nummer" in source
     assert "Hinweis auf dem Lieferschein" in source
@@ -744,7 +744,7 @@ def test_order_panel_exposes_deposit_returns_new_order_and_copy_actions():
 
     assert '"newOrderButton": "Neue Bestellung"' in source
     assert '"copyOrderButton": "Als Vorlage kopieren"' in source
-    assert '"addDepositReturnButton": "Pfand-Rueckgabe eintragen"' in source
+    assert '"addDepositReturnButton": "Pfand-Rückgabe eintragen"' in source
     assert "self.deposit_returns_table" in source
     assert "self.deposit_return_select = QComboBox()" in source
     assert "DEPOSIT_RETURN_PRESETS" in source
@@ -777,7 +777,7 @@ def test_order_panel_guides_next_step_after_successful_save():
 
     assert "def show_saved_order_next_steps" in source
     assert "Bestellung gespeichert" in source
-    assert "Was moechten Sie als Naechstes tun?" in source
+    assert "Was möchten Sie als Nächstes tun?" in source
     assert "Nur speichern" in source
     assert "Lieferschein erstellen" in source
     assert "Rechnung erstellen" in source
@@ -791,7 +791,7 @@ def test_order_panel_warns_clearly_before_invalid_save():
 
     assert "def warn_invalid_order_save" in source
     assert "Bitte eine Bestellnummer eintragen." in source
-    assert "Bitte mindestens eine Position hinzufuegen." in source
+    assert "Bitte mindestens eine Position hinzufügen." in source
     assert "QMessageBox.warning" in source
 
 
@@ -799,8 +799,8 @@ def test_order_panel_uses_clearer_labels_for_less_technical_users():
     source = Path("src/getraenkeladen_tool/ui/order_panel.py").read_text(encoding="utf-8")
 
     assert '"copyOrderButton": "Als Vorlage kopieren"' in source
-    assert '"addDepositReturnButton": "Pfand-Rueckgabe eintragen"' in source
-    assert '"removeDepositReturnButton": "Pfand-Rueckgabe entfernen"' in source
+    assert '"addDepositReturnButton": "Pfand-Rückgabe eintragen"' in source
+    assert '"removeDepositReturnButton": "Pfand-Rückgabe entfernen"' in source
     assert 'ORDER_LINE_COLUMNS = ("Produkt", "Menge", "Preis je Einheit EUR", "Pfand je Einheit EUR", "Summe EUR")' in source
     assert 'customer_form.addRow("Bestellnummer", order_number_row)' in source
     assert "Auftragssumme" not in source
@@ -921,7 +921,7 @@ def test_order_line_context_menu_can_copy_selected_position_into_order():
     assert panel.order_lines_table.item(1, 2).text() == "12,99"
     assert panel.order_lines_table.item(1, 3).text() == "3,30"
     assert panel.order_lines_table.item(1, 0).data(Qt.ItemDataRole.UserRole) == 12
-    assert "Position in die neue Bestellung uebernommen" in panel.status_label.text()
+    assert "Position in die neue Bestellung übernommen" in panel.status_label.text()
 
 
 def test_order_line_table_has_context_menu_for_copying_positions():
@@ -930,7 +930,7 @@ def test_order_line_table_has_context_menu_for_copying_positions():
     assert "self.order_lines_table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)" in source
     assert "self.order_lines_table.customContextMenuRequested.connect(self.show_order_line_context_menu)" in source
     assert "def show_order_line_context_menu" in source
-    assert "Position in neue Bestellung uebernehmen" in source
+    assert "Position in neue Bestellung übernehmen" in source
     assert "def copy_selected_order_line" in source
 
 
@@ -944,7 +944,7 @@ def test_order_panel_runs_automation_warnings_before_save():
     assert "*validate_order_before_save(session, payload, exclude_order_id=self.current_order_id)" in source
     assert "*validate_deposit_returns(payload)" in source
     assert "def confirm_automation_warnings" in source
-    assert "Pruefung vor dem Speichern" in source
+    assert "Prüfung vor dem Speichern" in source
     assert "Blocker" in source
     assert "Warnungen" in source
     assert "Hinweise" in source
@@ -966,7 +966,7 @@ def test_document_workflow_runs_asset_verification_after_export():
 
     assert "from ..services.automation_service import verify_document_assets" in source
     assert "verification = verify_document_assets(session, document.id, expected_assets=assets)" in source
-    assert "Belegpruefung: OK." in source
+    assert "Belegprüfung: OK." in source
 
 
 def test_order_context_archive_does_not_open_edit_dialog():

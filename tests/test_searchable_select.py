@@ -156,13 +156,13 @@ def test_searchable_select_can_show_grouped_recommendations_before_all_items():
     select = SearchableSelect("Produkt suchen")
     select.set_items(
         [
-            ("Wasser 12x0,7", 1, "letzte Menge 4", "Empfohlen fuer diesen Kunden"),
+            ("Wasser 12x0,7", 1, "letzte Menge 4", "Empfohlen für diesen Kunden"),
             ("Spezi 20x0,5", 2, "14,90 EUR", "Alle Artikel"),
         ]
     )
 
     assert select.visible_labels() == [
-        "Empfohlen fuer diesen Kunden",
+        "Empfohlen für diesen Kunden",
         "Wasser 12x0,7",
         "Alle Artikel",
         "Spezi 20x0,5",
@@ -180,13 +180,13 @@ def test_searchable_select_group_headers_are_visual_separators_not_choices():
     select = SearchableSelect("Produkt suchen")
     select.set_items(
         [
-            ("Wasser 12x0,7", 1, "letzte Menge 4", "Empfohlen fuer diesen Kunden"),
+            ("Wasser 12x0,7", 1, "letzte Menge 4", "Empfohlen für diesen Kunden"),
             ("Spezi 20x0,5", 2, "14,90 EUR", "Alle Artikel"),
         ]
     )
 
     header = select.result_list.item(0)
-    assert header.text() == "Empfohlen fuer diesen Kunden"
+    assert header.text() == "Empfohlen für diesen Kunden"
     assert header.data(Qt.ItemDataRole.UserRole) is None
     assert not (header.flags() & Qt.ItemFlag.ItemIsSelectable)
     assert not (header.flags() & Qt.ItemFlag.ItemIsEnabled)

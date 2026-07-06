@@ -9,7 +9,6 @@ from PySide6.QtWidgets import (
     QPushButton,
     QScrollArea,
     QStackedWidget,
-    QTabWidget,
     QVBoxLayout,
     QWidget,
 )
@@ -20,6 +19,7 @@ from .customer_panel import CustomerPanel
 from .document_archive_panel import DocumentArchivePanel
 from .document_workflow_panel import DeliveryNotePanel, InvoicePanel, ReturnInvoicePanel
 from .layouts import SidebarNavigation
+from .management_home_panel import ManagementHomePanel
 from .order_panel import OrderPanel
 from .product_panel import ProductPanel
 from .report_panel import ReportPanel
@@ -65,6 +65,7 @@ class MainWindow(QMainWindow):
         self.document_archive_panel = DocumentArchivePanel(session_factory=session_factory)
         self.settings_panel = SettingsPanel(session_factory=session_factory)
         self.checklist_panel = ChecklistPanel(session_factory=session_factory)
+        self.management_home_panel = ManagementHomePanel()
         self.work_workspace = self._work_workspace()
         self.management_workspace = self._management_workspace()
         self._loaded_management_panels: set[QWidget] = set()
@@ -85,6 +86,7 @@ class MainWindow(QMainWindow):
         self.work_start_panel.customer_selected.connect(self.open_customer_focus)
         self.work_start_panel.return_selected.connect(self.open_return_for_order)
         self.return_invoice_panel.document_created.connect(self.open_work_start_tab)
+        self.management_home_panel.route_requested.connect(self.open_management_section)
 
         app_shell = QWidget()
         app_shell.setObjectName("appShell")
@@ -96,7 +98,7 @@ class MainWindow(QMainWindow):
         self.pages.addWidget(self._scrollable_tab(self.work_workspace))
         self.pages.addWidget(self._scrollable_tab(self.open_items_panel))
         self.pages.addWidget(self._scrollable_tab(self.management_workspace))
-        self.navigation.currentRowChanged.connect(self.pages.setCurrentIndex)
+        self.navigation.currentRowChanged.connect(self.show_main_page)
         self.navigation.currentRowChanged.connect(self.refresh_current_tab)
         self.management_workspace.currentChanged.connect(self.refresh_active_management_panel)
         shell_layout.addWidget(self.navigation)
@@ -123,12 +125,31 @@ class MainWindow(QMainWindow):
         self.navigation.setCurrentRow(MAIN_TABS.index("Rechnungen"))
 
     def open_checklist_tab(self) -> None:
-        self.management_workspace.setCurrentWidget(self.checklist_panel)
         self.navigation.setCurrentRow(MAIN_TABS.index("Verwaltung"))
+        self.management_workspace.setCurrentWidget(self.checklist_panel)
 
     def open_orders_tab(self) -> None:
         self.work_workspace.setCurrentWidget(self.order_panel)
         self.navigation.setCurrentRow(MAIN_TABS.index("Arbeiten"))
+
+    def show_main_page(self, index: int) -> None:
+        self.pages.setCurrentIndex(index)
+        if index == MAIN_TABS.index("Verwaltung"):
+            self.management_workspace.setCurrentWidget(self.management_home_panel)
+
+    def open_management_section(self, section: str) -> None:
+        panels = {
+            "Kunden": self.customer_panel,
+            "Artikel": self.product_panel,
+            "Prüfpunkte": self.checklist_panel,
+            "Import": self.settings_panel,
+            "Belegarchiv": self.document_archive_panel,
+        }
+        panel = panels.get(section)
+        if panel is None:
+            return
+        self.management_workspace.setCurrentWidget(panel)
+        self.refresh_active_management_panel()
 
     def open_new_order_dialog(self) -> None:
         self.open_orders_tab()
@@ -235,15 +256,16 @@ class MainWindow(QMainWindow):
         self.work_workspace.currentChanged.connect(self.refresh_active_work_panel)
         return self.work_workspace
 
-    def _management_workspace(self) -> QTabWidget:
-        tabs = QTabWidget()
-        tabs.setObjectName("workspaceTabs")
-        tabs.addTab(self.customer_panel, "Kunden")
-        tabs.addTab(self.product_panel, "Artikel")
-        tabs.addTab(self.checklist_panel, "Prüfpunkte")
-        tabs.addTab(self.settings_panel, "Import")
-        tabs.addTab(self.document_archive_panel, "Belegarchiv")
-        return tabs
+    def _management_workspace(self) -> QStackedWidget:
+        stack = QStackedWidget()
+        stack.setObjectName("managementStateStack")
+        stack.addWidget(self.management_home_panel)
+        stack.addWidget(self.customer_panel)
+        stack.addWidget(self.product_panel)
+        stack.addWidget(self.checklist_panel)
+        stack.addWidget(self.settings_panel)
+        stack.addWidget(self.document_archive_panel)
+        return stack
 
     def _panel(self, title: str, subtitle: str) -> QWidget:
         widget = QWidget()

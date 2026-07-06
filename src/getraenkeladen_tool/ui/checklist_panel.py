@@ -14,11 +14,11 @@ from .layouts import ContentSurface, InspectorPanel, PageHeader, ResponsiveSplit
 from .searchable_select import SearchableSelect
 
 
-CHECKLIST_COLUMNS = ("Prioritaet", "Kunde", "Problem", "Naechster Schritt")
+CHECKLIST_COLUMNS = ("Priorität", "Kunde", "Problem", "Nächster Schritt")
 CHECKLIST_ACTIONS = {
-    "refreshChecklistButton": "Pruefpunkte aktualisieren",
+    "refreshChecklistButton": "Prüfpunkte aktualisieren",
     "resolveChecklistButton": "Als erledigt markieren",
-    "reopenChecklistButton": "Wieder oeffnen",
+    "reopenChecklistButton": "Wieder öffnen",
     "useCentralPriceButton": "Zentralen Preis nutzen",
     "keepExcelPriceButton": "Excel-Preis behalten",
     "confirmProductAliasButton": "Artikel zuordnen",
@@ -35,7 +35,7 @@ class ChecklistPanel(QWidget):
         self.issue_rows_by_id = {}
         self.has_loaded = False
 
-        self.summary_label = QLabel("Pruefpunkte werden nach Blockerwirkung gesammelt und priorisiert.")
+        self.summary_label = QLabel("Prüfpunkte werden nach Blockerwirkung gesammelt und priorisiert.")
         self.summary_label.setObjectName("muted")
         self.issue_table = QTableWidget(0, len(CHECKLIST_COLUMNS))
         self.issue_table.setHorizontalHeaderLabels(CHECKLIST_COLUMNS)
@@ -56,12 +56,12 @@ class ChecklistPanel(QWidget):
         self.product_select = SearchableSelect("Zentralen Artikel suchen")
         self.product_select.setMinimumWidth(360)
         self.action_help_label = QLabel(
-            "Pruefpunkt auswaehlen. Nur die passenden Aktionen werden angezeigt. "
-            "Diese Entscheidung aendert Stammdaten oder Kundensortiment dauerhaft."
+            "Prüfpunkt auswählen. Nur die passenden Aktionen werden angezeigt. "
+            "Diese Entscheidung ändert Stammdaten oder Kundensortiment dauerhaft."
         )
         self.action_help_label.setObjectName("sectionSubtitle")
         self.action_help_label.setWordWrap(True)
-        self.status_label = QLabel("Pruefpunkte bereit.")
+        self.status_label = QLabel("Prüfpunkte bereit.")
         self.status_label.setObjectName("muted")
 
         root_layout = QVBoxLayout(self)
@@ -69,7 +69,7 @@ class ChecklistPanel(QWidget):
         surface = ContentSurface()
         root_layout.addWidget(surface)
         layout = surface.layout
-        layout.addWidget(PageHeader("Pruefpunkte", "Blockierende Konflikte bewusst entscheiden, bevor sie Bestellungen stoeren."))
+        layout.addWidget(PageHeader("Prüfpunkte", "Blockierende Konflikte bewusst entscheiden, bevor sie Bestellungen stören."))
 
         workspace = ResponsiveSplitter()
         layout.addWidget(workspace, 1)
@@ -100,7 +100,7 @@ class ChecklistPanel(QWidget):
         workspace.addWidget(card)
 
         self.issue_detail_panel = InspectorPanel(
-            "Pruefpunkt auswaehlen",
+            "Prüfpunkt auswählen",
             "Details, Vergleichswerte und passende Aktionen erscheinen hier.",
         )
         self.issue_detail_panel.setMaximumWidth(420)
@@ -108,7 +108,7 @@ class ChecklistPanel(QWidget):
         self.issue_field_label = self.issue_detail_panel.add_value_label("Feld")
         self.issue_folder_label = self.issue_detail_panel.add_value_label("Kunden-Excel")
         self.issue_list_label = self.issue_detail_panel.add_value_label("Zentrale Daten")
-        self.issue_message_label = self.issue_detail_panel.add_value_label("Naechster Schritt")
+        self.issue_message_label = self.issue_detail_panel.add_value_label("Nächster Schritt")
         self.issue_detail_panel.add_section_label("Aktionen")
         self.issue_detail_panel.body.addWidget(self.resolve_button)
         self.issue_detail_panel.body.addWidget(self.reopen_button)
@@ -198,8 +198,8 @@ class ChecklistPanel(QWidget):
                     self.issue_table.setItem(row_index, column, item)
         finally:
             self.issue_table.setUpdatesEnabled(True)
-        self.summary_label.setText(f"{open_count} offene Pruefpunkte, {len(rows)} insgesamt.")
-        self.status_label.setText("Pruefpunkte aktualisiert.")
+        self.summary_label.setText(f"{open_count} offene Prüfpunkte, {len(rows)} insgesamt.")
+        self.status_label.setText("Prüfpunkte aktualisiert.")
         self.update_issue_context()
 
     def update_issue_context(self) -> None:
@@ -207,20 +207,20 @@ class ChecklistPanel(QWidget):
         row = self.issue_rows_by_id.get(issue_id)
         if row is None:
             self.issue_detail_panel.set_heading(
-                "Pruefpunkt auswaehlen",
+                "Prüfpunkt auswählen",
                 "Nur die passenden Aktionen werden angezeigt.",
             )
             self.issue_field_label.setText("Feld: -")
             self.issue_folder_label.setText("Kunden-Excel: -")
             self.issue_list_label.setText("Zentrale Daten: -")
-            self.issue_message_label.setText("Naechster Schritt: -")
+            self.issue_message_label.setText("Nächster Schritt: -")
             self._set_issue_action_visibility(None)
             return
         self.issue_detail_panel.set_heading(row.issue_type_label, f"{row.customer_name} | Status: {row.status}")
         self.issue_field_label.setText(f"Feld: {row.field_name or '-'}")
         self.issue_folder_label.setText(f"Kunden-Excel: {row.folder_value or '-'}")
         self.issue_list_label.setText(f"Zentrale Daten: {row.list_value or '-'}")
-        self.issue_message_label.setText(f"Naechster Schritt: {row.message or '-'}")
+        self.issue_message_label.setText(f"Nächster Schritt: {row.message or '-'}")
         self._set_issue_action_visibility(getattr(row, "issue_type", ""))
 
     def _set_issue_action_visibility(self, issue_type: str | None) -> None:
@@ -244,25 +244,25 @@ class ChecklistPanel(QWidget):
         self._update_selected_issue("offen")
 
     def use_central_price_for_selected_issue(self) -> None:
-        self._resolve_price_decision("zentraler_preis", "Zentraler Preis wurde fuer diesen Artikel gespeichert.")
+        self._resolve_price_decision("zentraler_preis", "Zentraler Preis wurde für diesen Artikel gespeichert.")
 
     def keep_excel_price_for_selected_issue(self) -> None:
-        self._resolve_price_decision("excel_preis", "Excel-Preis wurde fuer diesen Artikel gespeichert.")
+        self._resolve_price_decision("excel_preis", "Excel-Preis wurde für diesen Artikel gespeichert.")
 
     def use_list_value_for_selected_issue(self) -> None:
-        self._resolve_customer_conflict("list", "Wert aus zentraler Liste wurde uebernommen.")
+        self._resolve_customer_conflict("list", "Wert aus zentraler Liste wurde übernommen.")
 
     def use_folder_value_for_selected_issue(self) -> None:
-        self._resolve_customer_conflict("folder", "Wert aus Kunden-Excel wurde uebernommen.")
+        self._resolve_customer_conflict("folder", "Wert aus Kunden-Excel wurde übernommen.")
 
     def confirm_product_alias_for_selected_issue(self) -> None:
         issue_id = self._selected_issue_id()
         product_id = self.product_select.current_value()
         if issue_id is None:
-            QMessageBox.warning(self, "Pruefpunkt auswaehlen", "Bitte zuerst einen Artikel-Pruefpunkt auswaehlen.")
+            QMessageBox.warning(self, "Prüfpunkt auswählen", "Bitte zuerst einen Artikel-Prüfpunkt auswählen.")
             return
         if product_id is None:
-            QMessageBox.warning(self, "Artikel auswaehlen", "Bitte zuerst einen zentralen Artikel auswaehlen.")
+            QMessageBox.warning(self, "Artikel auswählen", "Bitte zuerst einen zentralen Artikel auswählen.")
             return
         if self.session_factory is None:
             self.status_label.setText("Keine Datenbankverbindung vorhanden.")
@@ -277,12 +277,12 @@ class ChecklistPanel(QWidget):
         finally:
             session.close()
         self.show_issues(rows)
-        self.status_label.setText("Artikel wurde zugeordnet und als Alias bestaetigt.")
+        self.status_label.setText("Artikel wurde zugeordnet und als Alias bestätigt.")
 
     def _resolve_price_decision(self, decision: str, status_message: str) -> None:
         issue_id = self._selected_issue_id()
         if issue_id is None:
-            QMessageBox.warning(self, "Pruefpunkt auswaehlen", "Bitte zuerst einen Preis-Pruefpunkt auswaehlen.")
+            QMessageBox.warning(self, "Prüfpunkt auswählen", "Bitte zuerst einen Preis-Prüfpunkt auswählen.")
             return
         if self.session_factory is None:
             self.status_label.setText("Keine Datenbankverbindung vorhanden.")
@@ -302,7 +302,7 @@ class ChecklistPanel(QWidget):
     def _resolve_customer_conflict(self, source: str, status_message: str) -> None:
         issue_id = self._selected_issue_id()
         if issue_id is None:
-            QMessageBox.warning(self, "Pruefpunkt auswaehlen", "Bitte zuerst einen Kundendaten-Pruefpunkt auswaehlen.")
+            QMessageBox.warning(self, "Prüfpunkt auswählen", "Bitte zuerst einen Kundendaten-Prüfpunkt auswählen.")
             return
         if self.session_factory is None:
             self.status_label.setText("Keine Datenbankverbindung vorhanden.")
@@ -312,7 +312,7 @@ class ChecklistPanel(QWidget):
             resolve_customer_conflict(session, issue_id, source)
             rows = list_checklist_issues(session, include_done=True)
         except Exception as error:
-            QMessageBox.warning(self, "Kundendaten nicht uebernommen", f"Die Kundendaten konnten nicht uebernommen werden.\n\nGrund: {error}")
+            QMessageBox.warning(self, "Kundendaten nicht übernommen", f"Die Kundendaten konnten nicht übernommen werden.\n\nGrund: {error}")
             return
         finally:
             session.close()
@@ -322,7 +322,7 @@ class ChecklistPanel(QWidget):
     def _update_selected_issue(self, status: str) -> None:
         issue_id = self._selected_issue_id()
         if issue_id is None:
-            QMessageBox.warning(self, "Pruefpunkt auswaehlen", "Bitte zuerst einen Pruefpunkt in der Tabelle auswaehlen.")
+            QMessageBox.warning(self, "Prüfpunkt auswählen", "Bitte zuerst einen Prüfpunkt in der Tabelle auswählen.")
             return
         if self.session_factory is None:
             self.status_label.setText("Keine Datenbankverbindung vorhanden.")
@@ -331,10 +331,10 @@ class ChecklistPanel(QWidget):
         try:
             if status == "erledigt":
                 mark_issue_resolved(session, issue_id)
-                self.status_label.setText("Pruefpunkt als erledigt markiert.")
+                self.status_label.setText("Prüfpunkt als erledigt markiert.")
             else:
                 reopen_issue(session, issue_id)
-                self.status_label.setText("Pruefpunkt wieder geoeffnet.")
+                self.status_label.setText("Prüfpunkt wieder geöffnet.")
             rows = list_checklist_issues(session, include_done=True)
         finally:
             session.close()
@@ -347,7 +347,7 @@ class ChecklistPanel(QWidget):
         if issue_type in {"product_alias", "price_mismatch"}:
             return "Blocker"
         if issue_type.startswith("customer_"):
-            return "Pruefen"
+            return "Prüfen"
         return "Hinweis"
 
     def _selected_issue_id(self) -> int | None:

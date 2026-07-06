@@ -151,9 +151,9 @@ class SidebarNavigation(QListWidget):
         for label in labels:
             item = QListWidgetItem(label)
             item.setTextAlignment(Qt.AlignmentFlag.AlignVCenter)
-            item.setToolTip(f"{label} oeffnen")
+            item.setToolTip(f"{label} öffnen")
             item.setData(Qt.ItemDataRole.AccessibleTextRole, label)
-            item.setData(Qt.ItemDataRole.AccessibleDescriptionRole, f"{label} oeffnen")
+            item.setData(Qt.ItemDataRole.AccessibleDescriptionRole, f"{label} öffnen")
             self.addItem(item)
         self.setCurrentRow(0)
 

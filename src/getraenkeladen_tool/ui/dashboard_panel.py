@@ -9,19 +9,19 @@ from .layouts import ContentSurface, PageHeader
 
 DASHBOARD_ACTIONS = {
     "dashboardHelpButton": "?",
-    "newDeliveryButton": "Kunden oeffnen",
+    "newDeliveryButton": "Kunden öffnen",
     "refreshDashboardButton": "Heute aktualisieren",
 }
 DASHBOARD_CARDS = ("Lieferungen", "Rechnungen", "Kontakte")
 DASHBOARD_GUIDANCE_STEPS = (
-    "Faellige Aufgabe auswaehlen.",
-    "Kunde oder Rechnung im Kontext pruefen.",
-    "Naechste Aktion direkt ausfuehren.",
+    "Fällige Aufgabe auswählen.",
+    "Kunde oder Rechnung im Kontext prüfen.",
+    "Nächste Aktion direkt ausführen.",
 )
 DASHBOARD_HELP_TEXT = (
     "Heute: Hier stehen die Aufgaben, die jetzt Aufmerksamkeit brauchen.\n\n"
-    "Kunden oeffnen: Kunde suchen, Kontext pruefen und Bestellung starten.\n\n"
-    "Rechnungen oeffnen: Faellige Rechnungen pruefen und Zahlung markieren."
+    "Kunden öffnen: Kunde suchen, Kontext prüfen und Bestellung starten.\n\n"
+    "Rechnungen öffnen: Fällige Rechnungen prüfen und Zahlung markieren."
 )
 
 
@@ -88,28 +88,28 @@ class DashboardPanel(QWidget):
                 "route",
                 "Kunde oder Lieferung starten",
                 "Kunden suchen, Hinweise sehen, Bestellung beginnen.",
-                "Kunden oeffnen",
+                "Kunden öffnen",
                 self.new_delivery_requested,
             ),
             (
                 "document",
                 "Bestellung weiterbearbeiten",
-                "Entwurf oeffnen, Mengen pruefen, Beleg vorbereiten.",
-                "Bestellungen oeffnen",
+                "Entwurf öffnen, Mengen prüfen, Beleg vorbereiten.",
+                "Bestellungen öffnen",
                 self.orders_requested,
             ),
             (
                 "cash",
-                "Rechnung oder Zahlung pruefen",
-                "Faelligkeit, Zahlart und Zahlungseingang kontrollieren.",
-                "Rechnungen oeffnen",
+                "Rechnung oder Zahlung prüfen",
+                "Fälligkeit, Zahlart und Zahlungseingang kontrollieren.",
+                "Rechnungen öffnen",
                 self.open_items_requested,
             ),
             (
                 "audit",
-                "Blocker klaeren",
+                "Blocker klären",
                 "Unklare Artikel, Preise oder Kundendaten entscheiden.",
-                "Pruefpunkte oeffnen",
+                "Prüfpunkte öffnen",
                 self.checklist_requested,
             ),
         ):
@@ -164,14 +164,14 @@ class DashboardPanel(QWidget):
         layout = QVBoxLayout(panel)
         layout.setSpacing(10)
 
-        title = QLabel("Ueberblick")
+        title = QLabel("Überblick")
         title.setObjectName("summaryPanelTitle")
         layout.addWidget(title)
 
         for index, (title_text, hint_text) in enumerate(
             zip(
                 DASHBOARD_CARDS,
-                ("Heute faellig", "Offen oder faellig", "Wiedervorlage"),
+                ("Heute fällig", "Offen oder fällig", "Wiedervorlage"),
                 strict=True,
             )
         ):
@@ -222,7 +222,7 @@ class DashboardPanel(QWidget):
         values = (summary.delivery_count, summary.open_item_count, summary.due_contact_count)
         for label, value in zip(self.card_values, values, strict=True):
             label.setText(str(value))
-        self.next_steps_label.setText("Naechste Schritte: " + " ".join(summary.next_steps))
+        self.next_steps_label.setText("Nächste Schritte: " + " ".join(summary.next_steps))
 
     def _show_empty_summary(self, message: str) -> None:
         for label in self.card_values:

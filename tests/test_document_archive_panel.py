@@ -10,11 +10,11 @@ def test_document_archive_panel_exposes_one_combined_document_list_and_actions()
     assert "self.document_filter = QComboBox()" in source
     assert "Rechnungen und Lieferscheine gemeinsam" in source
     assert "Kunde, Nummer oder Datum suchen" in source
-    assert "Excel oeffnen" in source
-    assert "PDF oeffnen" in source
-    assert "Ordner oeffnen" in source
-    assert "Im Belegbereich oeffnen" in source
-    assert "Zugehoerige Bestellung" in source
+    assert "Excel öffnen" in source
+    assert "PDF öffnen" in source
+    assert "Ordner öffnen" in source
+    assert "Im Belegbereich öffnen" in source
+    assert "Zugehörige Bestellung" in source
     assert "Die Excel-Datei wurde nicht gefunden." in source
     assert "Die PDF-Datei wurde nicht gefunden." in source
     assert "Der Kundenordner wurde nicht gefunden." in source
@@ -24,7 +24,7 @@ def test_document_archive_panel_exposes_one_combined_document_list_and_actions()
     assert "button.setEnabled(False)" in source
     assert "clearSelection()" in source
     assert "Belege gefunden" in source
-    assert "konnte nicht geoeffnet werden" in source
+    assert "konnte nicht geöffnet werden" in source
     assert "customContextMenuRequested.connect" in source
     assert "show_document_context_menu" in source
     assert "PDF neu erzeugen" in source
@@ -32,7 +32,7 @@ def test_document_archive_panel_exposes_one_combined_document_list_and_actions()
     assert "Alle Aktionen stehen auch als Buttons bereit" in source
     assert "table.indexAt(position).row()" in source
     assert "table.setCurrentCell(clicked_row, 0)" in source
-    assert "Zugehoerige Bestellung oeffnen" in source
+    assert "Zugehörige Bestellung öffnen" in source
     assert "document_open_requested = Signal(str, int)" in source
     assert "order_open_requested = Signal(int)" in source
     assert "table.setColumnWidth(1, 180)" in source
@@ -42,7 +42,9 @@ def test_document_archive_panel_exposes_one_combined_document_list_and_actions()
 def test_main_window_wires_document_archive_workspace_for_users():
     source = Path("src/getraenkeladen_tool/ui/main_window.py").read_text(encoding="utf-8")
 
-    assert 'tabs.addTab(self.document_archive_panel, "Belegarchiv")' in source
+    assert "self.management_home_panel = ManagementHomePanel()" in source
+    assert "stack.addWidget(self.document_archive_panel)" in source
+    assert '"Belegarchiv": self.document_archive_panel' in source
     assert '"Belege"' not in source
     assert "from .document_archive_panel import DocumentArchivePanel" in source
     assert "self.document_archive_panel = DocumentArchivePanel" in source

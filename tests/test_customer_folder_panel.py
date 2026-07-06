@@ -22,7 +22,7 @@ def test_customer_folder_panel_exposes_real_folder_workflow():
     assert "InspectorPanel" in source
     assert "Kundenlage" in source
     assert "Rechnungswarnung" in source
-    assert "Naechster Schritt" in source
+    assert "Nächster Schritt" in source
     assert "Bestellung starten" in source
     assert "Liste aktualisieren" in source
     assert "Letzte Dateien" in source
@@ -46,7 +46,7 @@ def test_customer_folder_panel_disables_actions_until_customer_context_exists():
     assert panel.seed_file_hint.text() == "Kunde suchen, dann erscheinen letzte Mengen und passende Aktionen."
     assert panel.delivery_note_button.isEnabled() is False
     assert panel.invoice_button.isEnabled() is False
-    assert panel.customer_next_step_label.text() == "Naechster Schritt: Kunde suchen."
+    assert panel.customer_next_step_label.text() == "Nächster Schritt: Kunde suchen."
 
 
 def test_customer_folder_panel_enables_actions_from_snapshot_state(tmp_path: Path):
@@ -94,7 +94,7 @@ def test_customer_folder_panel_enables_actions_from_snapshot_state(tmp_path: Pat
     assert panel.new_order_button.text() == "Neue Bestellung starten"
     assert panel.seed_file_hint.text() == "Letzte Mengen sind vorbereitet. Neue Bestellung starten und Mengen anpassen."
     assert panel.inspector.title_label.text() == "Cafe Nord"
-    assert panel.customer_next_step_label.text() == "Naechster Schritt: Neue Bestellung starten; die letzten Mengen sind vorbereitet."
+    assert panel.customer_next_step_label.text() == "Nächster Schritt: Neue Bestellung starten; die letzten Mengen sind vorbereitet."
     assert panel.customer_invoice_warning_label.text() == "Offene Rechnungen: -"
     assert panel.delivery_note_button.isEnabled() is False
     assert panel.invoice_button.isEnabled() is False
@@ -186,7 +186,7 @@ def test_customer_folder_panel_routes_selected_order_to_documents():
     assert "self.delivery_note_requested.emit(order_id)" in source
     assert "def request_invoice_for_selected_order" in source
     assert "self.invoice_requested.emit(order_id)" in source
-    assert "Bitte zuerst eine Bestellung dieses Kunden auswaehlen" in source
+    assert "Bitte zuerst eine Bestellung dieses Kunden auswählen" in source
 
 
 def test_customer_folder_panel_shows_automation_quickstart_suggestions():

@@ -55,24 +55,24 @@ class CustomerFolderPanel(QWidget):
         layout.addWidget(
             PageHeader(
                 "Kunden",
-                "Kunde finden, Kontext pruefen und direkt die naechste Bestellung starten.",
+                "Kunde finden, Kontext prüfen und direkt die nächste Bestellung starten.",
             )
         )
 
         self.customer_select = SearchableSelect("Kunde suchen, z. B. Cafe oder Metzgerei")
         self.refresh_button = QPushButton("Liste aktualisieren")
         self.open_folder_button = QPushButton("Kundenordner")
-        self.open_file_button = QPushButton("Datei oeffnen")
+        self.open_file_button = QPushButton("Datei öffnen")
         self.new_order_button = QPushButton("Neue Bestellung starten")
         self.new_order_button.setObjectName("primaryAction")
         self.seed_file_hint = QLabel("Letzte Mengen erscheinen nach der Kundenauswahl.")
         self.seed_file_hint.setObjectName("sectionSubtitle")
-        self.customer_guide_label = QLabel("1. Kunde suchen  2. Letzte Mengen pruefen  3. Neue Bestellung starten")
+        self.customer_guide_label = QLabel("1. Kunde suchen  2. Letzte Mengen prüfen  3. Neue Bestellung starten")
         self.customer_guide_label.setObjectName("stepText")
         self.customer_guide_label.setWordWrap(True)
         self.delivery_note_button = QPushButton("Lieferschein erstellen")
         self.invoice_button = QPushButton("Rechnung erstellen")
-        self.status_label = QLabel("Noch kein Kunde ausgewaehlt.")
+        self.status_label = QLabel("Noch kein Kunde ausgewählt.")
         self.status_label.setObjectName("muted")
 
         self.customer_address_label = QLabel("Adresse: -")
@@ -82,7 +82,7 @@ class CustomerFolderPanel(QWidget):
         self.customer_folder_label = QLabel("Ablage: -")
         self.customer_documents_label = QLabel("Belege: -")
         self.customer_invoice_warning_label = QLabel("Offene Rechnungen: -")
-        self.customer_next_step_label = QLabel("Naechster Schritt: Kunde suchen.")
+        self.customer_next_step_label = QLabel("Nächster Schritt: Kunde suchen.")
         self.customer_next_step_label.setObjectName("nextStepValue")
         self.customer_next_step_label.setMinimumHeight(72)
         for label in (
@@ -103,7 +103,7 @@ class CustomerFolderPanel(QWidget):
 
         workspace_card = WorkspaceCard(
             "Kunden finden",
-            "Suche einen Kunden. Danach zeigt die rechte Seite Adresse, Zahlart, Hinweise und den besten naechsten Schritt.",
+            "Suche einen Kunden. Danach zeigt die rechte Seite Adresse, Zahlart, Hinweise und den besten nächsten Schritt.",
             tone="route",
             kicker="ARBEITSPLATZ",
         )
@@ -129,7 +129,7 @@ class CustomerFolderPanel(QWidget):
         overview_layout.addWidget(assortment_title)
         overview_layout.addWidget(self.assortment_table)
         overview_layout.addWidget(self.seed_file_hint)
-        self.customer_context_tabs.addTab(overview_tab, "Uebersicht")
+        self.customer_context_tabs.addTab(overview_tab, "Übersicht")
 
         orders_tab = QWidget()
         orders_layout = QVBoxLayout(orders_tab)
@@ -147,7 +147,7 @@ class CustomerFolderPanel(QWidget):
         workspace_card.layout.addWidget(self.customer_context_tabs, 1)
         splitter.addWidget(workspace_card)
 
-        self.inspector = InspectorPanel("Kunde auswaehlen", "Nach der Auswahl stehen hier Kontext und naechste Aktion.")
+        self.inspector = InspectorPanel("Kunde auswählen", "Nach der Auswahl stehen hier Kontext und nächste Aktion.")
         self.inspector.add_section_label("Kundenlage")
         self.inspector.body.addWidget(self.customer_address_label)
         self.inspector.body.addWidget(self.customer_contact_label)
@@ -158,7 +158,7 @@ class CustomerFolderPanel(QWidget):
         self.inspector.body.addWidget(self.customer_documents_label)
         self.inspector.add_section_label("Rechnungswarnung")
         self.inspector.body.addWidget(self.customer_invoice_warning_label)
-        self.inspector.add_section_label("Naechster Schritt")
+        self.inspector.add_section_label("Nächster Schritt")
         self.inspector.body.addWidget(self.customer_next_step_label)
         self.inspector.body.addWidget(self.new_order_button)
         self.inspector.body.addWidget(self.open_folder_button)
@@ -236,7 +236,7 @@ class CustomerFolderPanel(QWidget):
         self.files_table.setRowCount(0)
         self.orders_table.setRowCount(0)
         self.assortment_table.setRowCount(0)
-        self.inspector.set_heading("Kunde auswaehlen", "Nach der Auswahl stehen hier Kontext und naechste Aktion.")
+        self.inspector.set_heading("Kunde auswählen", "Nach der Auswahl stehen hier Kontext und nächste Aktion.")
         self.customer_address_label.setText("Adresse: -")
         self.customer_contact_label.setText("Kontakt: -")
         self.customer_payment_label.setText("Zahlart: -")
@@ -244,7 +244,7 @@ class CustomerFolderPanel(QWidget):
         self.customer_folder_label.setText("Ablage: -")
         self.customer_documents_label.setText("Belege: -")
         self.customer_invoice_warning_label.setText("Offene Rechnungen: -")
-        self.customer_next_step_label.setText("Naechster Schritt: Kunde suchen.")
+        self.customer_next_step_label.setText("Nächster Schritt: Kunde suchen.")
         self.seed_file_hint.setText("Letzte Mengen erscheinen nach der Kundenauswahl.")
         self.status_label.setText(message)
         self.update_action_state()
@@ -259,7 +259,7 @@ class CustomerFolderPanel(QWidget):
         self.files_table.setRowCount(len(snapshot.files))
         for row, folder_file in enumerate(snapshot.files):
             self.files_by_row[row] = folder_file
-            action = "Excel ansehen" if folder_file.can_seed_order else "oeffnen"
+            action = "Excel ansehen" if folder_file.can_seed_order else "öffnen"
             self._set_row(self.files_table, row, (folder_file.label, folder_file.kind, action))
 
         self.order_ids_by_row.clear()
@@ -283,7 +283,7 @@ class CustomerFolderPanel(QWidget):
                     str(item.last_quantity),
                     self._money(item.current_price_cents),
                     self._money(item.current_deposit_cents),
-                    item.price_warning_text or ("Pruefen" if item.needs_review else ""),
+                    item.price_warning_text or ("Prüfen" if item.needs_review else ""),
                 ),
             )
 
@@ -295,7 +295,7 @@ class CustomerFolderPanel(QWidget):
             self._text(getattr(customer, "contact_email", "")),
         ]
         contact_text = " · ".join(part for part in contact_parts if part) or "-"
-        self.inspector.set_heading(customer.name, "Kundenkontext fuer Bestellung, Beleg und Zahlung.")
+        self.inspector.set_heading(customer.name, "Kundenkontext für Bestellung, Beleg und Zahlung.")
         self.customer_address_label.setText(f"Adresse: {self._text(getattr(customer, 'address', '')) or '-'}")
         self.customer_contact_label.setText(f"Kontakt: {contact_text}")
         self.customer_payment_label.setText(f"Zahlart: {self._text(getattr(customer, 'payment_method', '')) or '-'}")
@@ -322,9 +322,9 @@ class CustomerFolderPanel(QWidget):
         elif assortment_rows:
             next_step = "Neue Bestellung starten; die letzten Mengen sind vorbereitet."
         elif snapshot.folder_exists:
-            next_step = "Leere Bestellung starten oder alte Datei zum Nachsehen oeffnen."
+            next_step = "Leere Bestellung starten oder alte Datei zum Nachsehen öffnen."
         else:
-            next_step = "Leere Bestellung starten; Kundenordner spaeter in Stammdaten pruefen."
+            next_step = "Leere Bestellung starten; Kundenordner später in Stammdaten prüfen."
         if excel_previews:
             preview = excel_previews[0]
             document_bits = [
@@ -333,19 +333,19 @@ class CustomerFolderPanel(QWidget):
                 f"{preview.filled_quantity_rows} Mengenzeile(n)",
             ]
             preview_text = " · ".join(bit for bit in document_bits if bit)
-            next_step = f"Neue Excel-Datei pruefen: {preview.path.name} ({preview_text}). " + next_step
-        self.customer_next_step_label.setText(f"Naechster Schritt: {next_step}")
+            next_step = f"Neue Excel-Datei prüfen: {preview.path.name} ({preview_text}). " + next_step
+        self.customer_next_step_label.setText(f"Nächster Schritt: {next_step}")
         self.status_label.setText(
             f"{snapshot.customer.name}: Kundenordner {folder_status}, "
             f"{len(snapshot.files)} Dateien, {len(snapshot.orders)} Bestellungen."
         )
         if assortment_rows and all(getattr(row, "price_warning_text", None) == "aus letzter Bestellung" for row in assortment_rows):
-            self.seed_file_hint.setText("Letzte Mengen aus letzter Bestellung. Mengen koennen in der neuen Bestellung geaendert werden.")
+            self.seed_file_hint.setText("Letzte Mengen aus letzter Bestellung. Mengen können in der neuen Bestellung geändert werden.")
         self.update_action_state()
 
     def open_customer_folder(self) -> None:
         if self.current_folder_path is None:
-            self.status_label.setText("Bitte zuerst einen Kunden auswaehlen.")
+            self.status_label.setText("Bitte zuerst einen Kunden auswählen.")
             return
         if not self.current_folder_path.is_dir():
             self._show_missing_file("Der Kundenordner wurde nicht gefunden.")
@@ -356,7 +356,7 @@ class CustomerFolderPanel(QWidget):
         row = self.files_table.currentRow()
         folder_file = self.files_by_row.get(row)
         if folder_file is None:
-            self.status_label.setText("Bitte zuerst eine Datei im Kundenordner auswaehlen.")
+            self.status_label.setText("Bitte zuerst eine Datei im Kundenordner auswählen.")
             return
         path = folder_file.path
         if not path.exists():
@@ -366,7 +366,7 @@ class CustomerFolderPanel(QWidget):
 
     def request_new_order_for_customer(self) -> None:
         if self.current_customer_id is None:
-            self.status_label.setText("Bitte zuerst einen Kunden auswaehlen.")
+            self.status_label.setText("Bitte zuerst einen Kunden auswählen.")
             return
         self.new_order_requested.emit(self.current_customer_id)
 
@@ -379,14 +379,14 @@ class CustomerFolderPanel(QWidget):
     def request_delivery_note_for_selected_order(self) -> None:
         order_id = self._selected_order_id()
         if order_id is None:
-            self.status_label.setText("Bitte zuerst eine Bestellung dieses Kunden auswaehlen.")
+            self.status_label.setText("Bitte zuerst eine Bestellung dieses Kunden auswählen.")
             return
         self.delivery_note_requested.emit(order_id)
 
     def request_invoice_for_selected_order(self) -> None:
         order_id = self._selected_order_id()
         if order_id is None:
-            self.status_label.setText("Bitte zuerst eine Bestellung dieses Kunden auswaehlen.")
+            self.status_label.setText("Bitte zuerst eine Bestellung dieses Kunden auswählen.")
             return
         self.invoice_requested.emit(order_id)
 

@@ -34,7 +34,7 @@ PRODUCT_PANEL_ACTIONS = {
     "newProductButton": "Neu",
     "saveProductButton": "Produkt speichern",
     "discardProductChangesButton": "Verwerfen",
-    "undoProductChangeButton": "Rueckgaengig",
+    "undoProductChangeButton": "Rückgängig",
     "refreshProductsButton": "Produktliste laden",
     "loadProductButton": "Auswahl bearbeiten",
     "deactivateProductButton": "Produkt deaktivieren",
@@ -43,15 +43,15 @@ PRODUCT_PANEL_ACTIONS = {
 PRODUCT_HELP_TEXT = (
     "Produkte: Hier pflegen Sie die zentrale Preisliste.\n\n"
     "Links erfassen oder bearbeiten Sie einen Artikel. Rechts sehen Sie die vorhandene Preisliste.\n\n"
-    "Deaktivieren verhindert neue Nutzung, laesst alte Belege aber nachvollziehbar bestehen."
+    "Deaktivieren verhindert neue Nutzung, lässt alte Belege aber nachvollziehbar bestehen."
 )
 
 PRODUCT_COLUMNS = ("Produkt", "Artikelnummer", "Preis", "Pfand", "Status")
-PRODUCT_PANEL_SECTIONS = ("1. Produkt erfassen", "2. Preisliste pruefen")
+PRODUCT_PANEL_SECTIONS = ("1. Produkt erfassen", "2. Preisliste prüfen")
 PRODUCT_GUIDANCE_STEPS = (
     "Artikel mit Standardpreis pflegen.",
-    "Vorhandene Artikel unten auswaehlen und zur Bearbeitung laden.",
-    "Aenderungen koennen vor dem Speichern verworfen werden.",
+    "Vorhandene Artikel unten auswählen und zur Bearbeitung laden.",
+    "Änderungen können vor dem Speichern verworfen werden.",
 )
 PRODUCT_CONTEXT_ACTIONS = {
     "edit": "Produkt bearbeiten",
@@ -101,7 +101,7 @@ class ProductPanel(QWidget):
 
         edit_box, edit_layout = self._section(
             PRODUCT_PANEL_SECTIONS[0],
-            "Produktname, Artikelnummer, Preis und Pfand sind die Basis fuer spaetere Bestellungen.",
+            "Produktname, Artikelnummer, Preis und Pfand sind die Basis für spätere Bestellungen.",
             tone="cash",
             kicker="PREISKARTE",
         )
@@ -265,7 +265,7 @@ class ProductPanel(QWidget):
     def load_selected_product(self) -> None:
         product_id = self._selected_product_id()
         if product_id is None or self.session_factory is None:
-            self.status_label.setText("Bitte zuerst ein Produkt auswaehlen.")
+            self.status_label.setText("Bitte zuerst ein Produkt auswählen.")
             return
 
         session = self.session_factory()
@@ -288,7 +288,7 @@ class ProductPanel(QWidget):
     def deactivate_current_product(self) -> None:
         product_id = self.current_product_id or self._selected_product_id()
         if self.session_factory is None or product_id is None:
-            self.status_label.setText("Kein Produkt zum Deaktivieren ausgewaehlt.")
+            self.status_label.setText("Kein Produkt zum Deaktivieren ausgewählt.")
             return
 
         session = self.session_factory()
@@ -305,7 +305,7 @@ class ProductPanel(QWidget):
     def restore_selected_product(self) -> None:
         product_id = self.current_product_id or self._selected_product_id()
         if self.session_factory is None or product_id is None:
-            self.status_label.setText("Kein Produkt zum Wiederherstellen ausgewaehlt.")
+            self.status_label.setText("Kein Produkt zum Wiederherstellen ausgewählt.")
             return
 
         session = self.session_factory()
@@ -322,20 +322,20 @@ class ProductPanel(QWidget):
     def undo_last_change(self) -> None:
         product_id = self.current_product_id or self._selected_product_id()
         if self.session_factory is None or product_id is None:
-            self.status_label.setText("Bitte zuerst ein Produkt auswaehlen.")
+            self.status_label.setText("Bitte zuerst ein Produkt auswählen.")
             return
 
         session = self.session_factory()
         try:
             changes = [change for change in list_product_changes(session, product_id) if change.action != "revert"]
             if not changes:
-                self.status_label.setText("Keine Aenderung zum Rueckgaengigmachen gefunden.")
+                self.status_label.setText("Keine Änderung zum Rückgängigmachen gefunden.")
                 return
             product = revert_product_change(session, changes[0].id)
             self.current_product_id = product.id
             self.show_products(list_products(session))
             self.loaded_form_snapshot = self._snapshot_from_product(product)
-            self.status_label.setText(f"Letzte Aenderung rueckgaengig gemacht: {product.name}")
+            self.status_label.setText(f"Letzte Änderung rückgängig gemacht: {product.name}")
         finally:
             session.close()
 
@@ -352,14 +352,14 @@ class ProductPanel(QWidget):
         self.deposit_eur.clear()
         self.is_active.setChecked(True)
         self.loaded_form_snapshot = self._form_snapshot()
-        self.status_label.setText("Neues Produkt. Erst Speichern uebernimmt die Angaben.")
+        self.status_label.setText("Neues Produkt. Erst Speichern übernimmt die Angaben.")
 
     def discard_changes(self) -> None:
         if self.loaded_form_snapshot is None:
             self.new_product()
             return
         self._apply_snapshot(self.loaded_form_snapshot)
-        self.status_label.setText("Aenderungen verworfen. Der zuletzt geladene Stand ist wiederhergestellt.")
+        self.status_label.setText("Änderungen verworfen. Der zuletzt geladene Stand ist wiederhergestellt.")
 
     def show_product_context_menu(self, position) -> None:
         if self.products_table.currentRow() < 0:
