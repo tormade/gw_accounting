@@ -17,7 +17,6 @@ from PySide6.QtWidgets import (
 from .checklist_panel import ChecklistPanel
 from .customer_folder_panel import CustomerFolderPanel
 from .customer_panel import CustomerPanel
-from .dashboard_panel import DashboardPanel
 from .document_archive_panel import DocumentArchivePanel
 from .document_workflow_panel import DeliveryNotePanel, InvoicePanel, ReturnInvoicePanel
 from .layouts import SidebarNavigation
@@ -54,7 +53,6 @@ class MainWindow(QMainWindow):
         root_layout.setContentsMargins(0, 0, 0, 0)
         root_layout.setSpacing(0)
 
-        self.dashboard_panel = DashboardPanel(session_factory=session_factory)
         self.work_start_panel = WorkStartPanel(session_factory=session_factory)
         self.customer_folder_panel = CustomerFolderPanel(session_factory=session_factory)
         self.order_panel = OrderPanel(session_factory=session_factory)
@@ -76,10 +74,6 @@ class MainWindow(QMainWindow):
             "Verwaltung": (self.refresh_active_management_panel,),
         }
 
-        self.dashboard_panel.new_delivery_requested.connect(self.open_customer_folder_tab)
-        self.dashboard_panel.orders_requested.connect(self.open_orders_tab)
-        self.dashboard_panel.open_items_requested.connect(self.open_open_items_tab)
-        self.dashboard_panel.checklist_requested.connect(self.open_checklist_tab)
         self.customer_folder_panel.new_order_requested.connect(self.open_new_order_for_customer)
         self.customer_folder_panel.delivery_note_requested.connect(self.open_delivery_note_for_order)
         self.customer_folder_panel.invoice_requested.connect(self.open_invoice_for_order)
@@ -198,7 +192,6 @@ class MainWindow(QMainWindow):
         current_panel = self.work_workspace.currentWidget()
         refresh_handlers = {
             self.work_start_panel: (self.work_start_panel.refresh,),
-            self.dashboard_panel: (self.dashboard_panel.refresh_dashboard,),
             self.customer_folder_panel: (self.customer_folder_panel.refresh_customers,),
             self.order_panel: (self.order_panel.refresh_orders,),
             self.return_invoice_panel: (self.return_invoice_panel.refresh_orders,),

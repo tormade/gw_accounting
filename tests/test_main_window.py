@@ -37,14 +37,13 @@ def test_main_window_uses_sidebar_app_shell_instead_of_top_tabs():
     assert "self.tabs = QTabWidget()" not in source
 
 
-def test_dashboard_quick_actions_open_customer_folder_workspace():
+def test_arbeiten_shell_no_longer_wires_dashboard_as_workflow_entry():
     from pathlib import Path
 
     source = Path("src/getraenkeladen_tool/ui/main_window.py").read_text(encoding="utf-8")
 
-    assert "self.dashboard_panel.new_delivery_requested.connect(self.open_customer_folder_tab)" in source
-    assert "self.dashboard_panel.open_items_requested.connect(self.open_open_items_tab)" in source
-    assert "self.dashboard_panel.checklist_requested.connect(self.open_checklist_tab)" in source
+    assert "DashboardPanel" not in source
+    assert "self.dashboard_panel" not in source
     assert "def open_customer_folder_tab" in source
     assert "def open_open_items_tab" in source
     assert "def open_checklist_tab" in source
@@ -618,12 +617,13 @@ def test_dashboard_copy_matches_customer_folder_workflow():
     assert "Heute: Hier stehen die Aufgaben" in source
 
 
-def test_dashboard_primary_action_opens_customer_folder_tab():
+def test_work_start_primary_actions_open_customer_folder_or_customer_focus():
     from pathlib import Path
 
     source = Path("src/getraenkeladen_tool/ui/main_window.py").read_text(encoding="utf-8")
 
-    assert "new_delivery_requested.connect(self.open_customer_folder_tab)" in source
+    assert "customer_search_requested.connect(self.open_customer_folder_tab)" in source
+    assert "customer_selected.connect(self.open_customer_focus)" in source
     assert 'MAIN_TABS.index("Arbeiten")' in source
 
 
@@ -638,8 +638,8 @@ def test_dashboard_quick_actions_open_customer_folder_workspace_signals():
     assert "button.clicked.connect(signal.emit)" in dashboard_source
     assert "manage_orders_requested" not in dashboard_source
     assert "invoice_requested = Signal()" not in dashboard_source
-    assert "open_items_requested.connect(self.open_open_items_tab)" in main_source
-    assert "checklist_requested.connect(self.open_checklist_tab)" in main_source
+    assert "open_items_requested.connect(self.open_open_items_tab)" not in main_source
+    assert "checklist_requested.connect(self.open_checklist_tab)" not in main_source
     assert 'MAIN_TABS.index("Arbeiten")' in main_source
 
 
