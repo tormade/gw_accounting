@@ -3,7 +3,7 @@ from dataclasses import dataclass
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QColor, QFont
-from PySide6.QtWidgets import QLabel, QLineEdit, QListWidget, QListWidgetItem, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QLabel, QLineEdit, QListWidget, QListWidgetItem, QSizePolicy, QVBoxLayout, QWidget
 
 
 @dataclass(slots=True)
@@ -27,6 +27,7 @@ class SearchableSelect(QWidget):
 
     def __init__(self, placeholder: str = "Suchen") -> None:
         super().__init__()
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Maximum)
         self._items: list[SearchableSelectItem] = []
         self._current_value = None
         self.search_input = QLineEdit()

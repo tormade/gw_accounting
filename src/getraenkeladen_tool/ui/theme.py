@@ -216,6 +216,22 @@ QPushButton#disclosureButton:checked {
     border-color: #b9b9bf;
 }
 
+QPushButton#secondaryActionButton {
+    background: #ffffff;
+    border: 1px solid #d2d2d7;
+    border-radius: 8px;
+    color: #1d1d1f;
+    font-size: 14px;
+    font-weight: 650;
+    min-height: 34px;
+    padding: 6px 12px;
+}
+
+QPushButton#secondaryActionButton:hover {
+    background: #f5f5f7;
+    border-color: #b9b9bf;
+}
+
 QWidget#disclosurePanel {
     background: #ffffff;
     border: 1px solid #d2d2d7;

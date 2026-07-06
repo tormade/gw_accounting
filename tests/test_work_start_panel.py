@@ -21,10 +21,17 @@ def test_work_start_panel_uses_compact_task_panels_without_card_stretch():
     source = Path("src/getraenkeladen_tool/ui/work_start_panel.py").read_text(encoding="utf-8")
 
     assert "WorkspaceCard" not in source
+    assert 'work_column.setObjectName("workStartColumn")' in source
+    assert "work_column.setMaximumWidth(980)" in source
     assert 'panel.setObjectName("workTaskPanel")' in source
-    assert "task_grid.setColumnStretch(0, 2)" in source
+    assert "panel.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Maximum)" in source
+    assert "work_flow = QVBoxLayout()" in source
+    assert "QGridLayout" not in source
     assert "self.customer_select.setMinimumWidth" not in source
     assert "self.returns_table.setMinimumWidth(320)" in source
+    assert "self.open_return_button.setVisible(bool(items))" in source
+    assert 'self.customer_search_button.setObjectName("secondaryActionButton")' in source
+    assert 'QPushButton("Alle Kunden öffnen")' in source
 
 
 def test_main_window_opens_work_start_as_first_arbeiten_screen():

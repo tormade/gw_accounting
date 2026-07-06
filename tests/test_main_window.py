@@ -76,6 +76,7 @@ def test_theme_uses_winklmeier_work_tool_direction():
     assert "sectionBox" in APP_STYLESHEET
     assert "workTaskPanel" in APP_STYLESHEET
     assert "helpButton" in APP_STYLESHEET
+    assert "secondaryActionButton" in APP_STYLESHEET
     assert "sectionTitle" in APP_STYLESHEET
     assert "documentHeaderCard" in APP_STYLESHEET
     assert "QPushButton#newOrderButton" in APP_STYLESHEET

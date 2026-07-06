@@ -111,6 +111,7 @@ Das Produktziel steht in `docs/zielbild.md`: ein schlankes lokales Windows-Buero
 - UI-Grill-Ergebnis als Design festgehalten und erste Redesign-Scheibe umgesetzt: `Arbeiten` zeigt keine sichtbaren Workflow-Tabs `Start/Heute/Kunden/Bestellung/Rücklauf` mehr, sondern nutzt intern einen Zustands-Stack. Die Startfläche hat jetzt eine echte Kundensuche plus offene Rückläufe statt nur eines Such-Buttons oder Dashboards. Volle Regression 290 Tests und `compileall src tests` erfolgreich.
 - `Heute`/Dashboard ist aus dem `Arbeiten`-Startfluss entfernt. `MainWindow` verdrahtet den täglichen Arbeitsstart jetzt direkt über Kundensuche und Rückläufe; alte Dashboard-Signale hängen nicht mehr als versteckter Workflow-Einstieg im Shell. Volle Regression 290 Tests und `compileall src tests` erfolgreich.
 - Fenster- und Abstandsprobleme im neuen `Arbeiten`-Start behoben: Die Startfläche nutzt keine stretchende Standard-Card mehr, Kundensuche und Rückläufe bleiben oben kompakt ausgerichtet, die App startet größer und die Kundenordner-Zeile in der Verwaltung schrumpft sauber statt Buttons abzuschneiden. Volle Regression 291 Tests erfolgreich.
+- `Arbeiten`-Start optisch nachgeschliffen: Kundensuche und Rückläufe stehen jetzt als vertikaler Arbeitsfluss statt gequetschter Zweispaltenfläche, Suchlisten wachsen nicht mehr leer in die Höhe, Sekundäraktionen sind kompakt und leere Rückläufe zeigen keinen deaktivierten Balken mehr. Visueller Offscreen-Preview geprüft; volle Regression 291 Tests und `compileall src tests` erfolgreich.
 
 ## In Arbeit
 

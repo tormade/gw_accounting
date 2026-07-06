@@ -1,10 +1,10 @@
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QAbstractItemView,
-    QGridLayout,
     QHeaderView,
     QLabel,
     QPushButton,
+    QSizePolicy,
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
@@ -39,20 +39,27 @@ class WorkStartPanel(QWidget):
         root_layout.addWidget(surface)
         layout = surface.layout
 
-        layout.addWidget(
+        work_column = QWidget()
+        work_column.setObjectName("workStartColumn")
+        work_column.setMaximumWidth(980)
+        work_column.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Maximum)
+        column_layout = QVBoxLayout(work_column)
+        column_layout.setContentsMargins(0, 0, 0, 0)
+        column_layout.setSpacing(20)
+        layout.addWidget(work_column, 0, Qt.AlignmentFlag.AlignTop)
+
+        column_layout.addWidget(
             PageHeader(
                 "Arbeiten",
                 "Telefonische Bestellung aufnehmen oder zurückgebrachte Lieferscheine abrechnen.",
             )
         )
 
-        task_grid = QGridLayout()
-        task_grid.setSpacing(16)
-        task_grid.addWidget(self._customer_task(), 0, 0)
-        task_grid.addWidget(self._returns_task(), 0, 1)
-        task_grid.setColumnStretch(0, 2)
-        task_grid.setColumnStretch(1, 1)
-        layout.addLayout(task_grid)
+        work_flow = QVBoxLayout()
+        work_flow.setSpacing(16)
+        work_flow.addWidget(self._customer_task())
+        work_flow.addWidget(self._returns_task())
+        column_layout.addLayout(work_flow)
         layout.addStretch()
 
         self.refresh()
@@ -60,6 +67,7 @@ class WorkStartPanel(QWidget):
     def _task_panel(self, title: str, subtitle: str, kicker: str) -> tuple[QWidget, QVBoxLayout]:
         panel = QWidget()
         panel.setObjectName("workTaskPanel")
+        panel.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Maximum)
         panel_layout = QVBoxLayout(panel)
         panel_layout.setContentsMargins(18, 16, 18, 18)
         panel_layout.setSpacing(10)
@@ -90,10 +98,11 @@ class WorkStartPanel(QWidget):
         panel_layout.addWidget(self.customer_empty_label)
         panel_layout.addWidget(self.customer_select)
 
-        self.customer_search_button = QPushButton("Kundenbereich öffnen")
-        self.customer_search_button.setObjectName("newOrderButton")
+        self.customer_search_button = QPushButton("Alle Kunden öffnen")
+        self.customer_search_button.setObjectName("secondaryActionButton")
+        self.customer_search_button.setFixedWidth(170)
         self.customer_search_button.clicked.connect(self.customer_search_requested.emit)
-        panel_layout.addWidget(self.customer_search_button)
+        panel_layout.addWidget(self.customer_search_button, 0, Qt.AlignmentFlag.AlignLeft)
         panel_layout.addStretch()
         return panel
 
@@ -124,9 +133,10 @@ class WorkStartPanel(QWidget):
         panel_layout.addWidget(self.returns_empty_label)
 
         self.open_return_button = QPushButton("Rücklauf bearbeiten")
+        self.open_return_button.setFixedWidth(190)
         self.open_return_button.setEnabled(False)
         self.open_return_button.clicked.connect(self.open_selected_return)
-        panel_layout.addWidget(self.open_return_button)
+        panel_layout.addWidget(self.open_return_button, 0, Qt.AlignmentFlag.AlignLeft)
         return panel
 
     def refresh(self) -> None:
@@ -182,6 +192,7 @@ class WorkStartPanel(QWidget):
                 self.returns_table.setItem(row, column, cell)
         self.returns_empty_label.setVisible(not items)
         self.returns_table.setVisible(bool(items))
+        self.open_return_button.setVisible(bool(items))
         self.update_return_button()
 
     def update_return_button(self) -> None:

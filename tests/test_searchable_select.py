@@ -75,11 +75,13 @@ def test_searchable_select_guides_uncertain_users_to_click_a_result():
 
 def test_searchable_select_shows_initial_options_before_typing():
     _app()
+    from PySide6.QtWidgets import QSizePolicy
     from getraenkeladen_tool.ui.searchable_select import SearchableSelect
 
     select = SearchableSelect("Kunde suchen")
     select.set_items([("Cafe Nord", 1, "Muenchen"), ("Hotel Sued", 2, "Rosenheim")])
 
+    assert select.sizePolicy().verticalPolicy() == QSizePolicy.Policy.Maximum
     assert select.current_value() is None
     assert select.result_list.count() == 2
     assert select.result_list.maximumHeight() == 190
