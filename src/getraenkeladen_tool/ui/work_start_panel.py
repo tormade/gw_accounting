@@ -15,6 +15,7 @@ from ..services.customer_service import list_active_customers
 from ..services.report_service import DeliveryReturnWorkItem, list_open_delivery_returns
 from .date_input import to_display_date
 from .layouts import ContentSurface, PageHeader, WorkspaceCard
+from .searchable_select import SearchableSelect
 
 
 RETURN_COLUMNS = ("Kunde", "Lieferschein", "Datum", "Zeit")
@@ -22,12 +23,16 @@ RETURN_COLUMNS = ("Kunde", "Lieferschein", "Datum", "Zeit")
 
 class WorkStartPanel(QWidget):
     customer_search_requested = Signal()
+    customer_selected = Signal(int)
     return_selected = Signal(int)
 
     def __init__(self, session_factory=None) -> None:
         super().__init__()
         self.session_factory = session_factory
         self.return_items: list[DeliveryReturnWorkItem] = []
+        self.customer_select = SearchableSelect("Kundenname eingeben, z. B. Metzgerei oder Cafe")
+        self.customer_select.setMinimumWidth(420)
+        self.customer_select.selection_changed.connect(self.open_selected_customer)
 
         root_layout = QVBoxLayout(self)
         root_layout.setContentsMargins(0, 0, 0, 0)
@@ -64,8 +69,9 @@ class WorkStartPanel(QWidget):
         self.customer_empty_label.setObjectName("muted")
         self.customer_empty_label.setWordWrap(True)
         card.layout.addWidget(self.customer_empty_label)
+        card.layout.addWidget(self.customer_select)
 
-        self.customer_search_button = QPushButton("Kunde suchen und Bestellung starten")
+        self.customer_search_button = QPushButton("Kundenbereich öffnen")
         self.customer_search_button.setObjectName("newOrderButton")
         self.customer_search_button.clicked.connect(self.customer_search_requested.emit)
         card.layout.addWidget(self.customer_search_button)
@@ -110,10 +116,31 @@ class WorkStartPanel(QWidget):
             return
         session = self.session_factory()
         try:
-            self.customer_empty_label.setVisible(len(list_active_customers(session)) == 0)
+            customers = list_active_customers(session)
+            self.customer_empty_label.setVisible(len(customers) == 0)
+            self.customer_select.set_items(
+                (
+                    customer.name,
+                    customer.id,
+                    " | ".join(
+                        value
+                        for value in (
+                            customer.address or "",
+                            customer.delivery_notes or "",
+                        )
+                        if value
+                    ),
+                )
+                for customer in customers
+            )
             self.show_returns(list_open_delivery_returns(session))
         finally:
             session.close()
+
+    def open_selected_customer(self) -> None:
+        customer_id = self.customer_select.current_value()
+        if customer_id is not None:
+            self.customer_selected.emit(int(customer_id))
 
     def show_returns(self, items: list[DeliveryReturnWorkItem]) -> None:
         self.return_items = items

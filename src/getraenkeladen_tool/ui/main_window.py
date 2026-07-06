@@ -88,6 +88,7 @@ class MainWindow(QMainWindow):
         self.document_archive_panel.document_open_requested.connect(self.open_document_from_archive)
         self.document_archive_panel.order_open_requested.connect(self.open_order_for_id)
         self.work_start_panel.customer_search_requested.connect(self.open_customer_folder_tab)
+        self.work_start_panel.customer_selected.connect(self.open_customer_focus)
         self.work_start_panel.return_selected.connect(self.open_return_for_order)
         self.return_invoice_panel.document_created.connect(self.open_work_start_tab)
 
@@ -103,7 +104,6 @@ class MainWindow(QMainWindow):
         self.pages.addWidget(self._scrollable_tab(self.management_workspace))
         self.navigation.currentRowChanged.connect(self.pages.setCurrentIndex)
         self.navigation.currentRowChanged.connect(self.refresh_current_tab)
-        self.work_workspace.currentChanged.connect(self.refresh_active_work_panel)
         self.management_workspace.currentChanged.connect(self.refresh_active_management_panel)
         shell_layout.addWidget(self.navigation)
         shell_layout.addWidget(self.pages, 1)
@@ -113,6 +113,12 @@ class MainWindow(QMainWindow):
     def open_customer_folder_tab(self) -> None:
         self.work_workspace.setCurrentWidget(self.customer_folder_panel)
         self.navigation.setCurrentRow(MAIN_TABS.index("Arbeiten"))
+
+    def open_customer_focus(self, customer_id: int) -> None:
+        self.work_workspace.setCurrentWidget(self.customer_folder_panel)
+        self.navigation.setCurrentRow(MAIN_TABS.index("Arbeiten"))
+        self.customer_folder_panel.customer_select.select_value(customer_id)
+        self.customer_folder_panel.load_selected_customer()
 
     def open_work_start_tab(self) -> None:
         self.work_workspace.setCurrentWidget(self.work_start_panel)
@@ -226,15 +232,15 @@ class MainWindow(QMainWindow):
         scroll_area.setWidget(panel)
         return scroll_area
 
-    def _work_workspace(self) -> QTabWidget:
-        tabs = QTabWidget()
-        tabs.setObjectName("workspaceTabs")
-        tabs.addTab(self.work_start_panel, "Start")
-        tabs.addTab(self.dashboard_panel, "Heute")
-        tabs.addTab(self.customer_folder_panel, "Kunden")
-        tabs.addTab(self.order_panel, "Bestellung")
-        tabs.addTab(self.return_invoice_panel, "Rücklauf")
-        return tabs
+    def _work_workspace(self) -> QStackedWidget:
+        self.work_workspace = QStackedWidget()
+        self.work_workspace.setObjectName("workStateStack")
+        self.work_workspace.addWidget(self.work_start_panel)
+        self.work_workspace.addWidget(self.customer_folder_panel)
+        self.work_workspace.addWidget(self.order_panel)
+        self.work_workspace.addWidget(self.return_invoice_panel)
+        self.work_workspace.currentChanged.connect(self.refresh_active_work_panel)
+        return self.work_workspace
 
     def _management_workspace(self) -> QTabWidget:
         tabs = QTabWidget()

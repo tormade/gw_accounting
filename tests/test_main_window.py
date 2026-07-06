@@ -243,8 +243,11 @@ def test_target_state_navigation_prioritizes_customer_folder_path():
     assert "Heute" not in MAIN_TABS
     assert "Bestellungen" not in MAIN_TABS
     assert "Belege" not in MAIN_TABS
-    assert 'tabs.addTab(self.dashboard_panel, "Heute")' in source
-    assert 'tabs.addTab(self.customer_folder_panel, "Kunden")' in source
+    assert 'tabs.addTab(self.dashboard_panel, "Heute")' not in source
+    assert 'tabs.addTab(self.customer_folder_panel, "Kunden")' not in source
+    assert 'self.work_workspace = QStackedWidget()' in source
+    assert 'self.work_workspace.addWidget(self.work_start_panel)' in source
+    assert 'self.work_workspace.addWidget(self.customer_folder_panel)' in source
     assert '"Kunde & Bestellung"' not in source
     assert '"Auftraege"' not in source
     assert 'MAIN_TABS.index("Arbeiten")' in source
@@ -401,7 +404,7 @@ def test_main_window_embeds_customer_folder_as_second_page_and_wires_actions():
     assert "from .customer_folder_panel import CustomerFolderPanel" in source
     assert "self.customer_folder_panel = CustomerFolderPanel(session_factory=session_factory)" in source
     assert "self.pages.addWidget(self._scrollable_tab(self.work_workspace))" in source
-    assert 'tabs.addTab(self.customer_folder_panel, "Kunden")' in source
+    assert "self.work_workspace.addWidget(self.customer_folder_panel)" in source
     assert "self.customer_folder_panel.new_order_requested.connect(self.open_new_order_for_customer)" in source
     assert "self.order_panel.open_new_order_for_customer(customer_id)" in source
     assert "self.customer_folder_panel.delivery_note_requested.connect(self.open_delivery_note_for_order)" in source
@@ -428,7 +431,7 @@ def test_main_window_embeds_order_intake_inside_arbeiten_workspace():
 
     source = Path("src/getraenkeladen_tool/ui/main_window.py").read_text(encoding="utf-8")
 
-    assert 'tabs.addTab(self.order_panel, "Bestellung")' in source
+    assert "self.work_workspace.addWidget(self.order_panel)" in source
     assert '"Bestellungen"' not in MAIN_TABS
     assert '"Arbeiten": (self.refresh_active_work_panel,)' in source
     assert "self.order_panel: (self.order_panel.refresh_orders,)" in source
