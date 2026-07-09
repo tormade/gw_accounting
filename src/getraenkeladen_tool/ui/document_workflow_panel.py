@@ -41,6 +41,7 @@ DOCUMENT_LINE_COLUMNS = ("Artikel", "Menge", "Preis je Einheit EUR", "Pfand je E
 DOCUMENT_RETURN_COLUMNS = ("Pfandart", "Menge", "Pfand EUR", "Gutschrift EUR")
 
 class DocumentWorkflowPanel(QWidget):
+    back_requested = Signal()
     document_created = Signal(int)
     document_type = ""
     document_singular = ""
@@ -51,6 +52,7 @@ class DocumentWorkflowPanel(QWidget):
     create_excel_button_text = ""
     create_pdf_button_text = ""
     create_both_button_text = ""
+    show_work_overview_button = False
 
     def __init__(self, session_factory=None) -> None:
         super().__init__()
@@ -104,10 +106,18 @@ class DocumentWorkflowPanel(QWidget):
         root_layout.addWidget(surface)
         layout = surface.layout
 
+        page_action = None
+        if self.show_work_overview_button:
+            self.back_button = QPushButton("Zurück zur Übersicht")
+            self.back_button.setObjectName("secondaryActionButton")
+            self.back_button.clicked.connect(lambda _checked=False: self.back_requested.emit())
+            page_action = self.back_button
+
         layout.addWidget(
             PageHeader(
                 self.page_title or self.document_type,
                 "Die Bestellung kommt aus der Kunden-Excel/Vorlage. Mengen, Preise und Pfand prüfen, dann Excel oder PDF erstellen.",
+                page_action,
             )
         )
 
@@ -684,3 +694,4 @@ class InvoicePanel(DocumentWorkflowPanel):
 class ReturnInvoicePanel(InvoicePanel):
     page_title = "Rücklauf bearbeiten und Rechnung erstellen"
     create_both_button_text = "Rechnung aus Rücklauf als Excel + PDF erstellen"
+    show_work_overview_button = True

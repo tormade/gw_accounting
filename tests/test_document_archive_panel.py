@@ -24,6 +24,7 @@ def test_document_archive_panel_exposes_one_combined_document_list_and_actions()
     assert "button.setEnabled(False)" in source
     assert "clearSelection()" in source
     assert "Belege gefunden" in source
+    assert "Keine Belege gefunden." in source
     assert "konnte nicht geöffnet werden" in source
     assert "customContextMenuRequested.connect" in source
     assert "show_document_context_menu" in source

@@ -82,6 +82,10 @@ class DocumentArchivePanel(QWidget):
             "Eine gemeinsame Liste für Rechnungen und Lieferscheine. Beleg markieren und Aktion wählen.",
         )
         archive_box.layout.addWidget(self.document_table)
+        self.empty_state_label = QLabel("Keine Belege gefunden.")
+        self.empty_state_label.setObjectName("sectionSubtitle")
+        self.empty_state_label.setVisible(False)
+        archive_box.layout.addWidget(self.empty_state_label)
         archive_box.layout.addLayout(self._action_row(self.document_table, self.document_ids_by_row, self.document_action_buttons))
         layout.addWidget(archive_box, 1)
 
@@ -217,8 +221,11 @@ class DocumentArchivePanel(QWidget):
             if row_matches:
                 visible_count += 1
         self.update_action_buttons()
+        self.empty_state_label.setVisible(visible_count == 0)
         if query:
             self.status_label.setText(f"{visible_count} Belege gefunden.")
+        elif visible_count == 0:
+            self.status_label.setText("Keine Belege gefunden. Filter oder Suche prüfen.")
 
     def _row_matches_filter(self, table: QTableWidget, row: int, filter_value: str) -> bool:
         if filter_value == "all":

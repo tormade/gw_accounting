@@ -6,7 +6,6 @@ from PySide6.QtWidgets import (
     QLabel,
     QLineEdit,
     QMenu,
-    QMessageBox,
     QPushButton,
     QTableWidget,
     QTableWidgetItem,
@@ -31,7 +30,6 @@ from .layouts import ContentSurface, PageHeader, WorkspaceCard, configure_form_l
 
 
 CUSTOMER_PANEL_ACTIONS = {
-    "customerHelpButton": "?",
     "newCustomerButton": "Neu",
     "saveCustomerButton": "Kunde speichern",
     "discardCustomerChangesButton": "Verwerfen",
@@ -42,12 +40,6 @@ CUSTOMER_PANEL_ACTIONS = {
     "restoreCustomerButton": "Kunde wiederherstellen",
     "chooseCustomerFolderButton": "Ordner wählen",
 }
-CUSTOMER_HELP_TEXT = (
-    "Kunden: Hier pflegen Sie Stammdaten, Lieferhinweise und Kontakttermine.\n\n"
-    "Links erfassen oder bearbeiten Sie einen Kunden. Rechts finden Sie bestehende Kunden.\n\n"
-    "Archivieren blendet Kunden aus dem Alltag aus, löscht sie aber nicht endgültig."
-)
-
 CUSTOMER_COLUMNS = ("Name", "Adresse", "Nächster Kontakt", "Status")
 CUSTOMER_PANEL_SECTIONS = ("1. Kunden erfassen", "2. Bestehende Kunden prüfen")
 CUSTOMER_GUIDANCE_STEPS = (
@@ -96,9 +88,8 @@ class CustomerPanel(QWidget):
         root_layout.addWidget(surface)
         layout = surface.layout
 
-        self.help_button = QPushButton(CUSTOMER_PANEL_ACTIONS["customerHelpButton"])
-        self.help_button.setObjectName("helpButton")
-        layout.addWidget(PageHeader("Kunden", "Stammdaten, Lieferhinweise und Kontakttermine.", self.help_button))
+        layout.addWidget(PageHeader("Kunden", "Stammdaten, Lieferhinweise und Kontakttermine."))
+        layout.addWidget(self._guidance_box())
 
         edit_box, edit_layout = self._section(
             CUSTOMER_PANEL_SECTIONS[0],
@@ -159,7 +150,6 @@ class CustomerPanel(QWidget):
 
         layout.addWidget(self.status_label)
 
-        self.help_button.clicked.connect(self.show_help)
         self.new_button.clicked.connect(self.new_customer)
         self.save_button.clicked.connect(self.save_customer)
         self.discard_button.clicked.connect(self.discard_changes)
@@ -192,9 +182,6 @@ class CustomerPanel(QWidget):
         button = QPushButton(CUSTOMER_PANEL_ACTIONS[object_name])
         button.setObjectName(object_name)
         return button
-
-    def show_help(self) -> None:
-        QMessageBox.information(self, "Hilfe: Kunden", CUSTOMER_HELP_TEXT)
 
     def _guidance_box(self) -> QWidget:
         box = QWidget()

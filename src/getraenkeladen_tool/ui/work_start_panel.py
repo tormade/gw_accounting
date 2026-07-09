@@ -30,6 +30,7 @@ class WorkStartPanel(QWidget):
         super().__init__()
         self.session_factory = session_factory
         self.return_items: list[DeliveryReturnWorkItem] = []
+        self._is_refreshing = False
         self.customer_select = SearchableSelect("Kundenname eingeben, z. B. Metzgerei oder Cafe")
         self.customer_select.selection_changed.connect(self.open_selected_customer)
 
@@ -50,8 +51,8 @@ class WorkStartPanel(QWidget):
 
         column_layout.addWidget(
             PageHeader(
-                "Arbeiten",
-                "Telefonische Bestellung aufnehmen oder zurückgebrachte Lieferscheine abrechnen.",
+                "Start",
+                "Kunde auswählen oder zurückgebrachte Lieferscheine abrechnen.",
             )
         )
 
@@ -101,7 +102,7 @@ class WorkStartPanel(QWidget):
         self.customer_search_button = QPushButton("Alle Kunden öffnen")
         self.customer_search_button.setObjectName("secondaryActionButton")
         self.customer_search_button.setFixedWidth(170)
-        self.customer_search_button.clicked.connect(self.customer_search_requested.emit)
+        self.customer_search_button.clicked.connect(lambda _checked=False: self.customer_search_requested.emit())
         panel_layout.addWidget(self.customer_search_button, 0, Qt.AlignmentFlag.AlignLeft)
         panel_layout.addStretch()
         return panel
@@ -140,13 +141,18 @@ class WorkStartPanel(QWidget):
         return panel
 
     def refresh(self) -> None:
-        if self.session_factory is None:
-            self.customer_empty_label.setText("Keine Datenbankverbindung vorhanden.")
-            self.customer_empty_label.setVisible(True)
-            self.show_returns([])
-            return
-        session = self.session_factory()
+        self._is_refreshing = True
+        session = None
         try:
+            # Start is a fresh entry point. Retaining a selected customer here
+            # would immediately reopen the work area while the list is rebuilt.
+            self.customer_select.clear_selection()
+            if self.session_factory is None:
+                self.customer_empty_label.setText("Keine Datenbankverbindung vorhanden.")
+                self.customer_empty_label.setVisible(True)
+                self.show_returns([])
+                return
+            session = self.session_factory()
             customers = list_active_customers(session)
             self.customer_empty_label.setVisible(len(customers) == 0)
             self.customer_select.set_items(
@@ -166,9 +172,13 @@ class WorkStartPanel(QWidget):
             )
             self.show_returns(list_open_delivery_returns(session))
         finally:
-            session.close()
+            if session is not None:
+                session.close()
+            self._is_refreshing = False
 
     def open_selected_customer(self) -> None:
+        if self._is_refreshing:
+            return
         customer_id = self.customer_select.current_value()
         if customer_id is not None:
             self.customer_selected.emit(int(customer_id))

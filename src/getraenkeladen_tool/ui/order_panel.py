@@ -53,35 +53,34 @@ ORDER_PANEL_ACTIONS = {
     "newOrderButton": "Neue Bestellung",
     "copyOrderButton": "Als Vorlage kopieren",
     "refreshOrderDataButton": "Daten neu laden",
-    "suggestOrderNumberButton": "Nummer vorschlagen",
+    "suggestOrderNumberButton": "Vorschlagen",
     "addOrderLineButton": "Position hinzufügen",
     "removeOrderLineButton": "Position entfernen",
     "addDepositReturnButton": "Pfand-Rückgabe eintragen",
     "removeDepositReturnButton": "Pfand-Rückgabe entfernen",
     "saveOrderButton": "Bestellung speichern",
-    "refreshOrdersButton": "Bestellungen laden",
     "createDeliveryNoteFromOrderButton": "Lieferschein erstellen",
     "createInvoiceFromOrderButton": "Rechnung erstellen",
 }
 
-ORDER_LINE_COLUMNS = ("Produkt", "Menge", "Preis je Einheit EUR", "Pfand je Einheit EUR", "Summe EUR")
+ORDER_LINE_COLUMNS = ("Produkt", "Menge", "Preis EUR", "Pfand EUR", "Summe EUR")
 ASSORTMENT_COLUMNS = ("Artikel", "Letzte Menge", "Preis aktuell", "Preis Excel", "Hinweis")
 DEPOSIT_RETURN_COLUMNS = ("Pfandart", "Menge", "Pfand EUR", "Gutschrift EUR")
 ORDER_COLUMNS = ("Bestellung", "Kunde", "Lieferdatum", "Zeitfenster", "Status")
 ORDER_PANEL_SECTIONS = (
     "Kunde und Lieferdatum",
     "Mengen erfassen",
-    "Bestellungen",
+    "Abschluss",
 )
 ORDER_HELP_TEXT = (
     "Kunde und Lieferdatum: Kunde, Lieferdatum, Zeitfenster und Bestellnummer prüfen.\n\n"
     "Mengen erfassen: letzte Mengen sehen, neue Mengen eintragen und Artikel hinzufügen.\n\n"
-    "Bestellungen: Vorhandene Bestellungen öffnen, archivieren oder als Vorlage kopieren."
+    "Abschluss: Bestellung speichern und anschließend den Lieferschein erstellen. Frühere Bestellungen stehen im Kundenbereich."
 )
 ORDER_GUIDANCE_STEPS = (
     "Kunde suchen und letzte Mengen als Vorlage sehen.",
     "Neue Mengen, neue Artikel und Pfand-Rückgabe erfassen.",
-    "Bestellung speichern und daraus Lieferschein oder Rechnung erzeugen.",
+    "Bestellung speichern und danach den Lieferschein erstellen.",
 )
 ORDER_CONTEXT_ACTIONS = {
     "open": "Bestellung öffnen",
@@ -109,6 +108,7 @@ class PreviousOrderSuggestionRow:
 
 
 class OrderPanel(QWidget):
+    back_requested = Signal()
     delivery_note_requested = Signal(int)
     invoice_requested = Signal(int)
 
@@ -126,12 +126,12 @@ class OrderPanel(QWidget):
         self.order_mode_label = QLabel("Neue Bestellung")
         self.order_mode_label.setObjectName("stepTitle")
         self.customer_select = SearchableSelect("Kunde suchen, z. B. Cafe oder Hotel")
-        self.customer_select.setMinimumWidth(420)
+        self.customer_select.setMinimumWidth(320)
         self.customer_summary = QLabel("Noch kein Kunde ausgewählt.")
         self.customer_summary.setObjectName("sectionSubtitle")
         self.customer_summary.setWordWrap(True)
         self.product_select = SearchableSelect("Produkt suchen, z. B. Spezi oder Wasser")
-        self.product_select.setMinimumWidth(420)
+        self.product_select.setMinimumWidth(320)
         self.product_select.help_label.setText("Erst Empfehlungen dieses Kunden, darunter alle Artikel.")
         self.assortment_table = QTableWidget(0, len(ASSORTMENT_COLUMNS))
         self.assortment_table.setHorizontalHeaderLabels(ASSORTMENT_COLUMNS)
@@ -147,10 +147,14 @@ class OrderPanel(QWidget):
         self.assortment_table.horizontalHeader().setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch)
         self.order_number = QLineEdit()
         self.order_number.setPlaceholderText("z. B. 2606196 oder LS-3001")
+        self.order_number.setMaximumWidth(520)
         self.suggest_order_number_button = self._button("suggestOrderNumberButton")
+        self.suggest_order_number_button.setFixedWidth(130)
         self.delivery_date = DateInput(date.today().isoformat())
+        self.delivery_date.setMaximumWidth(320)
         self.delivery_slot = QComboBox()
         self.delivery_slot.addItems(["", "vormittag", "nachmittag", "ganztags"])
+        self.delivery_slot.setMaximumWidth(320)
         self.quantity = QSpinBox()
         self.quantity.setRange(0, 999)
         self.unit_price_eur = QLineEdit()
@@ -166,25 +170,20 @@ class OrderPanel(QWidget):
         self.order_lines_table = QTableWidget(0, len(ORDER_LINE_COLUMNS))
         self.order_lines_table.setHorizontalHeaderLabels(ORDER_LINE_COLUMNS)
         self.order_lines_table.setMinimumHeight(220)
-        self.order_lines_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
-        self.order_lines_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
-        self.order_lines_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
-        self.order_lines_table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
-        self.order_lines_table.horizontalHeader().setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
+        self.order_lines_table.setMaximumWidth(1040)
+        order_lines_header = self.order_lines_table.horizontalHeader()
+        order_lines_header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+        for column, width in ((1, 74), (2, 92), (3, 92), (4, 108)):
+            order_lines_header.setSectionResizeMode(column, QHeaderView.ResizeMode.Fixed)
+            self.order_lines_table.setColumnWidth(column, width)
         self.order_lines_table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.deposit_returns_table = QTableWidget(0, len(DEPOSIT_RETURN_COLUMNS))
         self.deposit_returns_table.setHorizontalHeaderLabels(DEPOSIT_RETURN_COLUMNS)
         self.deposit_returns_table.setMaximumHeight(120)
+        self.deposit_returns_table.setMaximumWidth(1040)
         self.deposit_returns_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         self.order_total_label = QLabel("Bestellsumme: 0,00 EUR")
         self.order_total_label.setObjectName("totalAmount")
-        self.orders_table = QTableWidget(0, len(ORDER_COLUMNS))
-        self.orders_table.setHorizontalHeaderLabels(ORDER_COLUMNS)
-        self.orders_table.setMinimumHeight(360)
-        self.orders_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-        self.order_table_search = QLineEdit()
-        self.order_table_search.setObjectName("tableSearchField")
-        self.order_table_search.setPlaceholderText("In den Bestellungen suchen, z. B. Kunde, Nummer oder Datum")
         self.status_label = QLabel("Kunde suchen, letzte Mengen prüfen, Bestellung speichern.")
         self.status_label.setObjectName("muted")
 
@@ -194,13 +193,21 @@ class OrderPanel(QWidget):
         root_layout.addWidget(surface)
         layout = surface.layout
 
+        header_actions = QWidget()
+        header_actions_layout = QHBoxLayout(header_actions)
+        header_actions_layout.setContentsMargins(0, 0, 0, 0)
+        header_actions_layout.setSpacing(8)
+        self.back_button = QPushButton("Zurück zur Übersicht")
+        self.back_button.setObjectName("secondaryActionButton")
         self.help_button = QPushButton(ORDER_PANEL_ACTIONS["orderHelpButton"])
         self.help_button.setObjectName("helpButton")
+        header_actions_layout.addWidget(self.back_button)
+        header_actions_layout.addWidget(self.help_button)
         layout.addWidget(
             PageHeader(
                 "Bestellungen",
                 "Kunde wählen, Mengen erfassen und direkt den nächsten Beleg vorbereiten.",
-                self.help_button,
+                header_actions,
             )
         )
 
@@ -211,11 +218,12 @@ class OrderPanel(QWidget):
         self.remove_deposit_return_button = self._button("removeDepositReturnButton")
         self.save_order_button = self._button("saveOrderButton")
         self.cancel_order_dialog_button = QPushButton("Eingabe zurücksetzen")
-        self.refresh_orders_button = self._button("refreshOrdersButton")
         self.new_order_button = self._button("newOrderButton")
         self.copy_order_button = self._button("copyOrderButton")
         self.create_delivery_note_button = self._button("createDeliveryNoteFromOrderButton")
+        self.create_delivery_note_button.setObjectName("primaryAction")
         self.create_invoice_button = self._button("createInvoiceFromOrderButton")
+        self.create_invoice_button.setObjectName("secondaryAction")
         self.use_assortment_button = QPushButton("Aus Sortiment übernehmen")
         set_equal_button_widths(
             (
@@ -227,14 +235,17 @@ class OrderPanel(QWidget):
                 self.add_deposit_return_button,
                 self.remove_deposit_return_button,
                 self.new_order_button,
-                self.refresh_orders_button,
                 self.copy_order_button,
                 self.create_delivery_note_button,
                 self.create_invoice_button,
                 self.use_assortment_button,
             ),
-            220,
+            190,
         )
+        self.orders_table = QTableWidget(0, len(ORDER_COLUMNS))
+        self.orders_table.setHorizontalHeaderLabels(ORDER_COLUMNS)
+        self.orders_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        self.order_table_search = QLineEdit()
 
         self.order_dialog: QDialog | None = None
         self.order_editor_scroll: QScrollArea | None = None
@@ -264,7 +275,6 @@ class OrderPanel(QWidget):
         customer_layout.addWidget(self.customer_summary)
         customer_actions = QHBoxLayout()
         customer_actions.addWidget(self.refresh_data_button)
-        customer_actions.addWidget(self.save_order_button)
         customer_actions.addWidget(self.cancel_order_dialog_button)
         customer_actions.addStretch()
         customer_layout.addLayout(customer_actions)
@@ -287,11 +297,14 @@ class OrderPanel(QWidget):
         line_actions.addStretch()
         quantity_layout.addLayout(line_actions)
 
-        self.add_product_toggle = QPushButton("Weiteren Artikel hinzufügen")
+        self.add_product_toggle = QPushButton("+ Artikel hinzufügen")
         self.add_product_toggle.setObjectName("disclosureButton")
         self.add_product_toggle.setCheckable(True)
         self.add_product_toggle.setChecked(False)
-        quantity_layout.addWidget(self.add_product_toggle)
+        add_product_toggle_row = QHBoxLayout()
+        add_product_toggle_row.addWidget(self.add_product_toggle)
+        add_product_toggle_row.addStretch()
+        quantity_layout.addLayout(add_product_toggle_row)
         self.add_product_content = QWidget()
         self.add_product_content.setObjectName("disclosurePanel")
         self.add_product_content.setVisible(False)
@@ -332,31 +345,32 @@ class OrderPanel(QWidget):
         total_layout.setContentsMargins(16, 10, 16, 10)
         total_layout.addStretch()
         total_layout.addWidget(self.order_total_label)
-        quantity_layout.addWidget(total_bar)
         new_order_layout.addWidget(quantity_box)
-        layout.addWidget(self.order_editor_widget, 2)
 
-        orders_box, orders_layout = self._section(
-            ORDER_PANEL_SECTIONS[2],
-            "Vorhandene Bestellung auswählen. Die Details werden oben im Arbeitsbereich bearbeitet.",
-            tone="route",
-            kicker="BESTELLSTAPEL",
+        finish_box, finish_layout = self._section(
+            "Abschluss",
+            "Erst speichern. Danach ist der Lieferschein der normale nächste Schritt.",
+            tone="cash",
+            kicker="NÄCHSTER SCHRITT",
         )
-        orders_actions = QHBoxLayout()
-        orders_actions.addWidget(self.new_order_button)
-        orders_actions.addWidget(self.refresh_orders_button)
-        orders_actions.addWidget(self.copy_order_button)
-        orders_actions.addWidget(self.create_delivery_note_button)
-        orders_actions.addWidget(self.create_invoice_button)
-        orders_actions.addStretch()
-        orders_layout.addLayout(orders_actions)
-        orders_layout.addWidget(self.order_table_search)
-        orders_layout.addWidget(self.orders_table)
-        layout.addWidget(orders_box, 1)
+        self.order_next_step_label = QLabel("Nach dem Speichern kann direkt der Lieferschein erstellt werden.")
+        self.order_next_step_label.setObjectName("sectionSubtitle")
+        self.order_next_step_label.setWordWrap(True)
+        finish_layout.addWidget(self.order_next_step_label)
+        finish_layout.addWidget(total_bar)
+        finish_actions = QHBoxLayout()
+        finish_actions.addWidget(self.save_order_button)
+        finish_actions.addWidget(self.create_delivery_note_button)
+        finish_actions.addWidget(self.create_invoice_button)
+        finish_actions.addStretch()
+        finish_layout.addLayout(finish_actions)
+        new_order_layout.addWidget(finish_box)
+        layout.addWidget(self.order_editor_widget, 1)
 
         layout.addWidget(self.status_label)
 
         self.help_button.clicked.connect(self.show_help)
+        self.back_button.clicked.connect(lambda _checked=False: self.back_requested.emit())
         self.refresh_data_button.clicked.connect(self.refresh_master_data)
         self.suggest_order_number_button.clicked.connect(self.apply_suggested_order_number)
         self.new_order_button.clicked.connect(self.open_new_order_dialog)
@@ -370,21 +384,16 @@ class OrderPanel(QWidget):
         self.add_deposit_return_button.clicked.connect(self.add_deposit_return)
         self.remove_deposit_return_button.clicked.connect(self.remove_selected_deposit_return)
         self.save_order_button.clicked.connect(self.save_order)
-        self.refresh_orders_button.clicked.connect(self.refresh_orders)
         self.order_lines_table.itemChanged.connect(self.update_order_total)
         self.deposit_returns_table.itemChanged.connect(self.update_order_total)
         self.deposit_return_select.currentIndexChanged.connect(self.apply_selected_deposit_return)
         self.customer_select.selection_changed.connect(self.apply_selected_customer)
         self.add_product_toggle.toggled.connect(self.add_product_content.setVisible)
-        self.order_table_search.textChanged.connect(self.apply_order_table_search)
         self.product_select.selection_changed.connect(self.apply_selected_product)
-        self.orders_table.itemDoubleClicked.connect(lambda _item: self.load_selected_order_id())
         self.order_lines_table.customContextMenuRequested.connect(self.show_order_line_context_menu)
-        self.orders_table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        self.orders_table.customContextMenuRequested.connect(self.show_order_context_menu)
         self.refresh_master_data()
-        self.refresh_orders()
         self.apply_selected_deposit_return()
+        self.update_document_action_state()
 
     def _button(self, object_name: str) -> QPushButton:
         button = QPushButton(ORDER_PANEL_ACTIONS[object_name])
@@ -444,8 +453,8 @@ class OrderPanel(QWidget):
 
     def close_order_dialog_after_success(self, order_number: str) -> None:
         self.close_order_dialog()
-        self.refresh_orders()
-        self.status_label.setText(f"Bestellung {order_number} gespeichert. Liste wurde aktualisiert.")
+        self.update_document_action_state()
+        self.status_label.setText(f"Bestellung {order_number} gespeichert. Lieferschein kann jetzt erstellt werden.")
 
     def show_saved_order_next_steps(self, order_id: int, order_number: str) -> None:
         message = QMessageBox(self)
@@ -494,6 +503,7 @@ class OrderPanel(QWidget):
         self.apply_selected_deposit_return()
         self.update_order_total()
         self.status_label.setText("Neue Bestellung gestartet. Bitte Bestellnummer eintragen.")
+        self.update_document_action_state()
 
     def confirm_documented_order_change(self) -> bool:
         if self.current_order_status == "geplant":
@@ -893,7 +903,6 @@ class OrderPanel(QWidget):
             self.current_order_id = order.id
             self.current_order_status = order.status
             self.order_mode_label.setText(f"Bestellung bearbeiten: {order.order_number}")
-            self.show_orders(list_active_orders(session))
             self.close_order_dialog_after_success(order.order_number)
             self.show_saved_order_next_steps(order.id, order.order_number)
         except Exception as error:
@@ -1022,13 +1031,14 @@ class OrderPanel(QWidget):
                 deposit_return.quantity,
                 deposit_return.deposit_cents,
             )
+        self.update_document_action_state()
 
     def copy_selected_order_as_new(self) -> None:
         selected_order_id = self._selected_order_id()
         if selected_order_id is not None and selected_order_id != self.current_order_id:
             self.load_order_by_id(selected_order_id)
         if self.current_order_id is None:
-            self.status_label.setText("Bitte zuerst eine Bestellung aus der Liste auswählen.")
+            self.status_label.setText("Bitte zuerst eine frühere Bestellung im Kundenbereich öffnen.")
             return
         original_number = self.order_number.text().strip()
         self.current_order_id = None
@@ -1042,18 +1052,27 @@ class OrderPanel(QWidget):
     def request_delivery_note_for_selected_order(self) -> None:
         order_id = self._selected_or_loaded_order_id()
         if order_id is None:
-            self.status_label.setText("Bitte zuerst eine Bestellung aus der Liste auswählen.")
+            self.status_label.setText("Bitte zuerst die Bestellung speichern.")
             return
         self.delivery_note_requested.emit(order_id)
 
     def request_invoice_for_selected_order(self) -> None:
         order_id = self._selected_or_loaded_order_id()
         if order_id is None:
-            self.status_label.setText("Bitte zuerst eine Bestellung aus der Liste auswählen.")
+            self.status_label.setText("Bitte zuerst die Bestellung speichern.")
             return
         if not self.confirm_instant_invoice():
             return
         self.invoice_requested.emit(order_id)
+
+    def update_document_action_state(self) -> None:
+        has_saved_order = self.current_order_id is not None
+        self.create_delivery_note_button.setEnabled(has_saved_order)
+        self.create_invoice_button.setEnabled(has_saved_order)
+        if has_saved_order:
+            self.order_next_step_label.setText("Bestellung ist gespeichert. Der nächste normale Schritt ist der Lieferschein.")
+        else:
+            self.order_next_step_label.setText("Nach dem Speichern kann direkt der Lieferschein erstellt werden.")
 
     def archive_selected_order(self) -> None:
         if self.session_factory is None:
@@ -1071,6 +1090,7 @@ class OrderPanel(QWidget):
             self.current_order_id = None
             self.show_orders(list_active_orders(session))
             self.status_label.setText(f"Bestellung archiviert: {order.order_number}")
+            self.update_document_action_state()
         finally:
             session.close()
 

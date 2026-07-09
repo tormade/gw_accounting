@@ -15,7 +15,7 @@ def test_order_panel_loads_master_data_and_orders_on_open():
     source = Path("src/getraenkeladen_tool/ui/order_panel.py").read_text(encoding="utf-8")
 
     assert "self.refresh_master_data()" in source
-    assert "self.refresh_orders()" in source
+    assert "self.refresh_orders()" not in source.split("self.refresh_master_data()", 1)[1].split("self.apply_selected_deposit_return()", 1)[0]
     assert "suggest_order_number(session, fallback_date=self.delivery_date.iso_date() or None)" in source
     assert "self.apply_suggested_order_number()" not in source
 
@@ -23,6 +23,8 @@ def test_order_panel_loads_master_data_and_orders_on_open():
 def test_order_panel_can_start_new_order_for_preselected_customer():
     source = Path("src/getraenkeladen_tool/ui/order_panel.py").read_text(encoding="utf-8")
 
+    assert "back_requested = Signal()" in source
+    assert "Zurück zur Übersicht" in source
     assert "def open_new_order_for_customer" in source
     assert "self.customer_select.select_value(customer_id)" in source
     assert "Neue Bestellung aus Kunden" in source
@@ -161,6 +163,7 @@ def test_order_panel_uses_single_editable_quantity_list_for_new_order():
     assert "self.assortment_table.setVisible(False)" in source
     assert "self.add_product_toggle.setCheckable(True)" in source
     assert "self.add_product_content.setVisible(False)" in source
+    assert '"+ Artikel hinzufügen"' in source
     assert "self.add_product_box = QGroupBox" not in source
     assert "new_order_layout.addWidget(quantity_box)" in source
     assert "new_order_layout.addWidget(position_box)" not in source
@@ -703,7 +706,7 @@ def test_order_panel_uses_main_window_editor_for_editing():
     assert "Neue Bestellung" in source
     assert "Bestellung speichern" in source
     assert "orderEditorWorkspace" in source
-    assert "layout.addWidget(self.order_editor_widget, 2)" in source
+    assert "layout.addWidget(self.order_editor_widget, 1)" in source
     assert "WA_DeleteOnClose" not in source
     assert "self.order_dialog.setMinimumSize(760, 480)" not in source
     assert "self.order_dialog.resize(1020, 620)" not in source
@@ -716,7 +719,7 @@ def test_order_editor_is_embedded_in_main_window_instead_of_modal_dialog():
 
     assert "self.order_editor_widget = QWidget()" in source
     assert 'self.order_editor_widget.setObjectName("orderEditorWorkspace")' in source
-    assert "layout.addWidget(self.order_editor_widget, 2)" in source
+    assert "layout.addWidget(self.order_editor_widget, 1)" in source
     assert "self.assortment_table.setVisible(False)" in source
     assert "self.order_lines_table.setMinimumHeight(220)" in source
     assert "self.deposit_returns_table.setMaximumHeight(110)" in source
@@ -801,7 +804,7 @@ def test_order_panel_uses_clearer_labels_for_less_technical_users():
     assert '"copyOrderButton": "Als Vorlage kopieren"' in source
     assert '"addDepositReturnButton": "Pfand-Rückgabe eintragen"' in source
     assert '"removeDepositReturnButton": "Pfand-Rückgabe entfernen"' in source
-    assert 'ORDER_LINE_COLUMNS = ("Produkt", "Menge", "Preis je Einheit EUR", "Pfand je Einheit EUR", "Summe EUR")' in source
+    assert 'ORDER_LINE_COLUMNS = ("Produkt", "Menge", "Preis EUR", "Pfand EUR", "Summe EUR")' in source
     assert 'customer_form.addRow("Bestellnummer", order_number_row)' in source
     assert "Auftragssumme" not in source
 
@@ -822,17 +825,18 @@ def test_order_panel_loads_customer_assortment_into_order_dialog():
     assert 'row.price_decision == "offen"' in source
 
 
-def test_order_panel_filters_orders_by_customer_and_can_copy_existing_order():
+def test_order_panel_keeps_legacy_order_loading_out_of_visible_order_entry():
     source = Path("src/getraenkeladen_tool/ui/order_panel.py").read_text(encoding="utf-8")
 
     assert '"copyOrderButton": "Als Vorlage kopieren"' in source
     assert "self.order_table_search = QLineEdit()" in source
-    assert "self.order_table_search.textChanged.connect(self.apply_order_table_search)" in source
+    assert "self.order_table_search.textChanged.connect(self.apply_order_table_search)" not in source
     assert "def apply_order_table_search" in source
     assert "def copy_selected_order_as_new" in source
     assert "self.current_order_id = None" in source
     assert "Kopie aus Bestellung" in source
-    assert "list_active_orders(session)" in source
+    assert "layout.addWidget(orders_box, 1)" not in source
+    assert "Bestellstapel" not in source
     assert "open_order_dialog" in source
 
 
@@ -851,7 +855,8 @@ def test_order_panel_uses_resize_friendly_single_flow_workspaces():
     assert "QDialog" in source
     assert "PageHeader" in source
     assert "self.order_editor_widget" in source
-    assert "layout.addWidget(orders_box, 1)" in source
+    assert "layout.addWidget(orders_box, 1)" not in source
+    assert "new_order_layout.addWidget(finish_box)" in source
     assert "new_order_layout.addWidget(quantity_box)" in source
     assert "self.add_product_toggle.setChecked(False)" in source
     assert "ResponsiveSplitter" not in source
@@ -880,14 +885,15 @@ def test_order_panel_forms_expand_to_available_width_instead_of_floating_centere
     assert "setLabelAlignment(Qt.AlignmentFlag.AlignLeft)" in layout_source
 
 
-def test_order_and_document_use_table_search_instead_of_customer_filter_dropdowns():
+def test_order_keeps_customer_search_focused_and_document_uses_searchable_order_select():
     order_source = Path("src/getraenkeladen_tool/ui/order_panel.py").read_text(encoding="utf-8")
     document_source = Path("src/getraenkeladen_tool/ui/document_workflow_panel.py").read_text(encoding="utf-8")
 
     assert "FilterBar" not in order_source
     assert "self.order_customer_filter" not in order_source
     assert "customerFilterLabel" not in order_source
-    assert "setObjectName(\"tableSearchField\")" in order_source
+    assert "self.customer_select = SearchableSelect" in order_source
+    assert "self.order_table_search.textChanged.connect(self.apply_order_table_search)" not in order_source
     assert "FilterBar" not in document_source
     assert "self.customer_filter" not in document_source
     assert "setObjectName(\"tableSearchField\")" in document_source
@@ -954,7 +960,7 @@ def test_order_panel_offers_free_order_number_suggestion_without_autofill():
     source = Path("src/getraenkeladen_tool/ui/order_panel.py").read_text(encoding="utf-8")
 
     assert "suggest_order_number" in source
-    assert '"suggestOrderNumberButton": "Nummer vorschlagen"' in source
+    assert '"suggestOrderNumberButton": "Vorschlagen"' in source
     assert "self.suggest_order_number_button.clicked.connect(self.apply_suggested_order_number)" in source
     assert "self.order_number.setText(suggestion)" in source
 

@@ -63,6 +63,9 @@ class ChecklistPanel(QWidget):
         self.action_help_label.setWordWrap(True)
         self.status_label = QLabel("Prüfpunkte bereit.")
         self.status_label.setObjectName("muted")
+        self.empty_state_label = QLabel("Keine Prüfpunkte vorhanden. Importdaten sind aktuell geklärt.")
+        self.empty_state_label.setObjectName("sectionSubtitle")
+        self.empty_state_label.setVisible(False)
 
         root_layout = QVBoxLayout(self)
         root_layout.setContentsMargins(0, 0, 0, 0)
@@ -97,6 +100,7 @@ class ChecklistPanel(QWidget):
         card.layout.addWidget(self.action_help_label)
         card.layout.addLayout(toolbar)
         card.layout.addWidget(self.issue_table)
+        card.layout.addWidget(self.empty_state_label)
         workspace.addWidget(card)
 
         self.issue_detail_panel = InspectorPanel(
@@ -199,6 +203,7 @@ class ChecklistPanel(QWidget):
         finally:
             self.issue_table.setUpdatesEnabled(True)
         self.summary_label.setText(f"{open_count} offene Prüfpunkte, {len(rows)} insgesamt.")
+        self.empty_state_label.setVisible(not rows)
         self.status_label.setText("Prüfpunkte aktualisiert.")
         self.update_issue_context()
 

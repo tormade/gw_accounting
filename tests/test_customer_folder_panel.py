@@ -24,10 +24,12 @@ def test_customer_folder_panel_exposes_real_folder_workflow():
     assert "Rechnungswarnung" in source
     assert "Nächster Schritt" in source
     assert "Bestellung starten" in source
-    assert "Liste aktualisieren" in source
+    assert "Liste aktualisieren" not in source
     assert "Letzte Dateien" in source
     assert "Letzte Mengen" in source
+    assert "Frühere Bestellungen" in source
     assert "Excel ansehen" in source
+    assert "Öffnen" in source
     assert "Lieferschein erstellen" in source
     assert "Rechnung erstellen" in source
     assert "get_customer_folder_snapshot" in source
@@ -43,6 +45,7 @@ def test_customer_folder_panel_disables_actions_until_customer_context_exists():
     assert panel.open_folder_button.isEnabled() is False
     assert panel.open_file_button.isEnabled() is False
     assert panel.new_order_button.isEnabled() is False
+    assert panel.open_order_button.isEnabled() is False
     assert panel.seed_file_hint.text() == "Kunde suchen, dann erscheinen letzte Mengen und passende Aktionen."
     assert panel.delivery_note_button.isEnabled() is False
     assert panel.invoice_button.isEnabled() is False
@@ -91,13 +94,14 @@ def test_customer_folder_panel_enables_actions_from_snapshot_state(tmp_path: Pat
     assert panel.assortment_table.item(0, 0).text() == "Frucade"
     assert panel.open_folder_button.isEnabled() is True
     assert panel.new_order_button.isEnabled() is True
-    assert panel.new_order_button.text() == "Neue Bestellung starten"
+    assert panel.new_order_button.text() == "Bestellung neu"
     assert panel.seed_file_hint.text() == "Letzte Mengen sind vorbereitet. Neue Bestellung starten und Mengen anpassen."
     assert panel.inspector.title_label.text() == "Cafe Nord"
     assert panel.customer_next_step_label.text() == "Nächster Schritt: Neue Bestellung starten; die letzten Mengen sind vorbereitet."
     assert panel.customer_invoice_warning_label.text() == "Offene Rechnungen: -"
     assert panel.delivery_note_button.isEnabled() is False
     assert panel.invoice_button.isEnabled() is False
+    assert panel.open_order_button.isEnabled() is False
 
     panel.files_table.setCurrentCell(0, 0)
     panel.update_action_state()
@@ -110,6 +114,7 @@ def test_customer_folder_panel_enables_actions_from_snapshot_state(tmp_path: Pat
 
     panel.orders_table.setCurrentCell(0, 0)
     panel.update_action_state()
+    assert panel.open_order_button.isEnabled() is True
     assert panel.delivery_note_button.isEnabled() is True
     assert panel.invoice_button.isEnabled() is True
 
@@ -174,7 +179,7 @@ def test_customer_folder_panel_uses_clear_customer_folder_language():
     assert "Belege anstossen" not in source
     assert "Bestellung starten" in source
     assert "Excel ansehen" in source
-    assert "Bestellungen dieses Kunden" in source
+    assert "Frühere Bestellungen" in source
     assert "Lieferschein erstellen" in source
     assert "Rechnung erstellen" in source
 
@@ -186,7 +191,34 @@ def test_customer_folder_panel_routes_selected_order_to_documents():
     assert "self.delivery_note_requested.emit(order_id)" in source
     assert "def request_invoice_for_selected_order" in source
     assert "self.invoice_requested.emit(order_id)" in source
+    assert "def request_open_selected_order" in source
+    assert "self.order_open_requested.emit(order_id)" in source
     assert "Bitte zuerst eine Bestellung dieses Kunden auswählen" in source
+
+
+def test_customer_folder_panel_emits_selected_previous_order_for_opening(tmp_path: Path):
+    _app()
+    from getraenkeladen_tool.ui.customer_folder_panel import CustomerFolderPanel
+
+    folder = tmp_path / "Cafe Nord"
+    customer = SimpleNamespace(id=7, name="Cafe Nord")
+    order = SimpleNamespace(id=11, order_number="BEST-11", delivery_date="2026-06-24", status="geplant")
+    snapshot = SimpleNamespace(
+        customer=customer,
+        folder_path=folder,
+        folder_exists=False,
+        files=[],
+        orders=[order],
+    )
+    panel = CustomerFolderPanel(session_factory=None)
+    opened_order_ids: list[int] = []
+    panel.order_open_requested.connect(opened_order_ids.append)
+
+    panel.show_snapshot(snapshot, [])
+    panel.orders_table.setCurrentCell(0, 0)
+    panel.request_open_selected_order()
+
+    assert opened_order_ids == [11]
 
 
 def test_customer_folder_panel_shows_automation_quickstart_suggestions():

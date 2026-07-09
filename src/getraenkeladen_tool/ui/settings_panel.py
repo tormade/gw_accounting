@@ -17,18 +17,11 @@ from .layouts import ContentSurface, PageHeader, WorkspaceCard, configure_form_l
 
 
 SETTINGS_PANEL_ACTIONS = {
-    "settingsHelpButton": "?",
     "chooseInputFolderButton": "Ordner wählen",
     "previewMasterDataButton": "Import prüfen",
     "importMasterDataButton": "Import starten",
 }
 SETTINGS_PANEL_SECTIONS = ("Excel-Stammdaten importieren",)
-SETTINGS_HELP_TEXT = (
-    "Import: Hier können Sie die erhaltenen Excel-Stammdaten einlesen.\n\n"
-    "Die Originaldateien werden nicht verändert. Änderungen in der App werden intern protokolliert."
-)
-
-
 class SettingsPanel(QWidget):
     def __init__(self, session_factory=None) -> None:
         super().__init__()
@@ -38,6 +31,9 @@ class SettingsPanel(QWidget):
         self.input_folder.setPlaceholderText("Ordner mit Artikel Liste Preise.xlsx und Lieferkunden Liste.xlsx")
         self.status_label = QLabel("Input-Ordner wählen und Import prüfen.")
         self.status_label.setObjectName("muted")
+        self.preview_label = QLabel("Nach „Import prüfen“ erscheint hier eine kurze Vorschau der Änderungen.")
+        self.preview_label.setObjectName("sectionSubtitle")
+        self.preview_label.setWordWrap(True)
 
         root_layout = QVBoxLayout(self)
         root_layout.setContentsMargins(0, 0, 0, 0)
@@ -45,13 +41,10 @@ class SettingsPanel(QWidget):
         root_layout.addWidget(surface)
         layout = surface.layout
 
-        self.help_button = QPushButton(SETTINGS_PANEL_ACTIONS["settingsHelpButton"])
-        self.help_button.setObjectName("helpButton")
         layout.addWidget(
             PageHeader(
-                "Einstellungen",
-                "Excel-Dateien einlesen und Prüfpunkte erzeugen.",
-                self.help_button,
+                "Excel-Import",
+                "Stammdaten prüfen und erst danach bewusst übernehmen.",
             )
         )
 
@@ -74,10 +67,10 @@ class SettingsPanel(QWidget):
         import_actions.addStretch()
         import_layout.addLayout(import_actions)
         layout.addWidget(import_box)
+        layout.addWidget(self.preview_label)
         layout.addWidget(self.status_label)
         layout.addStretch()
 
-        self.help_button.clicked.connect(self.show_help)
         self.preview_master_data_button.clicked.connect(self.preview_master_data)
         self.import_master_data_button.clicked.connect(self.import_master_data)
 
@@ -96,9 +89,6 @@ class SettingsPanel(QWidget):
         layout.addWidget(self.choose_input_folder_button)
         return row
 
-    def show_help(self) -> None:
-        QMessageBox.information(self, "Hilfe: Einstellungen", SETTINGS_HELP_TEXT)
-
     def choose_input_folder(self) -> None:
         folder = QFileDialog.getExistingDirectory(self, "Input-Ordner wählen", self.input_folder.text())
         if folder:
@@ -115,6 +105,10 @@ class SettingsPanel(QWidget):
         session = self.session_factory()
         try:
             preview = preview_master_data_from_folder(session, input_dir)
+            if not preview.can_import:
+                self.preview_label.setText(preview.safety_report_text)
+                self.status_label.setText("Import nicht ausgeführt: Benötigte Excel-Dateien fehlen.")
+                return
             answer = QMessageBox.question(
                 self,
                 "Import bestätigen",
@@ -151,5 +145,5 @@ class SettingsPanel(QWidget):
             session.close()
         examples = "\n".join(f"- {item.name or 'Zeile ' + str(item.source_row)}: {item.action}" for item in preview.items[:8])
         details = f"\n\nBeispiele:\n{examples}" if examples else ""
-        QMessageBox.information(self, "Import-Vorschau", preview.safety_report_text + details)
+        self.preview_label.setText(preview.safety_report_text + details)
         self.status_label.setText(f"Import-Vorschau: {preview.summary_text}")

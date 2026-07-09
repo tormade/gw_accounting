@@ -54,5 +54,8 @@ def test_return_invoice_panel_uses_return_language():
     source = Path("src/getraenkeladen_tool/ui/document_workflow_panel.py").read_text(encoding="utf-8")
 
     assert "class ReturnInvoicePanel(InvoicePanel)" in source
+    assert "back_requested = Signal()" in source
+    assert "show_work_overview_button = True" in source
+    assert "Zurück zur Übersicht" in source
     assert 'page_title = "Rücklauf bearbeiten und Rechnung erstellen"' in source
     assert 'create_both_button_text = "Rechnung aus Rücklauf als Excel + PDF erstellen"' in source

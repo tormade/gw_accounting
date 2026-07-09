@@ -64,8 +64,8 @@ class InspectorPanel(QWidget):
     def __init__(self, title: str = "Kontext", subtitle: str = "") -> None:
         super().__init__()
         self.setObjectName("inspectorPanel")
-        self.setMinimumWidth(300)
-        self.setMaximumWidth(420)
+        self.setMinimumWidth(260)
+        self.setMaximumWidth(340)
 
         self.layout = QVBoxLayout(self)
         self.layout.setContentsMargins(20, 20, 20, 20)

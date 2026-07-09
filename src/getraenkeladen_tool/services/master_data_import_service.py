@@ -40,6 +40,11 @@ class MasterDataPreviewItem:
 @dataclass(frozen=True, slots=True)
 class MasterDataImportPreview:
     items: tuple[MasterDataPreviewItem, ...]
+    missing_required_files: tuple[str, ...] = ()
+
+    @property
+    def can_import(self) -> bool:
+        return not self.missing_required_files
 
     @property
     def products_created(self) -> int:
@@ -81,13 +86,15 @@ class MasterDataImportPreview:
     @property
     def safety_report_text(self) -> str:
         groups = self.safety_groups
+        missing_files = "\n".join(f"Fehlt: {file_name}" for file_name in self.missing_required_files)
+        required_files = f"\n\nBenötigte Dateien fehlen:\n{missing_files}" if missing_files else ""
         return (
             "Import-Sicherheitspruefung:\n"
             f"Neu: {groups['neu']}\n"
             f"Geaendert: {groups['geaendert']}\n"
             f"Unsicher: {groups['unsicher']}\n"
             f"Uebersprungen: {groups['uebersprungen']}\n\n"
-            f"{self.summary_text}"
+            f"{self.summary_text}{required_files}"
         )
 
     def _count(self, entity_type: str, action: str) -> int:
@@ -105,10 +112,19 @@ def preview_master_data_from_folder(session: Session, input_dir: Path) -> Master
         items.extend(_preview_products(session, article_path))
     if customer_path.exists():
         items.extend(_preview_customers(session, customer_path))
-    return MasterDataImportPreview(tuple(items))
+    missing_required_files = tuple(
+        file_name
+        for file_name, path in ((ARTICLE_FILE_NAME, article_path), (CUSTOMER_FILE_NAME, customer_path))
+        if not path.exists()
+    )
+    return MasterDataImportPreview(tuple(items), missing_required_files)
 
 
 def import_master_data_from_folder(session: Session, input_dir: Path) -> MasterDataImportResult:
+    preview = preview_master_data_from_folder(session, input_dir)
+    if not preview.can_import:
+        missing_files = ", ".join(preview.missing_required_files)
+        raise ValueError(f"Import nicht möglich. Benötigte Dateien fehlen: {missing_files}.")
     result = MasterDataImportResult()
     first_new_change_id = (session.scalar(select(func.max(MasterDataChange.id))) or 0) + 1
     article_path = input_dir / ARTICLE_FILE_NAME

@@ -28,6 +28,7 @@ from .work_start_panel import WorkStartPanel
 
 
 MAIN_TABS = (
+    "Start",
     "Arbeiten",
     "Rechnungen",
     "Verwaltung",
@@ -70,14 +71,17 @@ class MainWindow(QMainWindow):
         self.management_workspace = self._management_workspace()
         self._loaded_management_panels: set[QWidget] = set()
         self.refreshable_panels = {
+            "Start": (self.work_start_panel.refresh,),
             "Arbeiten": (self.refresh_active_work_panel,),
             "Rechnungen": (self.open_items_panel.refresh_all_lists,),
             "Verwaltung": (self.refresh_active_management_panel,),
         }
 
         self.customer_folder_panel.new_order_requested.connect(self.open_new_order_for_customer)
+        self.customer_folder_panel.order_open_requested.connect(self.open_order_for_id)
         self.customer_folder_panel.delivery_note_requested.connect(self.open_delivery_note_for_order)
         self.customer_folder_panel.invoice_requested.connect(self.open_invoice_for_order)
+        self.order_panel.back_requested.connect(self.open_work_start_tab)
         self.order_panel.delivery_note_requested.connect(self.open_delivery_note_for_order)
         self.order_panel.invoice_requested.connect(self.open_invoice_for_order)
         self.document_archive_panel.document_open_requested.connect(self.open_document_from_archive)
@@ -85,6 +89,7 @@ class MainWindow(QMainWindow):
         self.work_start_panel.customer_search_requested.connect(self.open_customer_folder_tab)
         self.work_start_panel.customer_selected.connect(self.open_customer_focus)
         self.work_start_panel.return_selected.connect(self.open_return_for_order)
+        self.return_invoice_panel.back_requested.connect(self.open_work_start_tab)
         self.return_invoice_panel.document_created.connect(self.open_work_start_tab)
         self.management_home_panel.route_requested.connect(self.open_management_section)
 
@@ -95,11 +100,13 @@ class MainWindow(QMainWindow):
         shell_layout.setSpacing(0)
         self.navigation = SidebarNavigation(MAIN_TABS)
         self.pages = QStackedWidget()
+        self.pages.addWidget(self._scrollable_tab(self.work_start_panel))
         self.pages.addWidget(self._scrollable_tab(self.work_workspace))
         self.pages.addWidget(self._scrollable_tab(self.open_items_panel))
         self.pages.addWidget(self._scrollable_tab(self.management_workspace))
         self.navigation.currentRowChanged.connect(self.show_main_page)
         self.navigation.currentRowChanged.connect(self.refresh_current_tab)
+        self.navigation.itemClicked.connect(self.open_navigation_item)
         self.management_workspace.currentChanged.connect(self.refresh_active_management_panel)
         shell_layout.addWidget(self.navigation)
         shell_layout.addWidget(self.pages, 1)
@@ -117,9 +124,15 @@ class MainWindow(QMainWindow):
         self.customer_folder_panel.load_selected_customer()
 
     def open_work_start_tab(self) -> None:
-        self.work_workspace.setCurrentWidget(self.work_start_panel)
         self.work_start_panel.refresh()
-        self.navigation.setCurrentRow(MAIN_TABS.index("Arbeiten"))
+        start_index = MAIN_TABS.index("Start")
+        self.pages.setCurrentIndex(start_index)
+        if self.navigation.currentRow() != start_index:
+            self.navigation.setCurrentRow(start_index)
+
+    def open_navigation_item(self, item) -> None:
+        if self.navigation.row(item) == MAIN_TABS.index("Start"):
+            self.open_work_start_tab()
 
     def open_open_items_tab(self) -> None:
         self.navigation.setCurrentRow(MAIN_TABS.index("Rechnungen"))
@@ -214,7 +227,6 @@ class MainWindow(QMainWindow):
         refresh_handlers = {
             self.work_start_panel: (self.work_start_panel.refresh,),
             self.customer_folder_panel: (self.customer_folder_panel.refresh_customers,),
-            self.order_panel: (self.order_panel.refresh_orders,),
             self.return_invoice_panel: (self.return_invoice_panel.refresh_orders,),
         }
         for refresh in refresh_handlers.get(current_panel, ()):
@@ -249,7 +261,6 @@ class MainWindow(QMainWindow):
     def _work_workspace(self) -> QStackedWidget:
         self.work_workspace = QStackedWidget()
         self.work_workspace.setObjectName("workStateStack")
-        self.work_workspace.addWidget(self.work_start_panel)
         self.work_workspace.addWidget(self.customer_folder_panel)
         self.work_workspace.addWidget(self.order_panel)
         self.work_workspace.addWidget(self.return_invoice_panel)

@@ -113,12 +113,18 @@ Das Produktziel steht in `docs/zielbild.md`: ein schlankes lokales Windows-Buero
 - Fenster- und Abstandsprobleme im neuen `Arbeiten`-Start behoben: Die Startfläche nutzt keine stretchende Standard-Card mehr, Kundensuche und Rückläufe bleiben oben kompakt ausgerichtet, die App startet größer und die Kundenordner-Zeile in der Verwaltung schrumpft sauber statt Buttons abzuschneiden. Volle Regression 291 Tests erfolgreich.
 - `Arbeiten`-Start optisch nachgeschliffen: Kundensuche und Rückläufe stehen jetzt als vertikaler Arbeitsfluss statt gequetschter Zweispaltenfläche, Suchlisten wachsen nicht mehr leer in die Höhe, Sekundäraktionen sind kompakt und leere Rückläufe zeigen keinen deaktivierten Balken mehr. Visueller Offscreen-Preview geprüft; volle Regression 291 Tests und `compileall src tests` erfolgreich.
 - Verwaltung entschlackt und sichtbare Texte bereinigt: `Verwaltung` startet jetzt mit einer ruhigen Einstiegsseite statt sichtbaren Admin-Tabs; Kunden, Artikel, Prüfpunkte, Import und Belegarchiv liegen als klare Routen dahinter. Sichtbare UI-Texte wurden systematisch von `ae/oe/ue` auf echte Umlaute umgestellt. Bürofluss-Test Bestellung -> Lieferschein -> Rücklauf -> Rechnung ist grün; volle Regression 292 Tests und `compileall src tests` erfolgreich.
+- Bestellaufnahme als fokussierte Ein-Aufgabe-Seite umgebaut: Der sichtbare Bestellstapel ist aus der Erfassung entfernt, alte Bestellungen liegen nun im Kundenbereich unter `Frühere Bestellungen` und können von dort geöffnet werden. Die Bestellseite führt jetzt von Kundendaten über Mengenliste/Pfand zu einem klaren Abschluss `Speichern -> Lieferschein`; Zusatzartikel ist nur noch eine kleine Nebenaktion. Tabellen- und Buttonbreiten wurden für 1440px visuell geprüft. Volle Regression 293 Tests und `compileall src tests` erfolgreich.
+- Rückweg in `Arbeiten` ergänzt: Kundenansicht, Bestellaufnahme und Rücklauf-Werkstatt haben jetzt `Zurück zur Übersicht` und führen wieder auf die Startfläche mit Kundensuche und offenen Lieferschein-Rückläufen. Offscreen-Smoke für Kunde -> Übersicht und Bestellung -> Übersicht erfolgreich; 118 fokussierte UI-Tests und `compileall src tests` erfolgreich.
+- Rückweg-Button repariert: `QPushButton.clicked` wird nun per Lambda auf argumentlose Navigationssignale weitergeleitet, damit der sichtbare Button wirklich klickt. Der Fehler betraf Kundenansicht, Bestellaufnahme, Rücklauf-Werkstatt und den Startflächen-Button `Alle Kunden öffnen`. Echte Button-Klicktests und Offscreen-Smoke erfolgreich; 119 fokussierte UI-Tests und `compileall src tests` grün.
+- Bürofluss-Polish umgesetzt: Der Excel-Import blockiert jetzt bei fehlenden Pflichtdateien statt unvollständige Daten still zu übernehmen; die Verwaltungsroute und Seite heißen einheitlich `Excel-Import`. Kunden- und Produktpflege erklären die drei wichtigsten Schritte direkt in der Seite, Archiv und Prüfpunkte haben klare Leerzustände. Sichtbarer Smoke lief bis zur Lieferschein-Belegwerkstatt; Kunde, Vorbefüllung, Menge-0-Positionen, Nummernvorschlag und Speichern wurden im laufenden Fenster geprüft. Der Mac-Computer-Use-Dienst brach beim finalen Belegerzeugungs-Klick ab, während der App-Prozess weiterlief; die fachliche Belegerzeugung bleibt durch Regressionstests abgedeckt.
+- Eigenständige Startseite ergänzt: `Start` zeigt Kundenauswahl und offene Lieferschein-Rückläufe, während `Arbeiten` erst nach Auswahl eines Kunden den Kundenarbeitsplatz zeigt. Das Zurückspringen nach `Arbeiten` beim Klick auf `Start` war eine erneute Auswahlmeldung der Suchliste; die Startseite leert die Auswahl beim Aktualisieren gezielt. Ein Regressionstest deckt Kunde auswählen -> `Start` wählen ab; 122 fokussierte UI-Tests sind grün.
+- Kundenarbeitsplatz vereinfacht: Der technische Button `Liste aktualisieren` ist entfernt. Kunden werden beim Öffnen der Startseite und beim Wechsel automatisch geladen; 70 Tests für Kundenansicht und Hauptfenster sind grün.
 
 ## In Arbeit
 
 - Echten Windows-Kundenordner fuer den naechsten Anwender-Smoke vorbereiten.
-- Hilfe-Dialoge app-eigen gestalten und Stammdaten weiter auf die haeufigsten Aufgaben reduzieren.
 - Excel-Fortschreibung im naechsten UAT mit echten Kundenordnern visuell gegen Originalausdruck pruefen.
+- Git-Worktree-Verknüpfung wurde mit `git worktree repair` wiederhergestellt. `git status` und die Worktree-Liste funktionieren erneut; vor einem Commit müssen die bereits vorhandenen, fachlich gemischten Änderungen bewusst in getrennte Checkpoints aufgeteilt werden.
 
 ## Offen
 
@@ -131,4 +137,4 @@ Das Produktziel steht in `docs/zielbild.md`: ein schlankes lokales Windows-Buero
 
 ## Naechste Aufgabe
 
-Hilfe-Dialoge app-eigen gestalten und die neuen Import-/Rechnungsfilter im sichtbaren Anwender-Smoke pruefen.
+Den Office-2.0-Bürofluss auf einem Windows-Zielsystem mit echter Kundenordner-Vorlage visuell prüfen und anschließend die vorhandenen Änderungen bewusst in fachliche Git-Checkpoints aufteilen.

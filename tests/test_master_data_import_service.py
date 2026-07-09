@@ -5,7 +5,12 @@ from openpyxl import Workbook
 from getraenkeladen_tool.models import Customer, Product
 from getraenkeladen_tool.schemas import CustomerCreate, ProductCreate
 from getraenkeladen_tool.services.customer_service import archive_customer, create_customer
-from getraenkeladen_tool.services.master_data_import_service import import_master_data_from_folder, preview_master_data_from_folder
+from getraenkeladen_tool.services.master_data_import_service import (
+    ARTICLE_FILE_NAME,
+    CUSTOMER_FILE_NAME,
+    import_master_data_from_folder,
+    preview_master_data_from_folder,
+)
 from getraenkeladen_tool.services.product_service import create_product, deactivate_product
 
 
@@ -211,6 +216,18 @@ def test_preview_master_data_exposes_safety_groups_for_confirmation(session, tmp
     assert "Neu: 1" in preview.safety_report_text
     assert "Geaendert: 1" in preview.safety_report_text
     assert "Uebersprungen: 2" in preview.safety_report_text
+
+
+def test_preview_blocks_import_when_a_required_source_file_is_missing(session, tmp_path):
+    input_dir = tmp_path / "Input"
+    input_dir.mkdir()
+    _write_article_file(input_dir / ARTICLE_FILE_NAME, [["Cola 20x0,5", 20, 0.5, 8.0, 3.1, 15.5]])
+
+    preview = preview_master_data_from_folder(session, input_dir)
+
+    assert preview.missing_required_files == (CUSTOMER_FILE_NAME,)
+    assert preview.can_import is False
+    assert f"Fehlt: {CUSTOMER_FILE_NAME}" in preview.safety_report_text
 
 
 def _write_article_file(path, rows):

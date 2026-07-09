@@ -5,7 +5,6 @@ from PySide6.QtCore import QUrl, Signal
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
     QAbstractItemView,
-    QHBoxLayout,
     QHeaderView,
     QLabel,
     QMessageBox,
@@ -34,6 +33,7 @@ ASSORTMENT_COLUMNS = ("Artikel", "Letzte Menge", "Neuer Preis", "Pfand", "Hinwei
 
 class CustomerFolderPanel(QWidget):
     new_order_requested = Signal(int)
+    order_open_requested = Signal(int)
     delivery_note_requested = Signal(int)
     invoice_requested = Signal(int)
 
@@ -60,10 +60,9 @@ class CustomerFolderPanel(QWidget):
         )
 
         self.customer_select = SearchableSelect("Kunde suchen, z. B. Cafe oder Metzgerei")
-        self.refresh_button = QPushButton("Liste aktualisieren")
         self.open_folder_button = QPushButton("Kundenordner")
         self.open_file_button = QPushButton("Datei öffnen")
-        self.new_order_button = QPushButton("Neue Bestellung starten")
+        self.new_order_button = QPushButton("Bestellung neu")
         self.new_order_button.setObjectName("primaryAction")
         self.seed_file_hint = QLabel("Letzte Mengen erscheinen nach der Kundenauswahl.")
         self.seed_file_hint.setObjectName("sectionSubtitle")
@@ -72,6 +71,8 @@ class CustomerFolderPanel(QWidget):
         self.customer_guide_label.setWordWrap(True)
         self.delivery_note_button = QPushButton("Lieferschein erstellen")
         self.invoice_button = QPushButton("Rechnung erstellen")
+        self.open_order_button = QPushButton("Öffnen")
+        self.open_order_button.setToolTip("Ausgewählte frühere Bestellung öffnen")
         self.status_label = QLabel("Noch kein Kunde ausgewählt.")
         self.status_label.setObjectName("muted")
 
@@ -109,11 +110,6 @@ class CustomerFolderPanel(QWidget):
         )
         workspace_card.layout.addWidget(self.customer_select)
         workspace_card.layout.addWidget(self.customer_guide_label)
-        workspace_actions = QHBoxLayout()
-        workspace_actions.addWidget(self.refresh_button)
-        workspace_actions.addStretch()
-        workspace_card.layout.addLayout(workspace_actions)
-
         self.orders_table = self._table(ORDER_COLUMNS, 180)
         self.assortment_table = self._table(ASSORTMENT_COLUMNS, 260)
         self.files_table = self._table(FOLDER_FILE_COLUMNS, 180)
@@ -122,7 +118,7 @@ class CustomerFolderPanel(QWidget):
 
         overview_tab = QWidget()
         overview_layout = QVBoxLayout(overview_tab)
-        orders_title = QLabel("Bestellungen dieses Kunden")
+        orders_title = QLabel("Frühere Bestellungen")
         orders_title.setObjectName("sectionTitle")
         assortment_title = QLabel("Letzte Mengen")
         assortment_title.setObjectName("sectionTitle")
@@ -135,7 +131,7 @@ class CustomerFolderPanel(QWidget):
         orders_layout = QVBoxLayout(orders_tab)
         orders_layout.addWidget(orders_title)
         orders_layout.addWidget(self.orders_table)
-        self.customer_context_tabs.addTab(orders_tab, "Bestellungen")
+        self.customer_context_tabs.addTab(orders_tab, "Frühere Bestellungen")
 
         files_tab = QWidget()
         files_layout = QVBoxLayout(files_tab)
@@ -161,6 +157,7 @@ class CustomerFolderPanel(QWidget):
         self.inspector.add_section_label("Nächster Schritt")
         self.inspector.body.addWidget(self.customer_next_step_label)
         self.inspector.body.addWidget(self.new_order_button)
+        self.inspector.body.addWidget(self.open_order_button)
         self.inspector.body.addWidget(self.open_folder_button)
         self.inspector.body.addWidget(self.open_file_button)
         self.inspector.body.addWidget(self.delivery_note_button)
@@ -174,10 +171,11 @@ class CustomerFolderPanel(QWidget):
         self.customer_select.selection_changed.connect(self.load_selected_customer)
         self.files_table.itemSelectionChanged.connect(self.update_action_state)
         self.orders_table.itemSelectionChanged.connect(self.update_action_state)
-        self.refresh_button.clicked.connect(self.refresh_customers)
         self.open_folder_button.clicked.connect(self.open_customer_folder)
         self.open_file_button.clicked.connect(self.open_selected_file)
         self.new_order_button.clicked.connect(self.request_new_order_for_customer)
+        self.open_order_button.clicked.connect(self.request_open_selected_order)
+        self.orders_table.itemDoubleClicked.connect(lambda _item: self.request_open_selected_order())
         self.delivery_note_button.clicked.connect(self.request_delivery_note_for_selected_order)
         self.invoice_button.clicked.connect(self.request_invoice_for_selected_order)
 
@@ -376,6 +374,13 @@ class CustomerFolderPanel(QWidget):
     def _selected_order_id(self) -> int | None:
         return self.order_ids_by_row.get(self.orders_table.currentRow())
 
+    def request_open_selected_order(self) -> None:
+        order_id = self._selected_order_id()
+        if order_id is None:
+            self.status_label.setText("Bitte zuerst eine frühere Bestellung dieses Kunden auswählen.")
+            return
+        self.order_open_requested.emit(order_id)
+
     def request_delivery_note_for_selected_order(self) -> None:
         order_id = self._selected_order_id()
         if order_id is None:
@@ -399,12 +404,13 @@ class CustomerFolderPanel(QWidget):
         self.open_folder_button.setEnabled(has_folder)
         self.open_file_button.setEnabled(has_file)
         self.new_order_button.setEnabled(has_customer)
+        self.open_order_button.setEnabled(has_order)
         if self.has_seed_quantities:
-            self.new_order_button.setText("Neue Bestellung starten")
+            self.new_order_button.setText("Bestellung neu")
         elif has_customer and not has_folder:
             self.new_order_button.setText("Leere Bestellung starten")
         else:
-            self.new_order_button.setText("Neue Bestellung starten")
+            self.new_order_button.setText("Bestellung neu")
         self.delivery_note_button.setEnabled(has_order)
         self.invoice_button.setEnabled(has_order)
         if selected_file is None:

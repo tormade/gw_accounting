@@ -2,10 +2,61 @@ from getraenkeladen_tool.ui.main_window import CLAIM_PATH, LOGO_PATH, MAIN_TABS,
 from getraenkeladen_tool.ui.theme import APP_STYLESHEET
 
 
+def _app():
+    import os
+
+    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+    from PySide6.QtWidgets import QApplication
+
+    return QApplication.instance() or QApplication([])
+
+
 def test_main_window_exposes_task_oriented_tabs():
-    assert MAIN_TABS == ("Arbeiten", "Rechnungen", "Verwaltung")
+    assert MAIN_TABS == ("Start", "Arbeiten", "Rechnungen", "Verwaltung")
     assert "Bestellungen" not in MAIN_TABS
     assert "Belege" not in MAIN_TABS
+
+
+def test_start_page_opens_arbeiten_after_a_customer_is_selected():
+    _app()
+    from getraenkeladen_tool.ui.main_window import MainWindow
+
+    window = MainWindow(session_factory=None)
+
+    assert window.pages.count() == 4
+    assert window.navigation.currentRow() == MAIN_TABS.index("Start")
+    assert window.pages.currentWidget().widget() is window.work_start_panel
+
+
+def test_start_navigation_clears_previous_customer_selection(session, tmp_path):
+    from getraenkeladen_tool.schemas import CustomerCreate
+    from getraenkeladen_tool.services.customer_service import create_customer
+    from getraenkeladen_tool.ui.main_window import MainWindow
+
+    _app()
+    customer = create_customer(session, CustomerCreate(name="Cafe Nord", folder_path=str(tmp_path / "Cafe Nord")))
+    window = MainWindow(session_factory=lambda: session)
+
+    window.work_start_panel.customer_select.select_value(customer.id)
+
+    assert window.navigation.currentRow() == MAIN_TABS.index("Arbeiten")
+
+    window.navigation.setCurrentRow(MAIN_TABS.index("Start"))
+
+    assert window.navigation.currentRow() == MAIN_TABS.index("Start")
+    assert window.pages.currentWidget().widget() is window.work_start_panel
+    assert window.work_start_panel.customer_select.current_value() is None
+    assert window.work_start_panel.customer_select.search_input.text() == ""
+
+    window.open_customer_folder_tab()
+
+    assert window.navigation.currentRow() == MAIN_TABS.index("Arbeiten")
+    assert window.pages.currentWidget().widget() is window.work_workspace
+    assert window.work_workspace.currentWidget() is window.customer_folder_panel
+
+    window.navigation.setCurrentRow(MAIN_TABS.index("Start"))
+
+    assert window.pages.currentWidget().widget() is window.work_start_panel
 
 
 def test_main_window_uses_resizable_screen_friendly_size():
@@ -201,7 +252,7 @@ def test_order_and_document_workspaces_use_named_layout_regions():
 
     assert "ContentSurface" in order_source
     assert "WorkspaceCard" in order_source
-    assert "tableSearchField" in order_source
+    assert "orderEditorWorkspace" in order_source
     assert 'setObjectName("totalBar")' in order_source
     assert "ContentSurface" in document_source
     assert "WorkspaceCard" in document_source
@@ -248,8 +299,9 @@ def test_order_form_gives_selection_fields_room_to_grow():
 
     source = Path("src/getraenkeladen_tool/ui/order_panel.py").read_text(encoding="utf-8")
 
-    assert "self.customer_select.setMinimumWidth(420)" in source
-    assert "self.product_select.setMinimumWidth(420)" in source
+    assert "self.customer_select.setMinimumWidth(320)" in source
+    assert "self.product_select.setMinimumWidth(320)" in source
+    assert "self.order_number.setMaximumWidth(520)" in source
 
 
 def test_target_state_navigation_prioritizes_customer_folder_path():
@@ -257,14 +309,14 @@ def test_target_state_navigation_prioritizes_customer_folder_path():
 
     source = Path("src/getraenkeladen_tool/ui/main_window.py").read_text(encoding="utf-8")
 
-    assert MAIN_TABS == ("Arbeiten", "Rechnungen", "Verwaltung")
+    assert MAIN_TABS == ("Start", "Arbeiten", "Rechnungen", "Verwaltung")
     assert "Heute" not in MAIN_TABS
     assert "Bestellungen" not in MAIN_TABS
     assert "Belege" not in MAIN_TABS
     assert 'tabs.addTab(self.dashboard_panel, "Heute")' not in source
     assert 'tabs.addTab(self.customer_folder_panel, "Kunden")' not in source
     assert 'self.work_workspace = QStackedWidget()' in source
-    assert 'self.work_workspace.addWidget(self.work_start_panel)' in source
+    assert 'self.pages.addWidget(self._scrollable_tab(self.work_start_panel))' in source
     assert 'self.work_workspace.addWidget(self.customer_folder_panel)' in source
     assert '"Kunde & Bestellung"' not in source
     assert '"Auftraege"' not in source
@@ -375,27 +427,26 @@ def test_order_tab_exposes_guided_order_actions():
         "newOrderButton": "Neue Bestellung",
         "copyOrderButton": "Als Vorlage kopieren",
         "refreshOrderDataButton": "Daten neu laden",
-        "suggestOrderNumberButton": "Nummer vorschlagen",
+        "suggestOrderNumberButton": "Vorschlagen",
         "addOrderLineButton": "Position hinzufügen",
         "removeOrderLineButton": "Position entfernen",
         "addDepositReturnButton": "Pfand-Rückgabe eintragen",
         "removeDepositReturnButton": "Pfand-Rückgabe entfernen",
         "saveOrderButton": "Bestellung speichern",
-        "refreshOrdersButton": "Bestellungen laden",
         "createDeliveryNoteFromOrderButton": "Lieferschein erstellen",
         "createInvoiceFromOrderButton": "Rechnung erstellen",
     }
     assert ORDER_PANEL_SECTIONS == (
         "Kunde und Lieferdatum",
         "Mengen erfassen",
-        "Bestellungen",
+        "Abschluss",
     )
     assert "Kunde und Lieferdatum" in ORDER_HELP_TEXT
     assert "Mengen erfassen" in ORDER_HELP_TEXT
     assert ORDER_GUIDANCE_STEPS == (
         "Kunde suchen und letzte Mengen als Vorlage sehen.",
         "Neue Mengen, neue Artikel und Pfand-Rückgabe erfassen.",
-        "Bestellung speichern und daraus Lieferschein oder Rechnung erzeugen.",
+        "Bestellung speichern und danach den Lieferschein erstellen.",
     )
     assert ORDER_CONTEXT_ACTIONS == {
         "open": "Bestellung öffnen",
@@ -429,6 +480,7 @@ def test_main_window_embeds_customer_folder_as_second_page_and_wires_actions():
     assert "self.order_panel.open_new_order_for_customer(customer_id)" in source
     assert "self.customer_folder_panel.delivery_note_requested.connect(self.open_delivery_note_for_order)" in source
     assert "self.customer_folder_panel.invoice_requested.connect(self.open_invoice_for_order)" in source
+    assert "self.customer_folder_panel.order_open_requested.connect(self.open_order_for_id)" in source
     assert "self.customer_folder_panel.new_order_requested.connect(self.open_new_order_for_customer)" in source
     assert '"Lieferscheine"' not in source
     assert '"Rechnungen"' in source
@@ -454,7 +506,7 @@ def test_main_window_embeds_order_intake_inside_arbeiten_workspace():
     assert "self.work_workspace.addWidget(self.order_panel)" in source
     assert '"Bestellungen"' not in MAIN_TABS
     assert '"Arbeiten": (self.refresh_active_work_panel,)' in source
-    assert "self.order_panel: (self.order_panel.refresh_orders,)" in source
+    assert "self.order_panel: (self.order_panel.refresh_orders,)" not in source
 
 
 def test_main_window_opens_document_workflows_as_visible_dialogs_from_customer_folder():
@@ -480,6 +532,35 @@ def test_main_window_opens_returns_inside_arbeiten_workspace():
     assert "self.work_workspace.setCurrentWidget(self.return_invoice_panel)" in source
     assert "self.return_invoice_panel.select_order(order_id)" in source
     assert "self.return_invoice_panel.document_created.connect(self.open_work_start_tab)" in source
+    assert "self.return_invoice_panel.back_requested.connect(self.open_work_start_tab)" in source
+
+
+def test_work_subscreens_can_return_to_work_overview():
+    from pathlib import Path
+
+    source = Path("src/getraenkeladen_tool/ui/main_window.py").read_text(encoding="utf-8")
+
+    assert "self.order_panel.back_requested.connect(self.open_work_start_tab)" in source
+    assert "self.return_invoice_panel.back_requested.connect(self.open_work_start_tab)" in source
+
+
+def test_work_subscreen_back_buttons_click_to_work_overview():
+    _app()
+    from getraenkeladen_tool.ui.main_window import MainWindow
+
+    window = MainWindow(session_factory=None)
+
+    window.open_orders_tab()
+    assert window.work_workspace.currentWidget() is window.order_panel
+    window.order_panel.back_button.click()
+    assert window.navigation.currentRow() == MAIN_TABS.index("Start")
+    assert window.pages.currentWidget().widget() is window.work_start_panel
+
+    window.work_workspace.setCurrentWidget(window.return_invoice_panel)
+    assert window.work_workspace.currentWidget() is window.return_invoice_panel
+    window.return_invoice_panel.back_button.click()
+    assert window.navigation.currentRow() == MAIN_TABS.index("Start")
+    assert window.pages.currentWidget().widget() is window.work_start_panel
 
 
 def test_customer_tab_exposes_master_data_actions():
@@ -492,7 +573,6 @@ def test_customer_tab_exposes_master_data_actions():
     )
 
     assert CUSTOMER_PANEL_ACTIONS == {
-        "customerHelpButton": "?",
         "newCustomerButton": "Neu",
         "saveCustomerButton": "Kunde speichern",
         "discardCustomerChangesButton": "Verwerfen",
@@ -526,7 +606,6 @@ def test_product_tab_exposes_price_list_actions():
     )
 
     assert PRODUCT_PANEL_ACTIONS == {
-        "productHelpButton": "?",
         "newProductButton": "Neu",
         "saveProductButton": "Produkt speichern",
         "discardProductChangesButton": "Verwerfen",
@@ -555,7 +634,6 @@ def test_settings_tab_focuses_on_master_data_import_without_number_sequences():
     from getraenkeladen_tool.ui.settings_panel import SETTINGS_PANEL_ACTIONS, SETTINGS_PANEL_SECTIONS
 
     assert SETTINGS_PANEL_ACTIONS == {
-        "settingsHelpButton": "?",
         "chooseInputFolderButton": "Ordner wählen",
         "previewMasterDataButton": "Import prüfen",
         "importMasterDataButton": "Import starten",
@@ -565,6 +643,20 @@ def test_settings_tab_focuses_on_master_data_import_without_number_sequences():
     assert "preview_master_data_from_folder" in source
     assert "Import bestätigen" in source
     assert "preview.safety_report_text" in source
+    assert '"Excel-Import",' in source
+    assert "preview.can_import" in source
+
+
+def test_master_data_panels_show_inline_guidance_and_empty_states():
+    from pathlib import Path
+
+    customer_source = Path("src/getraenkeladen_tool/ui/customer_panel.py").read_text(encoding="utf-8")
+    product_source = Path("src/getraenkeladen_tool/ui/product_panel.py").read_text(encoding="utf-8")
+    checklist_source = Path("src/getraenkeladen_tool/ui/checklist_panel.py").read_text(encoding="utf-8")
+
+    assert "layout.addWidget(self._guidance_box())" in customer_source
+    assert "layout.addWidget(self._guidance_box())" in product_source
+    assert "Keine Prüfpunkte vorhanden." in checklist_source
 
 
 def test_product_panel_hides_unit_maintenance_from_user():

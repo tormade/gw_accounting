@@ -6,7 +6,6 @@ from PySide6.QtWidgets import (
     QLabel,
     QLineEdit,
     QMenu,
-    QMessageBox,
     QPushButton,
     QTableWidget,
     QTableWidgetItem,
@@ -30,7 +29,6 @@ from .layouts import ContentSurface, PageHeader, WorkspaceCard, configure_form_l
 
 
 PRODUCT_PANEL_ACTIONS = {
-    "productHelpButton": "?",
     "newProductButton": "Neu",
     "saveProductButton": "Produkt speichern",
     "discardProductChangesButton": "Verwerfen",
@@ -40,12 +38,6 @@ PRODUCT_PANEL_ACTIONS = {
     "deactivateProductButton": "Produkt deaktivieren",
     "restoreProductButton": "Produkt wiederherstellen",
 }
-PRODUCT_HELP_TEXT = (
-    "Produkte: Hier pflegen Sie die zentrale Preisliste.\n\n"
-    "Links erfassen oder bearbeiten Sie einen Artikel. Rechts sehen Sie die vorhandene Preisliste.\n\n"
-    "Deaktivieren verhindert neue Nutzung, lässt alte Belege aber nachvollziehbar bestehen."
-)
-
 PRODUCT_COLUMNS = ("Produkt", "Artikelnummer", "Preis", "Pfand", "Status")
 PRODUCT_PANEL_SECTIONS = ("1. Produkt erfassen", "2. Preisliste prüfen")
 PRODUCT_GUIDANCE_STEPS = (
@@ -95,9 +87,8 @@ class ProductPanel(QWidget):
         root_layout.addWidget(surface)
         layout = surface.layout
 
-        self.help_button = QPushButton(PRODUCT_PANEL_ACTIONS["productHelpButton"])
-        self.help_button.setObjectName("helpButton")
-        layout.addWidget(PageHeader("Produkte", "Zentrale Artikelliste und Standardpreise.", self.help_button))
+        layout.addWidget(PageHeader("Produkte", "Zentrale Artikelliste und Standardpreise."))
+        layout.addWidget(self._guidance_box())
 
         edit_box, edit_layout = self._section(
             PRODUCT_PANEL_SECTIONS[0],
@@ -159,7 +150,6 @@ class ProductPanel(QWidget):
 
         layout.addWidget(self.status_label)
 
-        self.help_button.clicked.connect(self.show_help)
         self.new_button.clicked.connect(self.new_product)
         self.save_button.clicked.connect(self.save_product)
         self.discard_button.clicked.connect(self.discard_changes)
@@ -180,9 +170,6 @@ class ProductPanel(QWidget):
         button = QPushButton(PRODUCT_PANEL_ACTIONS[object_name])
         button.setObjectName(object_name)
         return button
-
-    def show_help(self) -> None:
-        QMessageBox.information(self, "Hilfe: Produkte", PRODUCT_HELP_TEXT)
 
     def _guidance_box(self) -> QWidget:
         box = QWidget()
