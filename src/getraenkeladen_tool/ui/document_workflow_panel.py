@@ -1,5 +1,7 @@
-from pathlib import Path
 from datetime import date, timedelta
+from dataclasses import dataclass
+from functools import partial
+from pathlib import Path
 
 from PySide6.QtCore import Qt, QUrl, Signal
 from PySide6.QtGui import QDesktopServices
@@ -25,9 +27,10 @@ from ..schemas import DepositReturnCreate, DocumentLineItem
 from ..services.automation_service import verify_document_assets
 from ..services.number_suggestion_service import suggest_document_number
 from ..services.order_service import create_order_delivery_order, create_order_invoice, get_order, list_active_orders
+from .background_task import BackgroundTask
 from .date_input import to_display_date
 from .deposit_return_presets import DEPOSIT_RETURN_PRESETS
-from .layouts import ContentSurface, PageHeader, ResponsiveSplitter, WorkspaceCard, configure_form_layout
+from .layouts import ContentSurface, PageHeader, ResponsiveSplitter, WorkspaceCard, configure_form_layout, set_button_role
 from .searchable_select import SearchableSelect
 
 
@@ -37,8 +40,57 @@ DOCUMENT_WORKFLOW_ACTIONS = {
     "addDocumentDepositReturnButton": "Pfand-Rückgabe eintragen",
     "removeDocumentDepositReturnButton": "Pfand-Rückgabe entfernen",
 }
+DOCUMENT_WORKFLOW_BUTTON_ROLES = {
+    "suggestDocumentNumberButton": "quiet",
+    "removeDocumentLineButton": "danger",
+    "addDocumentDepositReturnButton": "secondary",
+    "removeDocumentDepositReturnButton": "danger",
+}
 DOCUMENT_LINE_COLUMNS = ("Artikel", "Menge", "Preis je Einheit EUR", "Pfand je Einheit EUR", "Summe EUR")
 DOCUMENT_RETURN_COLUMNS = ("Pfandart", "Menge", "Pfand EUR", "Gutschrift EUR")
+
+
+@dataclass(frozen=True, slots=True)
+class DocumentCreationRequest:
+    order_id: int
+    document_number: str
+    line_items: tuple[DocumentLineItem, ...]
+    deposit_returns: tuple[DepositReturnCreate, ...]
+    delivery_fee_enabled: bool
+    note: str | None
+    assets: frozenset[str]
+
+
+@dataclass(frozen=True, slots=True)
+class DocumentCreationResult:
+    document_id: int
+    document_number: str
+    excel_path: str
+    pdf_path: str
+    excel_exists: bool
+    pdf_exists: bool
+
+
+def _create_document_in_background(session_factory, document_creator, request: DocumentCreationRequest) -> DocumentCreationResult:
+    """Create and verify a document without touching Qt widgets or returning ORM objects."""
+    session = session_factory()
+    try:
+        document = document_creator(session, request)
+        verification = verify_document_assets(session, document.id, expected_assets=set(request.assets))
+        if not verification.ok:
+            failed_checks = "; ".join(check.message for check in verification.checks if not check.ok)
+            raise RuntimeError(f"Belegprüfung fehlgeschlagen: {failed_checks or 'Erwartete Datei fehlt.'}")
+        return DocumentCreationResult(
+            document_id=document.id,
+            document_number=document.document_number,
+            excel_path=document.excel_path,
+            pdf_path=document.pdf_path,
+            excel_exists=Path(document.excel_path).is_file(),
+            pdf_exists=Path(document.pdf_path).is_file(),
+        )
+    finally:
+        session.close()
+
 
 class DocumentWorkflowPanel(QWidget):
     back_requested = Signal()
@@ -61,6 +113,7 @@ class DocumentWorkflowPanel(QWidget):
         self.current_order_id = None
         self.last_excel_path: Path | None = None
         self.last_pdf_path: Path | None = None
+        self._document_task = BackgroundTask(self)
 
         self.order_select = SearchableSelect("Kunde, Bestellnummer oder Lieferdatum suchen")
         self.order_select.search_input.setObjectName("tableSearchField")
@@ -110,6 +163,7 @@ class DocumentWorkflowPanel(QWidget):
         if self.show_work_overview_button:
             self.back_button = QPushButton("Zurück zur Übersicht")
             self.back_button.setObjectName("secondaryActionButton")
+            set_button_role(self.back_button, "quiet")
             self.back_button.clicked.connect(lambda _checked=False: self.back_requested.emit())
             page_action = self.back_button
 
@@ -136,6 +190,9 @@ class DocumentWorkflowPanel(QWidget):
         self.refresh_button = QPushButton("Liste aktualisieren")
         self.load_button = QPushButton("Diese Bestellung verwenden")
         self.reset_order_button = QPushButton("Suche zurücksetzen")
+        set_button_role(self.refresh_button, "quiet")
+        set_button_role(self.load_button, "secondary")
+        set_button_role(self.reset_order_button, "quiet")
         refresh_row.addWidget(self.refresh_button)
         refresh_row.addWidget(self.load_button)
         refresh_row.addWidget(self.reset_order_button)
@@ -150,9 +207,15 @@ class DocumentWorkflowPanel(QWidget):
             kicker="BELEGWERKSTATT",
         )
         document_layout.addWidget(self.order_summary)
+        self.change_order_button = QPushButton("Andere Bestellung wählen")
+        self.change_order_button.setObjectName("secondaryActionButton")
+        set_button_role(self.change_order_button, "secondary")
+        self.change_order_button.setVisible(False)
+        document_layout.addWidget(self.change_order_button)
 
         self.create_both_button = QPushButton(self.create_both_button_text)
         self.create_both_button.setObjectName("primaryAction")
+        set_button_role(self.create_both_button, "primary")
 
         self.document_tabs = QTabWidget()
         self.document_tabs.setUsesScrollButtons(False)
@@ -165,6 +228,7 @@ class DocumentWorkflowPanel(QWidget):
         line_action_row = QHBoxLayout()
         self.remove_line_button = QPushButton(DOCUMENT_WORKFLOW_ACTIONS["removeDocumentLineButton"])
         self.remove_line_button.setObjectName("dangerAction")
+        set_button_role(self.remove_line_button, "danger")
         line_action_row.addWidget(self.remove_line_button)
         line_action_row.addStretch()
         positions_layout.addLayout(line_action_row)
@@ -189,6 +253,8 @@ class DocumentWorkflowPanel(QWidget):
         self.add_return_button = QPushButton(DOCUMENT_WORKFLOW_ACTIONS["addDocumentDepositReturnButton"])
         self.remove_return_button = QPushButton(DOCUMENT_WORKFLOW_ACTIONS["removeDocumentDepositReturnButton"])
         self.remove_return_button.setObjectName("dangerAction")
+        set_button_role(self.add_return_button, "secondary")
+        set_button_role(self.remove_return_button, "danger")
         return_action_row.addWidget(self.add_return_button)
         return_action_row.addWidget(self.remove_return_button)
         return_action_row.addStretch()
@@ -203,6 +269,10 @@ class DocumentWorkflowPanel(QWidget):
         self.create_pdf_button = QPushButton(self.create_pdf_button_text)
         self.open_excel_button = QPushButton("Excel öffnen")
         self.open_pdf_button = QPushButton("PDF öffnen")
+        set_button_role(self.create_excel_button, "secondary")
+        set_button_role(self.create_pdf_button, "secondary")
+        set_button_role(self.open_excel_button, "quiet")
+        set_button_role(self.open_pdf_button, "quiet")
         self.open_excel_button.setEnabled(False)
         self.open_pdf_button.setEnabled(False)
         normal_hint = QLabel("Normalerweise reicht der Hauptbutton: Excel und PDF zusammen erstellen.")
@@ -250,6 +320,7 @@ class DocumentWorkflowPanel(QWidget):
         self.refresh_button.clicked.connect(self.refresh_orders)
         self.load_button.clicked.connect(self.load_selected_order)
         self.reset_order_button.clicked.connect(self.reset_order_selection)
+        self.change_order_button.clicked.connect(self.reset_order_selection)
         self.suggest_document_number_button.clicked.connect(self.apply_suggested_document_number)
         self.remove_line_button.clicked.connect(self.remove_selected_line)
         self.add_return_button.clicked.connect(self.add_deposit_return)
@@ -267,7 +338,10 @@ class DocumentWorkflowPanel(QWidget):
         self.apply_selected_deposit_return()
 
     def _button(self, object_name: str) -> QPushButton:
-        return QPushButton(DOCUMENT_WORKFLOW_ACTIONS[object_name])
+        return set_button_role(
+            QPushButton(DOCUMENT_WORKFLOW_ACTIONS[object_name]),
+            DOCUMENT_WORKFLOW_BUTTON_ROLES[object_name],
+        )
 
     def _section(self, title: str, subtitle: str, tone: str = "default", kicker: str = "") -> tuple[QWidget, QVBoxLayout]:
         box = WorkspaceCard(title, subtitle, tone=tone, kicker=kicker)
@@ -308,8 +382,22 @@ class DocumentWorkflowPanel(QWidget):
     def reset_order_selection(self) -> None:
         self.current_order_id = None
         self.order_box.setVisible(True)
-        self.order_select.set_search_text("")
+        self.change_order_button.setVisible(False)
+        self.order_select.clear_selection()
         self.order_summary.setText("Noch keine Bestellung ausgewählt.")
+        self.lines_table.setRowCount(0)
+        self.returns_table.setRowCount(0)
+        self.document_number.clear()
+        self.document_note.clear()
+        self.delivery_fee_choice.setCurrentIndex(0)
+        self.deposit_return_quantity.clear()
+        self.last_excel_path = None
+        self.last_pdf_path = None
+        self.open_excel_button.setEnabled(False)
+        self.open_pdf_button.setEnabled(False)
+        self.result_label.setText("Noch keine Datei erstellt.")
+        self.total_label.setText("Gesamtsumme: 0,00 EUR")
+        self.document_tabs.setCurrentIndex(0)
         self.status_label.setText("Bitte Kundenbestellung suchen und verwenden.")
 
     def select_order(self, order_id: int) -> None:
@@ -320,6 +408,7 @@ class DocumentWorkflowPanel(QWidget):
             order = get_order(session, order_id)
             self.current_order_id = order.id
             self.order_box.setVisible(False)
+            self.change_order_button.setVisible(True)
             self.order_summary.setText(
                 "Ausgewählte Bestellung: "
                 f"{order.order_number} | {order.customer.name} | Lieferung {to_display_date(order.delivery_date)} | "
@@ -359,36 +448,99 @@ class DocumentWorkflowPanel(QWidget):
             self.status_label.setText(message)
             QMessageBox.critical(self, "Erstellung fehlgeschlagen", message)
             return
-        session = self.session_factory()
         try:
-            document = self._create_document_for_order(session, assets=assets)
-            verification = verify_document_assets(session, document.id, expected_assets=assets)
+            request = self._document_creation_request(assets)
         except Exception as error:
-            self.status_label.setText(f"Erstellung fehlgeschlagen: {error}")
-            QMessageBox.critical(
-                self,
-                "Erstellung fehlgeschlagen",
-                f"{self._document_name()} konnte nicht als {asset_label} erstellt werden.\n\nGrund: {error}",
-            )
+            self._show_document_creation_error(asset_label, error)
             return
-        finally:
-            session.close()
-        self.refresh_orders()
-        self.last_excel_path = Path(document.excel_path)
-        self.last_pdf_path = Path(document.pdf_path)
-        self.open_excel_button.setEnabled(self.last_excel_path.exists())
-        self.open_pdf_button.setEnabled(self.last_pdf_path.exists())
-        self.result_label.setText(self._created_asset_result(asset_label))
-        check_text = "Belegprüfung: OK." if verification.ok else "Belegprüfung: Bitte Dateien prüfen."
-        self.status_label.setText(
-            f"Erfolgreich erstellt: {self._document_name()} {document.document_number} als {asset_label}. {check_text}"
+        self._start_document_creation(request, asset_label)
+
+    def _document_creation_request(self, assets: set[str]) -> DocumentCreationRequest:
+        if self.current_order_id is None:
+            raise ValueError("Bitte zuerst eine Bestellung auswählen.")
+        return DocumentCreationRequest(
+            order_id=self.current_order_id,
+            document_number=self.document_number.text().strip(),
+            line_items=tuple(self._line_items_from_table()),
+            deposit_returns=tuple(self._deposit_returns_from_table()),
+            delivery_fee_enabled=self._delivery_fee_enabled(),
+            note=self.document_note.text().strip() or None,
+            assets=frozenset(assets),
         )
-        self.document_created.emit(document.id)
+
+    def _start_document_creation(self, request: DocumentCreationRequest, asset_label: str) -> None:
+        if self._document_task.is_running:
+            self.status_label.setText("Die Belegerstellung läuft bereits.")
+            return
+        self._set_document_creation_running(True)
+        self.status_label.setText(f"{self._document_name()} wird als {asset_label} erstellt …")
+        started = self._document_task.start(
+            partial(
+                _create_document_in_background,
+                self.session_factory,
+                type(self)._create_document_for_order,
+                request,
+            ),
+            on_success=lambda result: self._handle_document_created(result, asset_label),
+            on_error=lambda error: self._show_document_creation_error(asset_label, error),
+            on_finished=self._finish_document_task,
+        )
+        if not started:
+            self.status_label.setText("Die Belegerstellung läuft bereits.")
+
+    def _set_document_creation_running(self, running: bool) -> None:
+        enabled = not running
+        for control in (
+            self.refresh_button,
+            self.load_button,
+            self.reset_order_button,
+            self.change_order_button,
+            self.suggest_document_number_button,
+            self.remove_line_button,
+            self.add_return_button,
+            self.remove_return_button,
+            self.create_both_button,
+            self.create_excel_button,
+            self.create_pdf_button,
+            self.document_number,
+            self.delivery_fee_choice,
+            self.document_note,
+            self.deposit_return_select,
+            self.deposit_return_quantity,
+            self.deposit_return_eur,
+            self.lines_table,
+            self.returns_table,
+        ):
+            control.setEnabled(enabled)
+
+    def _finish_document_task(self) -> None:
+        self._set_document_creation_running(False)
+
+    def _handle_document_created(self, result: DocumentCreationResult, asset_label: str) -> None:
+        self.refresh_orders()
+        self.last_excel_path = Path(result.excel_path)
+        self.last_pdf_path = Path(result.pdf_path)
+        self.open_excel_button.setEnabled(result.excel_exists)
+        self.open_pdf_button.setEnabled(result.pdf_exists)
+        self.result_label.setText(self._created_asset_result(asset_label))
+        check_text = "Belegprüfung: OK."
+        self.status_label.setText(
+            f"Erfolgreich erstellt: {self._document_name()} {result.document_number} als {asset_label}. {check_text}"
+        )
+        self.document_created.emit(result.document_id)
         QMessageBox.information(
             self,
             f"{self._document_name()} erstellt",
-            f"{self._document_name()} {document.document_number} wurde als {asset_label} erstellt.\n\n"
+            f"{self._document_name()} {result.document_number} wurde als {asset_label} erstellt.\n\n"
             f"Datei: {self._created_asset_path(asset_label)}\n\n{check_text}",
+        )
+
+    def _show_document_creation_error(self, asset_label: str, error: Exception | str) -> None:
+        self.status_label.setText(f"Erstellung fehlgeschlagen: {error}")
+        QMessageBox.critical(
+            self,
+            "Erstellung fehlgeschlagen",
+            f"{self._document_name()} konnte nicht als {asset_label} erstellt werden.\n\nGrund: {error}",
         )
 
     def _document_name(self) -> str:
@@ -411,7 +563,8 @@ class DocumentWorkflowPanel(QWidget):
             return self.last_pdf_path
         return self.last_excel_path if asset_label == "Excel" else self.last_pdf_path
 
-    def _create_document_for_order(self, session, assets: set[str]):
+    @staticmethod
+    def _create_document_for_order(session, request: DocumentCreationRequest):
         raise NotImplementedError
 
     def _default_note_for_order(self, order) -> str:
@@ -640,17 +793,18 @@ class DeliveryNotePanel(DocumentWorkflowPanel):
     create_pdf_button_text = "Nur PDF-Lieferschein"
     create_both_button_text = "Lieferschein als Excel + PDF erstellen"
 
-    def _create_document_for_order(self, session, assets: set[str]):
+    @staticmethod
+    def _create_document_for_order(session, request: DocumentCreationRequest):
         return create_order_delivery_order(
             session,
-            self.current_order_id,
-            self.document_number.text().strip(),
-            line_items=self._line_items_from_table(),
-            deposit_returns=self._deposit_returns_from_table(),
-            delivery_fee_enabled=self._delivery_fee_enabled(),
-            delivery_comment=self.document_note.text().strip() or None,
+            request.order_id,
+            request.document_number,
+            line_items=list(request.line_items),
+            deposit_returns=list(request.deposit_returns),
+            delivery_fee_enabled=request.delivery_fee_enabled,
+            delivery_comment=request.note,
             footer_text=None,
-            assets=assets,
+            assets=set(request.assets),
         )
 
 
@@ -677,17 +831,18 @@ class InvoicePanel(DocumentWorkflowPanel):
             return self.default_note_text
         return ""
 
-    def _create_document_for_order(self, session, assets: set[str]):
+    @staticmethod
+    def _create_document_for_order(session, request: DocumentCreationRequest):
         return create_order_invoice(
             session,
-            self.current_order_id,
-            self.document_number.text().strip(),
-            line_items=self._line_items_from_table(),
-            deposit_returns=self._deposit_returns_from_table(),
-            delivery_fee_enabled=self._delivery_fee_enabled(),
-            footer_text=self.document_note.text().strip() or None,
+            request.order_id,
+            request.document_number,
+            line_items=list(request.line_items),
+            deposit_returns=list(request.deposit_returns),
+            delivery_fee_enabled=request.delivery_fee_enabled,
+            footer_text=request.note,
             datev_upload_dir=Path.cwd() / "outputs" / "datev_upload",
-            assets=assets,
+            assets=set(request.assets),
         )
 
 

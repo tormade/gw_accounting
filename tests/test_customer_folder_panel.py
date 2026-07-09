@@ -224,10 +224,11 @@ def test_customer_folder_panel_emits_selected_previous_order_for_opening(tmp_pat
 def test_customer_folder_panel_shows_automation_quickstart_suggestions():
     source = Path("src/getraenkeladen_tool/ui/customer_folder_panel.py").read_text(encoding="utf-8")
 
-    assert "from ..services.automation_service import get_customer_quickstart, list_customer_folder_excel_previews" in source
-    assert "quickstart = get_customer_quickstart(session, customer.id)" in source
+    assert "get_customer_quickstart" in source
+    assert "list_customer_folder_excel_previews" in source
+    assert "quickstart=get_customer_quickstart(" in source
     assert "quickstart.suggestions" in source
-    assert "excel_previews = list_customer_folder_excel_previews(session, customer.id)" in source
+    assert "excel_previews=tuple(list_customer_folder_excel_previews(" in source
     assert "Neue Excel-Datei" in source
 
 
@@ -270,3 +271,27 @@ def test_customer_folder_panel_keeps_next_step_short_enough_for_inspector():
     assert '" | ".join(quickstart.suggestions[:3])' not in source
     assert 'self.customer_next_step_label.setObjectName("nextStepValue")' in source
     assert "self.customer_next_step_label.setMinimumHeight(72)" in source
+
+
+def test_customer_folder_panel_loads_selected_customer_in_background():
+    source = Path("src/getraenkeladen_tool/ui/customer_folder_panel.py").read_text(encoding="utf-8")
+
+    assert "from .background_task import BackgroundTask" in source
+    assert "self._customer_load_task = BackgroundTask(self)" in source
+    assert "Kundenordner wird geladen..." in source
+    assert "self._customer_load_task.start(" in source
+    assert "def _load_customer_context_in_background" in source
+    assert "def _set_customer_loading" in source
+
+
+def test_customer_folder_panel_disables_customer_selection_while_loading():
+    _app()
+    from getraenkeladen_tool.ui.customer_folder_panel import CustomerFolderPanel
+
+    panel = CustomerFolderPanel(session_factory=None)
+
+    panel._set_customer_loading(True)
+    assert panel.customer_select.isEnabled() is False
+
+    panel._set_customer_loading(False)
+    assert panel.customer_select.isEnabled() is True

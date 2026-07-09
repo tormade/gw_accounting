@@ -1,5 +1,7 @@
-from pathlib import Path
+from dataclasses import dataclass
 from datetime import date
+from functools import partial
+from pathlib import Path
 
 from PySide6.QtCore import QUrl, Signal
 from PySide6.QtGui import QDesktopServices
@@ -16,19 +18,109 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from ..services.customer_assortment_service import list_customer_assortment_with_order_fallback
-from ..services.automation_service import get_customer_quickstart, list_customer_folder_excel_previews
+from ..services.customer_assortment_service import CustomerAssortmentRow, list_customer_assortment_with_order_fallback
+from ..services.automation_service import (
+    CustomerFolderExcelPreview,
+    CustomerQuickstart,
+    get_customer_quickstart,
+    list_customer_folder_excel_previews,
+)
 from ..services.customer_folder_service import CustomerFolderFile, get_customer_folder_snapshot
 from ..services.customer_service import list_active_customers
 from ..services.report_service import CustomerInvoiceWarning, get_customer_invoice_warning
+from .background_task import BackgroundTask
 from .date_input import to_display_date
-from .layouts import ContentSurface, InspectorPanel, PageHeader, ResponsiveSplitter, WorkspaceCard
+from .layouts import ContentSurface, InspectorPanel, PageHeader, ResponsiveSplitter, WorkspaceCard, set_button_role
 from .searchable_select import SearchableSelect
 
 
 FOLDER_FILE_COLUMNS = ("Datei", "Art", "Aktion")
 ORDER_COLUMNS = ("Bestellung", "Lieferdatum", "Status")
 ASSORTMENT_COLUMNS = ("Artikel", "Letzte Menge", "Neuer Preis", "Pfand", "Hinweis")
+
+
+@dataclass(frozen=True, slots=True)
+class CustomerFolderCustomerData:
+    id: int
+    name: str
+    address: str | None
+    phone: str | None
+    contact_name: str | None
+    contact_email: str | None
+    payment_method: str | None
+    delivery_notes: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class CustomerFolderOrderData:
+    id: int
+    order_number: str
+    delivery_date: str
+    status: str
+
+
+@dataclass(frozen=True, slots=True)
+class CustomerFolderSnapshotData:
+    customer: CustomerFolderCustomerData
+    folder_path: Path
+    folder_exists: bool
+    files: tuple[CustomerFolderFile, ...]
+    documents_count: int
+    orders: tuple[CustomerFolderOrderData, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class CustomerFolderLoadData:
+    snapshot: CustomerFolderSnapshotData
+    assortment_rows: tuple[CustomerAssortmentRow, ...]
+    quickstart: CustomerQuickstart
+    excel_previews: tuple[CustomerFolderExcelPreview, ...]
+    invoice_warning: CustomerInvoiceWarning
+
+
+def _load_customer_context_in_background(session_factory, customer_id: int) -> CustomerFolderLoadData:
+    session = session_factory()
+    try:
+        snapshot = get_customer_folder_snapshot(session, customer_id)
+        customer = snapshot.customer
+        display_snapshot = CustomerFolderSnapshotData(
+            customer=CustomerFolderCustomerData(
+                id=customer.id,
+                name=customer.name,
+                address=customer.address,
+                phone=customer.phone,
+                contact_name=customer.contact_name,
+                contact_email=customer.contact_email,
+                payment_method=customer.payment_method,
+                delivery_notes=customer.delivery_notes,
+            ),
+            folder_path=snapshot.folder_path,
+            folder_exists=snapshot.folder_exists,
+            files=tuple(snapshot.files),
+            documents_count=len(snapshot.documents),
+            orders=tuple(
+                CustomerFolderOrderData(
+                    id=order.id,
+                    order_number=order.order_number,
+                    delivery_date=order.delivery_date,
+                    status=order.status,
+                )
+                for order in snapshot.orders
+            ),
+        )
+        return CustomerFolderLoadData(
+            snapshot=display_snapshot,
+            assortment_rows=tuple(list_customer_assortment_with_order_fallback(session, customer_id)),
+            quickstart=get_customer_quickstart(session, customer_id),
+            excel_previews=tuple(list_customer_folder_excel_previews(session, customer_id)),
+            invoice_warning=get_customer_invoice_warning(
+                session,
+                customer.name,
+                target_date=date.today().isoformat(),
+            ),
+        )
+    finally:
+        session.close()
 
 
 class CustomerFolderPanel(QWidget):
@@ -45,7 +137,12 @@ class CustomerFolderPanel(QWidget):
         self.order_ids_by_row: dict[int, int] = {}
         self.current_customer_id: int | None = None
         self.current_folder_path: Path | None = None
+        self.current_folder_exists = False
         self.has_seed_quantities = False
+        self._customer_load_task = BackgroundTask(self)
+        self._is_customer_loading = False
+        self._loading_customer_id: int | None = None
+        self._pending_customer_id: int | None = None
 
         root_layout = QVBoxLayout(self)
         root_layout.setContentsMargins(0, 0, 0, 0)
@@ -73,6 +170,12 @@ class CustomerFolderPanel(QWidget):
         self.invoice_button = QPushButton("Rechnung erstellen")
         self.open_order_button = QPushButton("Öffnen")
         self.open_order_button.setToolTip("Ausgewählte frühere Bestellung öffnen")
+        set_button_role(self.new_order_button, "primary")
+        set_button_role(self.open_order_button, "secondary")
+        set_button_role(self.delivery_note_button, "secondary")
+        set_button_role(self.invoice_button, "secondary")
+        set_button_role(self.open_folder_button, "quiet")
+        set_button_role(self.open_file_button, "quiet")
         self.status_label = QLabel("Noch kein Kunde ausgewählt.")
         self.status_label.setObjectName("muted")
 
@@ -210,24 +313,71 @@ class CustomerFolderPanel(QWidget):
     def load_selected_customer(self) -> None:
         customer_id = self.customer_select.current_value()
         if customer_id is None:
+            self._pending_customer_id = None
             self.clear_customer_context("Bitte einen Kunden aus der Trefferliste anklicken.")
             return
         if self.session_factory is None:
             self.status_label.setText("Keine Datenbankverbindung vorhanden.")
             return
-        session = self.session_factory()
-        try:
-            snapshot = get_customer_folder_snapshot(session, int(customer_id))
-            assortment = list_customer_assortment_with_order_fallback(session, int(customer_id))
-            self.show_snapshot(snapshot, assortment)
-        except ValueError as exc:
-            QMessageBox.warning(self, "Kundenordner", str(exc))
-        finally:
-            session.close()
+        customer_id = int(customer_id)
+        if self._customer_load_task.is_running:
+            if customer_id != self._loading_customer_id:
+                self._pending_customer_id = customer_id
+                self.status_label.setText("Auswahl wird nach dem aktuellen Laden übernommen.")
+            return
+        self._start_customer_loading(customer_id)
+
+    def _start_customer_loading(self, customer_id: int) -> None:
+        if self.current_customer_id is not None and self.current_customer_id != customer_id:
+            self.clear_customer_context("Kundenwechsel wird vorbereitet.")
+        self._loading_customer_id = customer_id
+        self._set_customer_loading(True)
+        if not self._customer_load_task.start(
+            partial(_load_customer_context_in_background, self.session_factory, customer_id),
+            on_success=self._show_loaded_customer_context,
+            on_error=self._show_customer_load_error,
+            on_finished=self._customer_load_finished,
+        ):
+            self._pending_customer_id = customer_id
+
+    def _show_loaded_customer_context(self, result: object) -> None:
+        if not isinstance(result, CustomerFolderLoadData):
+            self._show_customer_load_error("Kundenordner konnte nicht gelesen werden.")
+            return
+        if self.customer_select.current_value() != result.snapshot.customer.id:
+            return
+        self.show_snapshot(
+            result.snapshot,
+            result.assortment_rows,
+            quickstart=result.quickstart,
+            excel_previews=result.excel_previews,
+            invoice_warning=result.invoice_warning,
+        )
+
+    def _show_customer_load_error(self, error: Exception | str) -> None:
+        message = str(error).strip() or type(error).__name__
+        self.status_label.setText(f"Kundenordner konnte nicht geladen werden: {message}")
+        QMessageBox.warning(self, "Kundenordner", message)
+
+    def _customer_load_finished(self) -> None:
+        self._set_customer_loading(False)
+        self._loading_customer_id = None
+        pending_customer_id = self._pending_customer_id
+        self._pending_customer_id = None
+        if pending_customer_id is not None and self.customer_select.current_value() == pending_customer_id:
+            self._start_customer_loading(pending_customer_id)
+
+    def _set_customer_loading(self, is_loading: bool) -> None:
+        self._is_customer_loading = is_loading
+        self.customer_select.setEnabled(not is_loading)
+        if is_loading:
+            self.status_label.setText("Kundenordner wird geladen...")
+        self.update_action_state()
 
     def clear_customer_context(self, message: str) -> None:
         self.current_customer_id = None
         self.current_folder_path = None
+        self.current_folder_exists = False
         self.has_seed_quantities = False
         self.files_by_row.clear()
         self.order_ids_by_row.clear()
@@ -247,9 +397,18 @@ class CustomerFolderPanel(QWidget):
         self.status_label.setText(message)
         self.update_action_state()
 
-    def show_snapshot(self, snapshot, assortment_rows=None) -> None:
+    def show_snapshot(
+        self,
+        snapshot,
+        assortment_rows=None,
+        *,
+        quickstart: CustomerQuickstart | None = None,
+        excel_previews: tuple[CustomerFolderExcelPreview, ...] = (),
+        invoice_warning: CustomerInvoiceWarning | None = None,
+    ) -> None:
         self.current_customer_id = snapshot.customer.id
         self.current_folder_path = snapshot.folder_path
+        self.current_folder_exists = snapshot.folder_exists
         assortment_rows = assortment_rows or []
         self.has_seed_quantities = bool(assortment_rows)
 
@@ -301,20 +460,12 @@ class CustomerFolderPanel(QWidget):
             f"Lieferhinweise: {self._text(getattr(customer, 'delivery_notes', '')) or '-'}"
         )
         self.customer_folder_label.setText(f"Ablage: Kundenordner {folder_status}")
+        document_count = getattr(snapshot, "documents_count", len(getattr(snapshot, "documents", [])))
         self.customer_documents_label.setText(
-            f"Belege: {len(getattr(snapshot, 'documents', []))} Dokumente, {len(snapshot.orders)} Bestellungen"
+            f"Belege: {document_count} Dokumente, {len(snapshot.orders)} Bestellungen"
         )
-        quickstart = None
-        excel_previews = []
-        if self.session_factory is not None:
-            session = self.session_factory()
-            try:
-                quickstart = get_customer_quickstart(session, customer.id)
-                excel_previews = list_customer_folder_excel_previews(session, customer.id)
-                invoice_warning = get_customer_invoice_warning(session, customer.name, target_date=date.today().isoformat())
-                self.customer_invoice_warning_label.setText(self._invoice_warning_text(invoice_warning))
-            finally:
-                session.close()
+        if invoice_warning is not None:
+            self.customer_invoice_warning_label.setText(self._invoice_warning_text(invoice_warning))
         if quickstart is not None and quickstart.suggestions:
             next_step = quickstart.suggestions[0]
         elif assortment_rows:
@@ -345,7 +496,7 @@ class CustomerFolderPanel(QWidget):
         if self.current_folder_path is None:
             self.status_label.setText("Bitte zuerst einen Kunden auswählen.")
             return
-        if not self.current_folder_path.is_dir():
+        if not self.current_folder_exists:
             self._show_missing_file("Der Kundenordner wurde nicht gefunden.")
             return
         self._open_url(self.current_folder_path)
@@ -397,22 +548,26 @@ class CustomerFolderPanel(QWidget):
 
     def update_action_state(self) -> None:
         has_customer = self.current_customer_id is not None
-        has_folder = self.current_folder_path is not None and self.current_folder_path.is_dir()
+        has_folder = self.current_folder_path is not None and self.current_folder_exists
         selected_file = self.files_by_row.get(self.files_table.currentRow())
         has_file = selected_file is not None
         has_order = self._selected_order_id() is not None
-        self.open_folder_button.setEnabled(has_folder)
-        self.open_file_button.setEnabled(has_file)
-        self.new_order_button.setEnabled(has_customer)
-        self.open_order_button.setEnabled(has_order)
+        can_act = not self._is_customer_loading
+        self.open_folder_button.setEnabled(can_act and has_folder)
+        self.open_file_button.setEnabled(can_act and has_file)
+        self.new_order_button.setEnabled(can_act and has_customer)
+        self.open_order_button.setEnabled(can_act and has_order)
         if self.has_seed_quantities:
             self.new_order_button.setText("Bestellung neu")
         elif has_customer and not has_folder:
             self.new_order_button.setText("Leere Bestellung starten")
         else:
             self.new_order_button.setText("Bestellung neu")
-        self.delivery_note_button.setEnabled(has_order)
-        self.invoice_button.setEnabled(has_order)
+        self.delivery_note_button.setEnabled(can_act and has_order)
+        self.invoice_button.setEnabled(can_act and has_order)
+        if self._is_customer_loading:
+            self.seed_file_hint.setText("Kundenordner wird geladen...")
+            return
         if selected_file is None:
             if not has_customer:
                 self.seed_file_hint.setText("Kunde suchen, dann erscheinen letzte Mengen und passende Aktionen.")

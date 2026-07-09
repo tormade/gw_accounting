@@ -4,7 +4,7 @@ from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import QGridLayout, QHBoxLayout, QLabel, QMessageBox, QPushButton, QVBoxLayout, QWidget
 
 from ..services.report_service import DashboardSummary, get_dashboard_summary
-from .layouts import ContentSurface, PageHeader
+from .layouts import ContentSurface, PageHeader, set_button_role
 
 
 DASHBOARD_ACTIONS = {
@@ -46,6 +46,7 @@ class DashboardPanel(QWidget):
 
         self.help_button = QPushButton(DASHBOARD_ACTIONS["dashboardHelpButton"])
         self.help_button.setObjectName("helpButton")
+        set_button_role(self.help_button, "quiet")
         layout.addWidget(PageHeader("Heute", "Was heute wichtig ist: Lieferungen, Rechnungen und offene Klärungen.", self.help_button))
 
         top_grid = QGridLayout()
@@ -59,6 +60,7 @@ class DashboardPanel(QWidget):
         action_row = QHBoxLayout()
         self.refresh_button = QPushButton(DASHBOARD_ACTIONS["refreshDashboardButton"])
         self.refresh_button.setObjectName("refreshDashboardButton")
+        set_button_role(self.refresh_button, "quiet")
         action_row.addWidget(self.refresh_button)
         action_row.addStretch()
         layout.addLayout(action_row)
@@ -132,6 +134,7 @@ class DashboardPanel(QWidget):
 
             button = QPushButton(button_text)
             button.setObjectName("workflowStepButton")
+            set_button_role(button, "secondary")
             button.setFixedWidth(178)
             button.clicked.connect(signal.emit)
             self.quick_action_buttons.append(button)

@@ -119,12 +119,13 @@ Das Produktziel steht in `docs/zielbild.md`: ein schlankes lokales Windows-Buero
 - Bürofluss-Polish umgesetzt: Der Excel-Import blockiert jetzt bei fehlenden Pflichtdateien statt unvollständige Daten still zu übernehmen; die Verwaltungsroute und Seite heißen einheitlich `Excel-Import`. Kunden- und Produktpflege erklären die drei wichtigsten Schritte direkt in der Seite, Archiv und Prüfpunkte haben klare Leerzustände. Sichtbarer Smoke lief bis zur Lieferschein-Belegwerkstatt; Kunde, Vorbefüllung, Menge-0-Positionen, Nummernvorschlag und Speichern wurden im laufenden Fenster geprüft. Der Mac-Computer-Use-Dienst brach beim finalen Belegerzeugungs-Klick ab, während der App-Prozess weiterlief; die fachliche Belegerzeugung bleibt durch Regressionstests abgedeckt.
 - Eigenständige Startseite ergänzt: `Start` zeigt Kundenauswahl und offene Lieferschein-Rückläufe, während `Arbeiten` erst nach Auswahl eines Kunden den Kundenarbeitsplatz zeigt. Das Zurückspringen nach `Arbeiten` beim Klick auf `Start` war eine erneute Auswahlmeldung der Suchliste; die Startseite leert die Auswahl beim Aktualisieren gezielt. Ein Regressionstest deckt Kunde auswählen -> `Start` wählen ab; 122 fokussierte UI-Tests sind grün.
 - Kundenarbeitsplatz vereinfacht: Der technische Button `Liste aktualisieren` ist entfernt. Kunden werden beim Öffnen der Startseite und beim Wechsel automatisch geladen; 70 Tests für Kundenansicht und Hauptfenster sind grün.
+- Datenintegritäts- und Arbeitsfluss-Checkpoint abgeschlossen: Die Kundenpflege führt importierte Telefon-, Kontakt-, E-Mail-, Zahlart-, Öffnungszeiten- und interne Notizdaten verlustfrei mit; eindeutige Suchtreffer öffnen erst nach Klick oder Enter; Excel-Import, Kundenordner-Laden und Belegerzeugung laufen über einen gemeinsamen Qt-Hintergrundtask; im Belegworkflow kann die Bestellung sichtbar und vollständig zurückgesetzt werden; alle App-Buttons besitzen verbindliche semantische Rollen. Abschlussnachweis: 326 Tests bestanden, `compileall src tests` erfolgreich und isolierter Offscreen-Anwender-Smoke für Kundensuche, asynchrones Laden, Kundenänderung und Bestellwechsel erfolgreich.
 
 ## In Arbeit
 
 - Echten Windows-Kundenordner fuer den naechsten Anwender-Smoke vorbereiten.
 - Excel-Fortschreibung im naechsten UAT mit echten Kundenordnern visuell gegen Originalausdruck pruefen.
-- Git-Worktree-Verknüpfung wurde mit `git worktree repair` wiederhergestellt. `git status` und die Worktree-Liste funktionieren erneut; vor einem Commit müssen die bereits vorhandenen, fachlich gemischten Änderungen bewusst in getrennte Checkpoints aufgeteilt werden.
+- Git-Worktree-Verknüpfung ist repariert; der Datenintegritäts- und Arbeitsfluss-Checkpoint ist fachlich, technisch und visuell geprüft.
 
 ## Offen
 
@@ -137,4 +138,4 @@ Das Produktziel steht in `docs/zielbild.md`: ein schlankes lokales Windows-Buero
 
 ## Naechste Aufgabe
 
-Den Office-2.0-Bürofluss auf einem Windows-Zielsystem mit echter Kundenordner-Vorlage visuell prüfen und anschließend die vorhandenen Änderungen bewusst in fachliche Git-Checkpoints aufteilen.
+Den Office-2.0-Bürofluss auf einem Windows-Zielsystem mit echter Kundenordner-Vorlage visuell prüfen. EXE-Paketierung und Windows-Export bleiben bis zu diesem späteren Meilenstein ausdrücklich ausgenommen.

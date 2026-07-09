@@ -200,10 +200,7 @@ QLabel#totalAmount {
 }
 
 QPushButton#disclosureButton {
-    background: #ffffff;
-    border: 1px solid #d2d2d7;
     border-radius: 8px;
-    color: #1d1d1f;
     font-size: 15px;
     font-weight: 760;
     min-height: 42px;
@@ -211,25 +208,10 @@ QPushButton#disclosureButton {
     text-align: left;
 }
 
-QPushButton#disclosureButton:checked {
+QPushButton[role="quiet"]:checked {
     background: #f5f5f7;
     border-color: #b9b9bf;
-}
-
-QPushButton#secondaryActionButton {
-    background: #ffffff;
-    border: 1px solid #d2d2d7;
-    border-radius: 8px;
     color: #1d1d1f;
-    font-size: 14px;
-    font-weight: 650;
-    min-height: 34px;
-    padding: 6px 12px;
-}
-
-QPushButton#secondaryActionButton:hover {
-    background: #f5f5f7;
-    border-color: #b9b9bf;
 }
 
 QWidget#disclosurePanel {
@@ -573,112 +555,92 @@ QHeaderView::section {
 }
 
 QPushButton {
-    background: #ffffff;
-    border: 1px solid #d2d2d7;
     border-radius: 8px;
-    color: #1d1d1f;
     font-size: 14px;
     font-weight: 650;
     min-height: 38px;
     padding: 7px 14px;
 }
 
-QPushButton:hover {
-    background: #f5f5f7;
-    border-color: #b9b9bf;
-}
-
-QPushButton:pressed {
-    background: #eeeeef;
-}
-
-QPushButton:disabled {
-    background: #f0f0f2;
-    border-color: #d2d2d7;
-    color: #8e8e93;
-}
-
-QPushButton#primaryAction,
-QPushButton#newDeliveryButton,
-QPushButton#newOrderButton,
-QPushButton#addOrderLineButton,
-QPushButton#saveOrderButton,
-QPushButton#createOrderDocumentsButton,
-QPushButton#workflowStepButton {
+QPushButton[role="primary"] {
     background: #0a84ff;
     border: 1px solid #0a84ff;
     color: #ffffff;
 }
 
-QPushButton#primaryAction:hover,
-QPushButton#newDeliveryButton:hover,
-QPushButton#newOrderButton:hover,
-QPushButton#addOrderLineButton:hover,
-QPushButton#saveOrderButton:hover,
-QPushButton#createOrderDocumentsButton:hover,
-QPushButton#workflowStepButton:hover {
+QPushButton[role="primary"]:hover {
     background: #0071e3;
     border-color: #0071e3;
 }
 
-QPushButton#primaryAction:disabled,
-QPushButton#newDeliveryButton:disabled,
-QPushButton#newOrderButton:disabled,
-QPushButton#addOrderLineButton:disabled,
-QPushButton#saveOrderButton:disabled,
-QPushButton#createOrderDocumentsButton:disabled,
-QPushButton#workflowStepButton:disabled {
+QPushButton[role="primary"]:pressed {
+    background: #0064c8;
+    border-color: #0064c8;
+}
+
+QPushButton[role="primary"]:focus {
+    border: 2px solid #004f9f;
+    padding: 6px 13px;
+}
+
+QPushButton[role="secondary"] {
+    background: #ffffff;
+    border: 1px solid #d2d2d7;
+    color: #1d1d1f;
+}
+
+QPushButton[role="secondary"]:hover {
+    background: #f5f5f7;
+    border-color: #b9b9bf;
+}
+
+QPushButton[role="danger"] {
+    background: #fff7f7;
+    border: 1px solid #f1c5c5;
+    color: #b42318;
+}
+
+QPushButton[role="danger"]:hover {
+    background: #ffeded;
+    border-color: #d92d20;
+}
+
+QPushButton[role="quiet"] {
+    background: transparent;
+    border: 1px solid transparent;
+    color: #515154;
+}
+
+QPushButton[role="quiet"]:hover {
+    background: #f5f5f7;
+    border-color: #d2d2d7;
+    color: #1d1d1f;
+}
+
+QPushButton[role="secondary"]:focus,
+QPushButton[role="danger"]:focus,
+QPushButton[role="quiet"]:focus {
+    border: 2px solid #0a84ff;
+    padding: 6px 13px;
+}
+
+QPushButton[role="primary"]:disabled,
+QPushButton[role="secondary"]:disabled,
+QPushButton[role="danger"]:disabled,
+QPushButton[role="quiet"]:disabled {
     background: #f0f0f2;
     border-color: #d2d2d7;
     color: #8e8e93;
 }
 
 QPushButton#helpButton {
-    background: #ffffff;
-    border: 1px solid #d2d2d7;
     border-radius: 8px;
-    color: #6e6e73;
     font-weight: 800;
     max-height: 38px;
     max-width: 38px;
     min-height: 38px;
     min-width: 38px;
     padding: 0;
-}
-
-QPushButton#helpButton:hover {
-    background: #f5f5f7;
-    color: #1d1d1f;
-}
-
-QPushButton#actionCardButton {
-    background: #ffffff;
-    border: 1px solid #d2d2d7;
-    color: #1d1d1f;
-}
-
-QPushButton#actionCardButton:hover {
-    background: #f5f5f7;
-    border-color: #b9b9bf;
-}
-
-QPushButton#dangerAction,
-QPushButton#removeOrderLineButton,
-QPushButton#removeDepositReturnButton,
-QPushButton#removeDocumentLineButton,
-QPushButton#removeDocumentDepositReturnButton {
-    background: #fff7f7;
-    border: 1px solid #f1c5c5;
-    color: #b42318;
-}
-
-QPushButton#dangerAction:hover,
-QPushButton#removeOrderLineButton:hover,
-QPushButton#removeDepositReturnButton:hover,
-QPushButton#removeDocumentLineButton:hover,
-QPushButton#removeDocumentDepositReturnButton:hover {
-    background: #ffeded;
-    border-color: #d92d20;
 }
 
 QSplitter#workspaceSplitter::handle {

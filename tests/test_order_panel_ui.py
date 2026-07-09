@@ -971,7 +971,8 @@ def test_document_workflow_runs_asset_verification_after_export():
     source = Path("src/getraenkeladen_tool/ui/document_workflow_panel.py").read_text(encoding="utf-8")
 
     assert "from ..services.automation_service import verify_document_assets" in source
-    assert "verification = verify_document_assets(session, document.id, expected_assets=assets)" in source
+    assert "verification = verify_document_assets(session, document.id, expected_assets=set(request.assets))" in source
+    assert "DocumentCreationResult" in source
     assert "Belegprüfung: OK." in source
 
 

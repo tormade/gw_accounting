@@ -26,7 +26,7 @@ from ..services.customer_service import (
     update_customer,
 )
 from .date_input import DateInput, to_display_date
-from .layouts import ContentSurface, PageHeader, WorkspaceCard, configure_form_layout, set_equal_button_widths
+from .layouts import ContentSurface, PageHeader, WorkspaceCard, configure_form_layout, set_button_role, set_equal_button_widths
 
 
 CUSTOMER_PANEL_ACTIONS = {
@@ -53,6 +53,17 @@ CUSTOMER_CONTEXT_ACTIONS = {
     "restore": "Kunde wiederherstellen",
 }
 DATE_FIELD_WIDGETS = ("next_contact_date",)
+CUSTOMER_BUTTON_ROLES = {
+    "newCustomerButton": "quiet",
+    "saveCustomerButton": "primary",
+    "discardCustomerChangesButton": "quiet",
+    "undoCustomerChangeButton": "quiet",
+    "refreshCustomersButton": "quiet",
+    "loadCustomerButton": "secondary",
+    "archiveCustomerButton": "danger",
+    "restoreCustomerButton": "secondary",
+    "chooseCustomerFolderButton": "secondary",
+}
 
 
 class CustomerPanel(QWidget):
@@ -72,6 +83,18 @@ class CustomerPanel(QWidget):
         self.address = QLineEdit()
         self.next_contact_date = DateInput()
         self.delivery_notes = QLineEdit()
+        self.phone = QLineEdit()
+        self.phone.setPlaceholderText("z. B. 089 123456")
+        self.contact_name = QLineEdit()
+        self.contact_name.setPlaceholderText("Ansprechperson")
+        self.contact_email = QLineEdit()
+        self.contact_email.setPlaceholderText("kontakt@kunde.de")
+        self.payment_method = QLineEdit()
+        self.payment_method.setPlaceholderText("z. B. SEPA oder Überweisung")
+        self.opening_hours = QLineEdit()
+        self.opening_hours.setPlaceholderText("z. B. Mo-Fr 08:00-16:00")
+        self.internal_notes = QLineEdit()
+        self.internal_notes.setPlaceholderText("Interner Hinweis, nicht auf Belegen")
         self.status_label = QLabel("Noch kein Kunde gespeichert.")
         self.status_label.setObjectName("muted")
         self.customers_table = QTableWidget(0, len(CUSTOMER_COLUMNS))
@@ -97,7 +120,6 @@ class CustomerPanel(QWidget):
             tone="route",
             kicker="KUNDENKARTE",
         )
-        edit_box.setMaximumHeight(520)
         form = QFormLayout()
         configure_form_layout(form)
         form.addRow("Kunde", self.customer_name)
@@ -106,6 +128,26 @@ class CustomerPanel(QWidget):
         form.addRow("Nächster Kontakt", self.next_contact_date)
         form.addRow("Lieferhinweise", self.delivery_notes)
         edit_layout.addLayout(form)
+
+        self.additional_details_button = QPushButton("Weitere Kundendaten")
+        self.additional_details_button.setObjectName("disclosureButton")
+        set_button_role(self.additional_details_button, "quiet")
+        self.additional_details_button.setCheckable(True)
+        self.additional_details_button.setChecked(False)
+        self.additional_details_button.setAccessibleName("Weitere Kundendaten ein- oder ausblenden")
+        edit_layout.addWidget(self.additional_details_button)
+        self.additional_details_content = QWidget()
+        self.additional_details_content.setObjectName("disclosurePanel")
+        self.additional_details_content.setVisible(False)
+        additional_details_form = QFormLayout(self.additional_details_content)
+        configure_form_layout(additional_details_form)
+        additional_details_form.addRow("Telefon", self.phone)
+        additional_details_form.addRow("Kontaktperson", self.contact_name)
+        additional_details_form.addRow("Kontakt-E-Mail", self.contact_email)
+        additional_details_form.addRow("Zahlart", self.payment_method)
+        additional_details_form.addRow("Öffnungszeiten", self.opening_hours)
+        additional_details_form.addRow("Interne Notizen", self.internal_notes)
+        edit_layout.addWidget(self.additional_details_content)
 
         action_row = QHBoxLayout()
         self.new_button = self._button("newCustomerButton")
@@ -158,6 +200,7 @@ class CustomerPanel(QWidget):
         self.load_button.clicked.connect(self.load_selected_customer)
         self.archive_button.clicked.connect(self.archive_selected_customer)
         self.restore_button.clicked.connect(self.restore_selected_customer)
+        self.additional_details_button.toggled.connect(self.additional_details_content.setVisible)
         self.customers_table.itemDoubleClicked.connect(lambda _item: self.load_selected_customer())
         self.customers_table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customers_table.customContextMenuRequested.connect(self.show_customer_context_menu)
@@ -181,7 +224,7 @@ class CustomerPanel(QWidget):
     def _button(self, object_name: str) -> QPushButton:
         button = QPushButton(CUSTOMER_PANEL_ACTIONS[object_name])
         button.setObjectName(object_name)
-        return button
+        return set_button_role(button, CUSTOMER_BUTTON_ROLES[object_name])
 
     def _guidance_box(self) -> QWidget:
         box = QWidget()
@@ -272,8 +315,15 @@ class CustomerPanel(QWidget):
             self.customer_name.setText(customer.name)
             self.folder_path.setText(customer.folder_path)
             self.address.setText(customer.address or "")
+            self.phone.setText(customer.phone or "")
+            self.contact_name.setText(customer.contact_name or "")
+            self.contact_email.setText(customer.contact_email or "")
+            self.payment_method.setText(customer.payment_method or "")
             self.next_contact_date.set_iso_date(customer.next_contact_date)
             self.delivery_notes.setText(customer.delivery_notes or "")
+            self.opening_hours.setText(customer.opening_hours or "")
+            self.internal_notes.setText(customer.internal_notes or "")
+            self._set_additional_details_expanded(self._has_additional_details(customer))
             self.loaded_form_snapshot = self._snapshot_from_customer(customer)
             self.status_label.setText(f"Kunde geladen: {customer.name}")
         finally:
@@ -330,8 +380,14 @@ class CustomerPanel(QWidget):
             name=self.customer_name.text().strip(),
             folder_path=self.folder_path.text().strip(),
             address=self.address.text().strip() or None,
+            phone=self.phone.text().strip() or None,
+            contact_name=self.contact_name.text().strip() or None,
+            contact_email=self.contact_email.text().strip() or None,
+            payment_method=self.payment_method.text().strip() or None,
             next_contact_date=self.next_contact_date.iso_date() or None,
             delivery_notes=self.delivery_notes.text().strip() or None,
+            opening_hours=self.opening_hours.text().strip() or None,
+            internal_notes=self.internal_notes.text().strip() or None,
         )
 
     def new_customer(self) -> None:
@@ -339,8 +395,15 @@ class CustomerPanel(QWidget):
         self.customer_name.clear()
         self.folder_path.clear()
         self.address.clear()
+        self.phone.clear()
+        self.contact_name.clear()
+        self.contact_email.clear()
+        self.payment_method.clear()
         self.next_contact_date.set_iso_date(None)
         self.delivery_notes.clear()
+        self.opening_hours.clear()
+        self.internal_notes.clear()
+        self._set_additional_details_expanded(False)
         self.loaded_form_snapshot = self._form_snapshot()
         self.status_label.setText("Neuer Kunde. Erst Speichern übernimmt die Angaben.")
 
@@ -372,8 +435,15 @@ class CustomerPanel(QWidget):
             "name": self.customer_name.text(),
             "folder_path": self.folder_path.text(),
             "address": self.address.text(),
+            "phone": self.phone.text(),
+            "contact_name": self.contact_name.text(),
+            "contact_email": self.contact_email.text(),
+            "payment_method": self.payment_method.text(),
             "next_contact_date": self.next_contact_date.iso_date(),
             "delivery_notes": self.delivery_notes.text(),
+            "opening_hours": self.opening_hours.text(),
+            "internal_notes": self.internal_notes.text(),
+            "additional_details_expanded": self.additional_details_button.isChecked(),
         }
 
     def _snapshot_from_customer(self, customer: Customer) -> dict:
@@ -382,8 +452,15 @@ class CustomerPanel(QWidget):
             "name": customer.name,
             "folder_path": customer.folder_path,
             "address": customer.address or "",
+            "phone": customer.phone or "",
+            "contact_name": customer.contact_name or "",
+            "contact_email": customer.contact_email or "",
+            "payment_method": customer.payment_method or "",
             "next_contact_date": customer.next_contact_date or "",
             "delivery_notes": customer.delivery_notes or "",
+            "opening_hours": customer.opening_hours or "",
+            "internal_notes": customer.internal_notes or "",
+            "additional_details_expanded": self._has_additional_details(customer),
         }
 
     def _apply_snapshot(self, snapshot: dict) -> None:
@@ -391,5 +468,29 @@ class CustomerPanel(QWidget):
         self.customer_name.setText(snapshot["name"])
         self.folder_path.setText(snapshot["folder_path"])
         self.address.setText(snapshot["address"])
+        self.phone.setText(snapshot["phone"])
+        self.contact_name.setText(snapshot["contact_name"])
+        self.contact_email.setText(snapshot["contact_email"])
+        self.payment_method.setText(snapshot["payment_method"])
         self.next_contact_date.set_iso_date(snapshot["next_contact_date"])
         self.delivery_notes.setText(snapshot["delivery_notes"])
+        self.opening_hours.setText(snapshot["opening_hours"])
+        self.internal_notes.setText(snapshot["internal_notes"])
+        self._set_additional_details_expanded(snapshot["additional_details_expanded"])
+
+    def _set_additional_details_expanded(self, expanded: bool) -> None:
+        self.additional_details_button.setChecked(expanded)
+        self.additional_details_content.setVisible(expanded)
+
+    @staticmethod
+    def _has_additional_details(customer: Customer) -> bool:
+        return any(
+            (
+                customer.phone,
+                customer.contact_name,
+                customer.contact_email,
+                customer.payment_method,
+                customer.opening_hours,
+                customer.internal_notes,
+            )
+        )

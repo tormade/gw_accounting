@@ -25,7 +25,7 @@ from ..services.product_service import (
     restore_product,
     update_product,
 )
-from .layouts import ContentSurface, PageHeader, WorkspaceCard, configure_form_layout, set_equal_button_widths
+from .layouts import ContentSurface, PageHeader, WorkspaceCard, configure_form_layout, set_button_role, set_equal_button_widths
 
 
 PRODUCT_PANEL_ACTIONS = {
@@ -37,6 +37,16 @@ PRODUCT_PANEL_ACTIONS = {
     "loadProductButton": "Auswahl bearbeiten",
     "deactivateProductButton": "Produkt deaktivieren",
     "restoreProductButton": "Produkt wiederherstellen",
+}
+PRODUCT_BUTTON_ROLES = {
+    "newProductButton": "quiet",
+    "saveProductButton": "primary",
+    "discardProductChangesButton": "quiet",
+    "undoProductChangeButton": "quiet",
+    "refreshProductsButton": "quiet",
+    "loadProductButton": "secondary",
+    "deactivateProductButton": "danger",
+    "restoreProductButton": "secondary",
 }
 PRODUCT_COLUMNS = ("Produkt", "Artikelnummer", "Preis", "Pfand", "Status")
 PRODUCT_PANEL_SECTIONS = ("1. Produkt erfassen", "2. Preisliste prüfen")
@@ -169,7 +179,7 @@ class ProductPanel(QWidget):
     def _button(self, object_name: str) -> QPushButton:
         button = QPushButton(PRODUCT_PANEL_ACTIONS[object_name])
         button.setObjectName(object_name)
-        return button
+        return set_button_role(button, PRODUCT_BUTTON_ROLES[object_name])
 
     def _guidance_box(self) -> QWidget:
         box = QWidget()

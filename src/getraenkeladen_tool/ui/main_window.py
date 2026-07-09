@@ -18,7 +18,7 @@ from .customer_folder_panel import CustomerFolderPanel
 from .customer_panel import CustomerPanel
 from .document_archive_panel import DocumentArchivePanel
 from .document_workflow_panel import DeliveryNotePanel, InvoicePanel, ReturnInvoicePanel
-from .layouts import SidebarNavigation
+from .layouts import SidebarNavigation, set_button_role
 from .management_home_panel import ManagementHomePanel
 from .order_panel import OrderPanel
 from .product_panel import ProductPanel
@@ -294,6 +294,7 @@ class MainWindow(QMainWindow):
 
         action = QPushButton("Neu anlegen")
         action.setObjectName("primaryAction")
+        set_button_role(action, "primary")
         action.setFixedWidth(160)
         layout.addWidget(action)
 

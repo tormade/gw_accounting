@@ -26,6 +26,7 @@ from .layouts import (
     ResponsiveSplitter,
     WorkspaceCard,
     configure_form_layout,
+    set_button_role,
     set_equal_button_widths,
 )
 from ..services.report_service import (
@@ -51,6 +52,17 @@ REPORT_PANEL_ACTIONS = {
     "exportOpenItemsButton": "Exportieren",
     "exportDeliveriesButton": "Lieferliste exportieren",
     "exportContactsButton": "Kontaktliste exportieren",
+}
+REPORT_BUTTON_ROLES = {
+    "seedDemoDataButton": "quiet",
+    "refreshOpenItemsButton": "quiet",
+    "markPaidButton": "primary",
+    "markPartialButton": "secondary",
+    "refreshDeliveriesButton": "quiet",
+    "refreshContactsButton": "quiet",
+    "exportOpenItemsButton": "secondary",
+    "exportDeliveriesButton": "secondary",
+    "exportContactsButton": "secondary",
 }
 
 OPEN_ITEMS_COLUMNS = ("Kunde", "Rechnungsnr.", "Datum", "Fälligkeit", "Zahlart", "Betrag", "Status")
@@ -233,7 +245,7 @@ class ReportPanel(QWidget):
     def _button(self, object_name: str) -> QPushButton:
         button = QPushButton(REPORT_PANEL_ACTIONS[object_name])
         button.setObjectName(object_name)
-        return button
+        return set_button_role(button, REPORT_BUTTON_ROLES[object_name])
 
     def seed_demo_data(self) -> None:
         if self.session_factory is None:

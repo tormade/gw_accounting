@@ -43,6 +43,7 @@ from .layouts import (
     PageHeader,
     WorkspaceCard,
     configure_form_layout,
+    set_button_role,
     set_equal_button_widths,
 )
 from .searchable_select import SearchableSelect
@@ -61,6 +62,19 @@ ORDER_PANEL_ACTIONS = {
     "saveOrderButton": "Bestellung speichern",
     "createDeliveryNoteFromOrderButton": "Lieferschein erstellen",
     "createInvoiceFromOrderButton": "Rechnung erstellen",
+}
+ORDER_BUTTON_ROLES = {
+    "newOrderButton": "secondary",
+    "copyOrderButton": "quiet",
+    "refreshOrderDataButton": "quiet",
+    "suggestOrderNumberButton": "quiet",
+    "addOrderLineButton": "secondary",
+    "removeOrderLineButton": "danger",
+    "addDepositReturnButton": "secondary",
+    "removeDepositReturnButton": "danger",
+    "saveOrderButton": "primary",
+    "createDeliveryNoteFromOrderButton": "secondary",
+    "createInvoiceFromOrderButton": "secondary",
 }
 
 ORDER_LINE_COLUMNS = ("Produkt", "Menge", "Preis EUR", "Pfand EUR", "Summe EUR")
@@ -199,8 +213,10 @@ class OrderPanel(QWidget):
         header_actions_layout.setSpacing(8)
         self.back_button = QPushButton("Zurück zur Übersicht")
         self.back_button.setObjectName("secondaryActionButton")
+        set_button_role(self.back_button, "quiet")
         self.help_button = QPushButton(ORDER_PANEL_ACTIONS["orderHelpButton"])
         self.help_button.setObjectName("helpButton")
+        set_button_role(self.help_button, "quiet")
         header_actions_layout.addWidget(self.back_button)
         header_actions_layout.addWidget(self.help_button)
         layout.addWidget(
@@ -218,6 +234,7 @@ class OrderPanel(QWidget):
         self.remove_deposit_return_button = self._button("removeDepositReturnButton")
         self.save_order_button = self._button("saveOrderButton")
         self.cancel_order_dialog_button = QPushButton("Eingabe zurücksetzen")
+        set_button_role(self.cancel_order_dialog_button, "quiet")
         self.new_order_button = self._button("newOrderButton")
         self.copy_order_button = self._button("copyOrderButton")
         self.create_delivery_note_button = self._button("createDeliveryNoteFromOrderButton")
@@ -225,6 +242,7 @@ class OrderPanel(QWidget):
         self.create_invoice_button = self._button("createInvoiceFromOrderButton")
         self.create_invoice_button.setObjectName("secondaryAction")
         self.use_assortment_button = QPushButton("Aus Sortiment übernehmen")
+        set_button_role(self.use_assortment_button, "secondary")
         set_equal_button_widths(
             (
                 self.refresh_data_button,
@@ -298,6 +316,7 @@ class OrderPanel(QWidget):
         quantity_layout.addLayout(line_actions)
 
         self.add_product_toggle = QPushButton("+ Artikel hinzufügen")
+        set_button_role(self.add_product_toggle, "quiet")
         self.add_product_toggle.setObjectName("disclosureButton")
         self.add_product_toggle.setCheckable(True)
         self.add_product_toggle.setChecked(False)
@@ -398,7 +417,7 @@ class OrderPanel(QWidget):
     def _button(self, object_name: str) -> QPushButton:
         button = QPushButton(ORDER_PANEL_ACTIONS[object_name])
         button.setObjectName(object_name)
-        return button
+        return set_button_role(button, ORDER_BUTTON_ROLES[object_name])
 
     def _guidance_box(self) -> QWidget:
         box = QWidget()

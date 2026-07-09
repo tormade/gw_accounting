@@ -10,7 +10,7 @@ from ..services.checklist_service import (
     resolve_price_mismatch,
 )
 from ..services.product_service import list_active_products
-from .layouts import ContentSurface, InspectorPanel, PageHeader, ResponsiveSplitter, WorkspaceCard
+from .layouts import ContentSurface, InspectorPanel, PageHeader, ResponsiveSplitter, WorkspaceCard, set_button_role
 from .searchable_select import SearchableSelect
 
 
@@ -53,6 +53,17 @@ class ChecklistPanel(QWidget):
         self.confirm_product_alias_button = QPushButton(CHECKLIST_ACTIONS["confirmProductAliasButton"])
         self.use_list_value_button = QPushButton(CHECKLIST_ACTIONS["useListValueButton"])
         self.use_folder_value_button = QPushButton(CHECKLIST_ACTIONS["useFolderValueButton"])
+        set_button_role(self.refresh_button, "quiet")
+        set_button_role(self.resolve_button, "primary")
+        set_button_role(self.reopen_button, "secondary")
+        for decision_button in (
+            self.use_central_price_button,
+            self.keep_excel_price_button,
+            self.confirm_product_alias_button,
+            self.use_list_value_button,
+            self.use_folder_value_button,
+        ):
+            set_button_role(decision_button, "secondary")
         self.product_select = SearchableSelect("Zentralen Artikel suchen")
         self.product_select.setMinimumWidth(360)
         self.action_help_label = QLabel(

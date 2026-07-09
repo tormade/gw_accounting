@@ -1,3 +1,5 @@
+import time
+
 from getraenkeladen_tool.ui.main_window import CLAIM_PATH, LOGO_PATH, MAIN_TABS, MAIN_WINDOW_INITIAL_SIZE, MAIN_WINDOW_MINIMUM_SIZE
 from getraenkeladen_tool.ui.theme import APP_STYLESHEET
 
@@ -9,6 +11,16 @@ def _app():
     from PySide6.QtWidgets import QApplication
 
     return QApplication.instance() or QApplication([])
+
+
+def _wait_until(predicate, timeout_seconds: float = 2.0) -> None:
+    app = _app()
+    deadline = time.monotonic() + timeout_seconds
+    while not predicate() and time.monotonic() < deadline:
+        app.processEvents()
+        time.sleep(0.005)
+    app.processEvents()
+    assert predicate()
 
 
 def test_main_window_exposes_task_oriented_tabs():
@@ -29,15 +41,19 @@ def test_start_page_opens_arbeiten_after_a_customer_is_selected():
 
 
 def test_start_navigation_clears_previous_customer_selection(session, tmp_path):
+    from getraenkeladen_tool.config import AppConfig
+    from getraenkeladen_tool.db import create_session_factory
     from getraenkeladen_tool.schemas import CustomerCreate
     from getraenkeladen_tool.services.customer_service import create_customer
     from getraenkeladen_tool.ui.main_window import MainWindow
 
     _app()
     customer = create_customer(session, CustomerCreate(name="Cafe Nord", folder_path=str(tmp_path / "Cafe Nord")))
-    window = MainWindow(session_factory=lambda: session)
+    session_factory = create_session_factory(AppConfig(base_dir=tmp_path))
+    window = MainWindow(session_factory=session_factory)
 
     window.work_start_panel.customer_select.select_value(customer.id)
+    _wait_until(lambda: not window.customer_folder_panel._customer_load_task.is_running)
 
     assert window.navigation.currentRow() == MAIN_TABS.index("Arbeiten")
 
@@ -144,10 +160,10 @@ def test_theme_uses_winklmeier_work_tool_direction():
     assert "sectionBox" in APP_STYLESHEET
     assert "workTaskPanel" in APP_STYLESHEET
     assert "helpButton" in APP_STYLESHEET
-    assert "secondaryActionButton" in APP_STYLESHEET
+    assert 'QPushButton[role="secondary"]' in APP_STYLESHEET
     assert "sectionTitle" in APP_STYLESHEET
     assert "documentHeaderCard" in APP_STYLESHEET
-    assert "QPushButton#newOrderButton" in APP_STYLESHEET
+    assert 'QPushButton[role="primary"]' in APP_STYLESHEET
     assert "QWidget#heroSearchPanel" in APP_STYLESHEET
     assert "QWidget#dailyCockpitCard" in APP_STYLESHEET
     assert "QWidget#liveSummaryCard" in APP_STYLESHEET
@@ -205,8 +221,8 @@ def test_theme_modernizes_dropdown_buttons_and_calendar_popups():
     assert "QDateEdit:on" in APP_STYLESHEET
     assert "QCalendarWidget" in APP_STYLESHEET
     assert "QCalendarWidget QToolButton" in APP_STYLESHEET
-    assert "QPushButton:disabled" in APP_STYLESHEET
-    assert "QPushButton#dangerAction" in APP_STYLESHEET
+    assert 'QPushButton[role="primary"]:disabled' in APP_STYLESHEET
+    assert 'QPushButton[role="danger"]' in APP_STYLESHEET
 
 
 def test_shared_layout_widgets_are_available():
@@ -645,6 +661,19 @@ def test_settings_tab_focuses_on_master_data_import_without_number_sequences():
     assert "preview.safety_report_text" in source
     assert '"Excel-Import",' in source
     assert "preview.can_import" in source
+
+
+def test_settings_panel_import_uses_a_background_task():
+    from pathlib import Path
+
+    source = Path("src/getraenkeladen_tool/ui/settings_panel.py").read_text(encoding="utf-8")
+
+    assert "from .background_task import BackgroundTask" in source
+    assert "self._master_data_task = BackgroundTask(self)" in source
+    assert "def _preview_master_data_in_background" in source
+    assert "def _import_master_data_in_background" in source
+    assert "def _set_import_running" in source
+    assert "self._master_data_task.start(" in source
 
 
 def test_master_data_panels_show_inline_guidance_and_empty_states():

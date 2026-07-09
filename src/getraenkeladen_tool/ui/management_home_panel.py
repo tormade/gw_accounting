@@ -1,7 +1,7 @@
 from PySide6.QtCore import Signal
 from PySide6.QtWidgets import QGridLayout, QLabel, QPushButton, QVBoxLayout, QWidget
 
-from .layouts import ContentSurface, PageHeader
+from .layouts import ContentSurface, PageHeader, set_button_role
 
 
 MANAGEMENT_ROUTES = (
@@ -43,6 +43,7 @@ class ManagementHomePanel(QWidget):
     def _route_button(self, route_id: str, title: str, subtitle: str) -> QPushButton:
         button = QPushButton(f"{title}\n{subtitle}")
         button.setObjectName("managementRouteButton")
+        set_button_role(button, "secondary")
         button.setProperty("routeId", route_id)
         button.clicked.connect(lambda _checked=False, selected_route=route_id: self.route_requested.emit(selected_route))
         return button

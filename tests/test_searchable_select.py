@@ -115,7 +115,8 @@ def test_searchable_select_collapses_results_after_selection_and_reopens_while_t
 
     select.set_search_text("Hotel")
 
-    assert select.help_label.text() == "Eindeutiger Treffer. Sie können direkt weiterarbeiten."
+    assert select.current_value() is None
+    assert select.help_label.text() == "Eindeutiger Treffer. Mit Enter oder Klick auswählen."
     assert select.result_list.maximumHeight() == 190
     assert select.visible_labels() == ["Hotel Sued"]
 
@@ -136,7 +137,7 @@ def test_searchable_select_enter_accepts_first_visible_result():
     assert select.help_label.text() == "Ausgewählt. Zum Ändern einfach neuen Namen tippen."
 
 
-def test_searchable_select_explains_single_match_is_ready_to_use():
+def test_searchable_select_requires_explicit_confirmation_for_a_single_match():
     _app()
     from getraenkeladen_tool.ui.searchable_select import SearchableSelect
 
@@ -145,8 +146,12 @@ def test_searchable_select_explains_single_match_is_ready_to_use():
 
     select.set_search_text("Classic")
 
+    assert select.current_value() is None
+    assert select.help_label.text() == "Eindeutiger Treffer. Mit Enter oder Klick auswählen."
+
+    select.select_first_visible_item()
+
     assert select.current_value() == 1
-    assert select.help_label.text() == "Eindeutiger Treffer. Sie können direkt weiterarbeiten."
 
 
 def test_searchable_select_can_show_grouped_recommendations_before_all_items():

@@ -1,6 +1,34 @@
 from pathlib import Path
 
 
+def _app():
+    import os
+
+    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+    from PySide6.QtWidgets import QApplication
+
+    return QApplication.instance() or QApplication([])
+
+
+def test_work_start_does_not_open_a_customer_while_typing_a_unique_match():
+    _app()
+    from getraenkeladen_tool.ui.work_start_panel import WorkStartPanel
+
+    panel = WorkStartPanel(session_factory=None)
+    panel.customer_select.set_items([("Cafe Nord", 1, "München")])
+    selected_customer_ids = []
+    panel.customer_selected.connect(selected_customer_ids.append)
+
+    panel.customer_select.set_search_text("Nord")
+
+    assert panel.customer_select.current_value() is None
+    assert selected_customer_ids == []
+
+    panel.customer_select.select_first_visible_item()
+
+    assert selected_customer_ids == [1]
+
+
 def test_work_start_panel_shows_customer_search_and_open_returns_tasks():
     source = Path("src/getraenkeladen_tool/ui/work_start_panel.py").read_text(encoding="utf-8")
 

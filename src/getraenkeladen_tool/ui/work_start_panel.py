@@ -14,7 +14,7 @@ from PySide6.QtWidgets import (
 from ..services.customer_service import list_active_customers
 from ..services.report_service import DeliveryReturnWorkItem, list_open_delivery_returns
 from .date_input import to_display_date
-from .layouts import ContentSurface, PageHeader
+from .layouts import ContentSurface, PageHeader, set_button_role
 from .searchable_select import SearchableSelect
 
 
@@ -101,6 +101,7 @@ class WorkStartPanel(QWidget):
 
         self.customer_search_button = QPushButton("Alle Kunden öffnen")
         self.customer_search_button.setObjectName("secondaryActionButton")
+        set_button_role(self.customer_search_button, "secondary")
         self.customer_search_button.setFixedWidth(170)
         self.customer_search_button.clicked.connect(lambda _checked=False: self.customer_search_requested.emit())
         panel_layout.addWidget(self.customer_search_button, 0, Qt.AlignmentFlag.AlignLeft)
@@ -134,6 +135,7 @@ class WorkStartPanel(QWidget):
         panel_layout.addWidget(self.returns_empty_label)
 
         self.open_return_button = QPushButton("Rücklauf bearbeiten")
+        set_button_role(self.open_return_button, "primary")
         self.open_return_button.setFixedWidth(190)
         self.open_return_button.setEnabled(False)
         self.open_return_button.clicked.connect(self.open_selected_return)

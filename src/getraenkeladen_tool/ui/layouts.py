@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
 
 
 DEFAULT_ACTION_BUTTON_WIDTH = 190
+BUTTON_ROLES = frozenset({"primary", "secondary", "danger", "quiet"})
 
 
 class PageHeader(QWidget):
@@ -130,6 +131,7 @@ class ActionCard(QWidget):
 
         self.button = QPushButton(button_text or title)
         self.button.setObjectName("actionCardButton")
+        set_button_role(self.button, "secondary")
         layout.addWidget(self.button)
 
 
@@ -205,3 +207,12 @@ def configure_form_layout(form: QFormLayout) -> None:
 def set_equal_button_widths(buttons: Iterable[QPushButton], width: int = DEFAULT_ACTION_BUTTON_WIDTH) -> None:
     for button in buttons:
         button.setFixedWidth(width)
+
+
+def set_button_role(button: QPushButton, role: str) -> QPushButton:
+    if role not in BUTTON_ROLES:
+        raise ValueError(f"Unbekannte Button-Rolle: {role}")
+    button.setProperty("role", role)
+    button.style().unpolish(button)
+    button.style().polish(button)
+    return button

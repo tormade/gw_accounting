@@ -138,9 +138,9 @@ class SearchableSelect(QWidget):
             empty_item.setFlags(empty_item.flags() & ~Qt.ItemFlag.ItemIsSelectable & ~Qt.ItemFlag.ItemIsEnabled)
             self.result_list.addItem(empty_item)
 
-        self._current_value = matches[0].value if len(matches) == 1 and text.strip() else None
+        self._current_value = None
         if len(matches) == 1 and text.strip():
-            self.help_label.setText("Eindeutiger Treffer. Sie können direkt weiterarbeiten.")
+            self.help_label.setText("Eindeutiger Treffer. Mit Enter oder Klick auswählen.")
         self.selection_changed.emit()
 
     def _select_item(self, item: QListWidgetItem) -> None:

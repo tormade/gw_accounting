@@ -20,7 +20,7 @@ from PySide6.QtWidgets import (
 
 from ..services.document_archive_service import list_documents_by_type, regenerate_document_asset
 from .date_input import to_display_date
-from .layouts import ContentSurface, PageHeader, WorkspaceCard
+from .layouts import ContentSurface, PageHeader, WorkspaceCard, set_button_role
 
 
 DOCUMENT_ARCHIVE_COLUMNS = ("Art", "Lieferdatum", "Belegnummer", "Kunde", "Excel-Datei", "PDF-Datei", "Kundenordner", "Status")
@@ -138,6 +138,7 @@ class DocumentArchivePanel(QWidget):
     def _button(self, object_name: str) -> QPushButton:
         button = QPushButton(DOCUMENT_ARCHIVE_ACTIONS[object_name])
         button.setObjectName(object_name)
+        set_button_role(button, "secondary")
         button.setEnabled(False)
         return button
 
