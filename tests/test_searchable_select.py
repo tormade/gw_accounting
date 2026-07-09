@@ -62,7 +62,7 @@ def test_searchable_select_guides_uncertain_users_to_click_a_result():
     select = SearchableSelect("Kunde suchen")
     select.set_items([("Cafe Nord", 1, "Muenchen"), ("Hotel Sued", 2, "Rosenheim")])
 
-    assert select.help_label.text() == "Namen tippen, dann Treffer anklicken."
+    assert select.help_label.text() == "Kundenliste scrollen oder oben Namen tippen."
 
     select.set_search_text("xyz")
 
@@ -71,7 +71,7 @@ def test_searchable_select_guides_uncertain_users_to_click_a_result():
     assert select.result_list.item(0).flags().value & 1 == 0
 
 
-def test_searchable_select_does_not_show_random_initial_suggestions():
+def test_searchable_select_shows_scrollable_list_without_search_text():
     _app()
     from getraenkeladen_tool.ui.searchable_select import SearchableSelect
 
@@ -79,12 +79,22 @@ def test_searchable_select_does_not_show_random_initial_suggestions():
     select.set_items([("Cafe Nord", 1, "Muenchen"), ("Hotel Sued", 2, "Rosenheim")])
 
     assert select.current_value() is None
-    assert select.result_list.count() == 0
-    assert select.result_list.maximumHeight() == 0
-    assert select.help_label.text() == "Namen tippen, dann Treffer anklicken."
+    assert select.visible_labels() == ["Cafe Nord", "Hotel Sued"]
+    assert select.result_list.maximumHeight() == 130
+    assert select.help_label.text() == "Kundenliste scrollen oder oben Namen tippen."
 
 
-def test_searchable_select_collapses_results_after_selection_and_reopens_while_typing():
+def test_searchable_select_can_use_article_list_language():
+    _app()
+    from getraenkeladen_tool.ui.searchable_select import SearchableSelect
+
+    select = SearchableSelect("Artikel suchen", list_label="Artikelliste")
+    select.set_items([("Paulaner Spezi 20x0,5", 1, "12,50 EUR")])
+
+    assert select.help_label.text() == "Artikelliste scrollen oder oben Namen tippen."
+
+
+def test_searchable_select_collapses_results_after_selection_and_only_expands_for_multiple_matches():
     _app()
     from getraenkeladen_tool.ui.searchable_select import SearchableSelect
 
@@ -94,12 +104,12 @@ def test_searchable_select_collapses_results_after_selection_and_reopens_while_t
     select.select_value(1)
 
     assert select.search_input.text() == "Cafe Nord"
-    assert select.help_label.text() == "Ausgewaehlt. Zum Aendern einfach neuen Namen tippen."
+    assert select.help_label.text() == "Ausgewaehlt: Cafe Nord"
     assert select.result_list.maximumHeight() == 0
 
     select.set_search_text("Hotel")
 
-    assert select.help_label.text() == "Eindeutiger Treffer. Sie koennen direkt weiterarbeiten."
+    assert select.help_label.text() == "Treffer in der Liste anklicken."
     assert select.result_list.maximumHeight() == 130
     assert select.visible_labels() == ["Hotel Sued"]
 
@@ -117,7 +127,7 @@ def test_searchable_select_enter_accepts_first_visible_result():
     assert select.current_value() == 1
     assert select.search_input.text() == "Cafe Nord"
     assert select.result_list.maximumHeight() == 0
-    assert select.help_label.text() == "Ausgewaehlt. Zum Aendern einfach neuen Namen tippen."
+    assert select.help_label.text() == "Ausgewaehlt: Cafe Nord"
 
 
 def test_searchable_select_explains_single_match_is_ready_to_use():
@@ -129,5 +139,36 @@ def test_searchable_select_explains_single_match_is_ready_to_use():
 
     select.set_search_text("Classic")
 
-    assert select.current_value() == 1
-    assert select.help_label.text() == "Eindeutiger Treffer. Sie koennen direkt weiterarbeiten."
+    assert select.current_value() is None
+    assert select.help_label.text() == "Treffer in der Liste anklicken."
+    assert select.result_list.maximumHeight() == 130
+
+
+def test_searchable_select_clearing_text_after_selection_shows_full_list_again():
+    _app()
+    from getraenkeladen_tool.ui.searchable_select import SearchableSelect
+
+    select = SearchableSelect("Kunde suchen")
+    select.set_items([("Cafe Nord", 1, "Muenchen"), ("Hotel Sued", 2, "Rosenheim")])
+    select.select_value(1)
+
+    select.set_search_text("")
+
+    assert select.current_value() is None
+    assert select.visible_labels() == ["Cafe Nord", "Hotel Sued"]
+    assert select.result_list.maximumHeight() == 130
+    assert select.help_label.text() == "Kundenliste scrollen oder oben Namen tippen."
+
+
+def test_searchable_select_keeps_list_visible_for_multiple_matches():
+    _app()
+    from getraenkeladen_tool.ui.searchable_select import SearchableSelect
+
+    select = SearchableSelect("Kunde suchen")
+    select.set_items([("Cafe Nord", 1, "Muenchen"), ("Cafe Sued", 2, "Rosenheim")])
+
+    select.set_search_text("Cafe")
+
+    assert select.current_value() is None
+    assert select.result_list.maximumHeight() == 130
+    assert select.visible_labels() == ["Cafe Nord", "Cafe Sued"]

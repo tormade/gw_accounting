@@ -181,3 +181,53 @@ def test_folder_onboarding_reports_readable_customers_and_skips_outliers(session
     assert result.results[0].customer.name == "Metzgerei Karl"
     assert result.skipped_files[0].path == unreadable
     assert "defekt.xlsx" in result.skipped_files[0].message
+
+
+def test_folder_onboarding_uses_latest_workbook_per_customer_folder(session, tmp_path):
+    import_master_data_from_folder(session, INPUT_DIR)
+
+    customer_dir = tmp_path / "Kundenordner" / "Metzgerei Karl"
+    customer_dir.mkdir(parents=True)
+    older = customer_dir / "2026-06-10_RE_Metzgerei_Karl.xlsx"
+    newer = customer_dir / "2026-06-22_LS_Metzgerei_Karl.xlsx"
+    older.write_bytes((INPUT_DIR / "_ RE 0525 Metzgerei Karl .xlsx").read_bytes())
+    newer.write_bytes((INPUT_DIR / "_ LS 0525 Metzgerei Karl .xlsx").read_bytes())
+
+    result = onboard_customer_workbook_folder(
+        session,
+        customer_list_path=INPUT_DIR / "Lieferkunden Liste.xlsx",
+        folder_path=tmp_path / "Kundenordner",
+    )
+
+    assert result.report.customers_read == 1
+    assert result.report.assortment_lines == 16
+    assert len(result.results) == 1
+    assert result.results[0].snapshot.source_file == str(newer)
+    assert result.results[0].snapshot.document_date == "2026-06-22"
+    assert result.results[0].snapshot.quantity_total == 15
+    assert result.skipped_files[0].path == older
+    assert "aeltere Kundenordnerdatei" in result.skipped_files[0].message
+    assortment = list(session.scalars(select(CustomerAssortmentItem).order_by(CustomerAssortmentItem.sort_order)))
+    assert len(assortment) == 16
+
+
+def test_folder_onboarding_ignores_windows_excel_lock_files(session, tmp_path):
+    import_master_data_from_folder(session, INPUT_DIR)
+
+    customer_dir = tmp_path / "Kundenordner"
+    customer_dir.mkdir()
+    readable = customer_dir / "_ RE 0525 Metzgerei Karl .xlsx"
+    readable.write_bytes((INPUT_DIR / "_ RE 0525 Metzgerei Karl .xlsx").read_bytes())
+    lock_file = customer_dir / "~$_RE 0525 Metzgerei Karl .xlsx"
+    lock_file.write_text("Excel-Sperrdatei", encoding="utf-8")
+
+    result = onboard_customer_workbook_folder(
+        session,
+        customer_list_path=INPUT_DIR / "Lieferkunden Liste.xlsx",
+        folder_path=customer_dir,
+    )
+
+    assert result.report.customers_read == 1
+    assert result.report.unreadable_files == 0
+    assert result.skipped_files[0].path == lock_file
+    assert "Excel-Sperrdatei" in result.skipped_files[0].message

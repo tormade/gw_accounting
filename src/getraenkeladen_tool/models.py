@@ -130,6 +130,26 @@ class Document(Base):
 
     customer: Mapped[Customer] = relationship()
     order: Mapped["Order | None"] = relationship()
+    line_snapshots: Mapped[list["DocumentLineSnapshot"]] = relationship(
+        back_populates="document",
+        cascade="all, delete-orphan",
+        order_by="DocumentLineSnapshot.sort_order",
+    )
+
+
+class DocumentLineSnapshot(Base):
+    __tablename__ = "document_line_snapshots"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    document_id: Mapped[int] = mapped_column(ForeignKey("documents.id"))
+    kind: Mapped[str] = mapped_column(String(30), default="position")
+    name: Mapped[str] = mapped_column(String(200))
+    quantity: Mapped[int] = mapped_column(Integer())
+    unit_price_cents: Mapped[int] = mapped_column(Integer())
+    deposit_cents: Mapped[int] = mapped_column(Integer(), default=0)
+    sort_order: Mapped[int] = mapped_column(Integer(), default=0)
+
+    document: Mapped[Document] = relationship(back_populates="line_snapshots")
 
 
 class OpenItem(Base):

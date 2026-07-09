@@ -16,11 +16,12 @@ from reportlab.platypus import (
 )
 
 from ..kern.regeln.beleg import BelegParameter, PfandRueckgabe, Position, berechne_beleg
+from ..resources import resource_path
 from .file_service import ensure_parent_folder
 
 
-LETTERHEAD_PATH = Path(__file__).resolve().parents[3] / "templates" / "briefkopf.json"
-LOGO_PATH = Path(__file__).resolve().parents[3] / "assets" / "brand" / "logo_winklmeier.png"
+LETTERHEAD_PATH = resource_path("templates", "briefkopf.json")
+LOGO_PATH = resource_path("assets", "brand", "logo_winklmeier.png")
 BRAND_GREEN = colors.HexColor("#116149")
 BRAND_RED = colors.HexColor("#c4312f")
 SOFT_GREEN = colors.HexColor("#e8f3ee")

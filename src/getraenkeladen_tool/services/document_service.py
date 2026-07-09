@@ -1,11 +1,12 @@
 from pathlib import Path
 from shutil import copy2
+from uuid import uuid4
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..kern.regeln.beleg import BelegParameter, PfandRueckgabe, Position, berechne_beleg
-from ..models import Customer, Document, OpenItem
+from ..models import Customer, Document, DocumentLineSnapshot, OpenItem
 from ..schemas import DocumentCreate
 from .excel_service import build_delivery_note_workbook, build_invoice_workbook
 from .file_naming_service import build_document_paths
@@ -51,10 +52,14 @@ def create_document(
         raise ValueError("Belegtyp muss Rechnung oder Lieferauftrag sein.")
 
     datev_export_path = None
-    if "excel" in requested_assets:
-        if document_type == "Rechnung":
+    temporary_excel_path = _temporary_output_path(paths.excel_path) if "excel" in requested_assets else None
+    temporary_pdf_path = _temporary_output_path(paths.pdf_path) if "pdf" in requested_assets else None
+    existing_output_paths = {path: path.exists() for path in (paths.excel_path, paths.pdf_path)}
+    published_paths: list[Path] = []
+    try:
+        if temporary_excel_path is not None and document_type == "Rechnung":
             build_invoice_workbook(
-                paths.excel_path,
+                temporary_excel_path,
                 customer.name,
                 document_number,
                 line_items,
@@ -63,9 +68,9 @@ def create_document(
                 delivery_fee_enabled=payload.delivery_fee_enabled,
                 invoice_footer_text=payload.footer_text,
             )
-        else:
+        elif temporary_excel_path is not None:
             build_delivery_note_workbook(
-                paths.excel_path,
+                temporary_excel_path,
                 customer.name,
                 document_number,
                 line_items,
@@ -76,9 +81,9 @@ def create_document(
                 footer_text=payload.footer_text,
             )
 
-    if "pdf" in requested_assets:
-        build_document_pdf(
-            paths.pdf_path,
+        if temporary_pdf_path is not None:
+            build_document_pdf(
+                temporary_pdf_path,
             document_type,
             customer.name,
             document_number,
@@ -89,10 +94,25 @@ def create_document(
             delivery_fee_enabled=payload.delivery_fee_enabled,
             note_text=payload.delivery_comment,
             footer_text=payload.footer_text,
-        )
+            )
 
-    if document_type == "Rechnung" and datev_upload_dir is not None and "pdf" in requested_assets:
-        datev_export_path = _copy_invoice_pdf_to_datev(paths.pdf_path, datev_upload_dir, document_date)
+        for temporary_path, output_path in ((temporary_excel_path, paths.excel_path), (temporary_pdf_path, paths.pdf_path)):
+            if temporary_path is None:
+                continue
+            temporary_path.replace(output_path)
+            published_paths.append(output_path)
+
+        if document_type == "Rechnung" and datev_upload_dir is not None and "pdf" in requested_assets:
+            datev_export_path = _copy_invoice_pdf_to_datev(paths.pdf_path, datev_upload_dir, document_date)
+    except Exception:
+        for path in (temporary_excel_path, temporary_pdf_path):
+            if path is not None and path.exists():
+                path.unlink()
+        for path in published_paths:
+            if not existing_output_paths[path] and path.exists():
+                path.unlink()
+        raise
+
 
     if document is None:
         document = Document(
@@ -121,6 +141,8 @@ def create_document(
         document.delivery_fee_enabled = payload.delivery_fee_enabled
         document.delivery_comment = payload.delivery_comment
         document.footer_text = payload.footer_text
+
+    _replace_document_line_snapshots(document, payload)
 
     if document_type == "Rechnung":
         amount_cents = _document_total_cents(payload)
@@ -166,12 +188,45 @@ def _existing_document(session: Session, document_type: str, document_number: st
     )
 
 
+def _replace_document_line_snapshots(document: Document, payload: DocumentCreate) -> None:
+    document.line_snapshots.clear()
+    sort_order = 1
+    for item in payload.line_items:
+        document.line_snapshots.append(
+            DocumentLineSnapshot(
+                kind="position",
+                name=item.name,
+                quantity=item.quantity,
+                unit_price_cents=item.unit_price_cents,
+                deposit_cents=item.deposit_cents,
+                sort_order=sort_order,
+            )
+        )
+        sort_order += 1
+    for item in payload.deposit_returns:
+        document.line_snapshots.append(
+            DocumentLineSnapshot(
+                kind="deposit_return",
+                name=item.name,
+                quantity=item.quantity,
+                unit_price_cents=0,
+                deposit_cents=item.deposit_cents,
+                sort_order=sort_order,
+            )
+        )
+        sort_order += 1
+
+
 def _copy_invoice_pdf_to_datev(pdf_path: Path, datev_upload_dir: Path, document_date: str) -> Path:
     month_folder = datev_upload_dir / document_date[:7]
     target_path = month_folder / pdf_path.name
     ensure_parent_folder(target_path)
     copy2(pdf_path, target_path)
     return target_path
+
+
+def _temporary_output_path(output_path: Path) -> Path:
+    return output_path.with_name(f".{output_path.stem}.{uuid4().hex}.tmp{output_path.suffix}")
 
 
 def _document_total_cents(payload: DocumentCreate) -> int:

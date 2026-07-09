@@ -26,6 +26,39 @@ def test_order_panel_can_start_new_order_for_preselected_customer():
     assert "Neue Bestellung aus Kundenordner" in source
 
 
+def test_invoice_panel_uses_current_central_prices_for_selected_order(session, tmp_path: Path):
+    _app()
+    from getraenkeladen_tool.schemas import CustomerCreate, OrderCreate, OrderLineCreate, ProductCreate
+    from getraenkeladen_tool.services.customer_service import create_customer
+    from getraenkeladen_tool.services.order_service import create_order
+    from getraenkeladen_tool.services.product_service import create_product
+    from getraenkeladen_tool.ui.document_workflow_panel import InvoicePanel
+
+    customer = create_customer(session, CustomerCreate(name="Preis Kunde", folder_path=str(tmp_path / "Preis Kunde")))
+    product = create_product(
+        session,
+        ProductCreate(name="Wasser", unit="Kiste", standard_price_cents=1000, default_deposit_cents=100),
+    )
+    order = create_order(
+        session,
+        OrderCreate(
+            customer_id=customer.id,
+            order_date="2026-07-09",
+            delivery_date="2026-07-10",
+            lines=[OrderLineCreate(product_id=product.id, quantity=2)],
+        ),
+    )
+    product.standard_price_cents = 1200
+    product.default_deposit_cents = 200
+    session.commit()
+
+    panel = InvoicePanel(session_factory=lambda: session)
+    panel.select_order(order.id)
+
+    assert panel.lines_table.item(0, 2).text() == "12,00"
+    assert panel.lines_table.item(0, 3).text() == "2,00"
+
+
 def test_order_panel_prefills_lines_from_customer_assortment_when_started_from_customer_folder(session):
     _app()
     from getraenkeladen_tool.models import Customer, CustomerAssortmentItem, Product
@@ -137,6 +170,87 @@ def test_order_panel_skips_unresolved_assortment_items_when_prefilling_from_cust
     panel.close_order_dialog()
 
 
+def test_order_panel_can_copy_existing_order_as_new_from_customer_folder(session):
+    _app()
+    from getraenkeladen_tool.models import Customer, Order, OrderLine, Product
+    from getraenkeladen_tool.ui.order_panel import OrderPanel
+
+    customer = Customer(name="Cafe Nord", folder_path="/tmp/Cafe Nord", is_active=True)
+    water = Product(
+        name="Adelholzener Wasser 12x0,7",
+        unit="Kiste",
+        standard_price_cents=890,
+        default_deposit_cents=330,
+        is_active=True,
+    )
+    session.add_all([customer, water])
+    session.flush()
+    order = Order(
+        order_number="ALT-1001",
+        customer_id=customer.id,
+        order_date="2026-06-22",
+        delivery_date="2026-06-22",
+        status="fakturiert",
+    )
+    order.lines.append(
+        OrderLine(
+            product_id=water.id,
+            product_name=water.name,
+            quantity=4,
+            unit_price_cents=890,
+            deposit_cents=330,
+        )
+    )
+    session.add(order)
+    session.commit()
+    order_id = order.id
+    session_factory = lambda: session
+
+    panel = OrderPanel(session_factory=session_factory)
+    panel.open_order_copy_from_existing(order_id)
+
+    assert panel.current_order_id is None
+    assert panel.current_order_status == "geplant"
+    assert panel.current_order_number == ""
+    assert panel.order_mode_label.text() == "Kopie aus Bestellung ALT-1001"
+    assert panel.customer_select.current_value() == customer.id
+    assert panel.order_lines_table.rowCount() == 1
+    assert panel.order_lines_table.item(0, 0).text() == water.name
+    assert panel.order_lines_table.item(0, 1).text() == "4"
+    assert "Mengen anpassen" in panel.status_label.text()
+    panel.close_order_dialog()
+
+
+def test_order_panel_commits_active_quantity_editor_before_saving(session):
+    _app()
+    from PySide6.QtWidgets import QLineEdit
+    from getraenkeladen_tool.models import Customer, Product
+    from getraenkeladen_tool.ui.order_panel import OrderPanel
+
+    customer = Customer(name="Cafe Nord", folder_path="/tmp/Cafe Nord", is_active=True)
+    water = Product(
+        name="Wasser 12x0,7",
+        unit="Kiste",
+        standard_price_cents=1299,
+        default_deposit_cents=330,
+        is_active=True,
+    )
+    session.add_all([customer, water])
+    session.commit()
+
+    panel = OrderPanel(session_factory=lambda: session)
+    panel._append_order_line_to_table(water.name, 9, 1299, 330, water.id)
+    quantity_item = panel.order_lines_table.item(0, 1)
+    panel.order_lines_table.setCurrentItem(quantity_item)
+    editor = QLineEdit(panel.order_lines_table)
+    editor.setText("10")
+
+    panel.commit_active_table_editor(editor)
+
+    assert panel.order_lines_table.item(0, 1).text() == "10"
+    assert panel._order_lines_from_table()[0].quantity == 10
+
+
 def test_order_panel_uses_searchable_customer_and_product_selects():
     source = Path("src/getraenkeladen_tool/ui/order_panel.py").read_text(encoding="utf-8")
 
@@ -169,7 +283,7 @@ def test_document_workflow_panels_make_excel_pdf_generation_flow_visible():
     assert "QMessageBox.warning" in source
     assert "Erstellung fehlgeschlagen" in source
     assert "Kundenbestellung suchen" in source
-    assert 'self.order_select = SearchableSelect("Kunde, Bestellnummer oder Lieferdatum suchen")' in source
+    assert 'self.order_select = SearchableSelect("Kunde oder Lieferdatum suchen")' in source
     assert "self.order_select.set_items(" in source
     assert "self.order_select.current_value()" in source
     assert "self.orders_table = QTableWidget" not in source
@@ -190,7 +304,19 @@ def test_document_workflow_uses_compact_order_search_instead_of_large_order_list
     assert "Diese Bestellung verwenden" in source
     assert "Suche zuruecksetzen" in source
     assert "Ausgewaehlte Bestellung" in source
-    assert "Kunde, Bestellnummer oder Lieferdatum suchen" in source
+    assert "Kunde oder Lieferdatum suchen" in source
+
+
+def test_document_workflow_validates_manual_document_number_before_export():
+    source = Path("src/getraenkeladen_tool/ui/document_workflow_panel.py").read_text(encoding="utf-8")
+
+    assert "def _validated_document_number" in source
+    assert "Bitte zuerst eine" in source
+    assert "self.document_tabs.setCurrentIndex(2)" in source
+    assert "self.document_number.setFocus()" in source
+    assert "document_number = self._validated_document_number()" in source
+    assert "create_order_delivery_order(\n            session,\n            self.current_order_id,\n            document_number," in source
+    assert "create_order_invoice(\n            session,\n            self.current_order_id,\n            document_number," in source
 
 
 def test_document_workflow_uses_rounded_tabs_for_document_steps():
@@ -200,7 +326,8 @@ def test_document_workflow_uses_rounded_tabs_for_document_steps():
     assert "self.document_tabs.setUsesScrollButtons(False)" in source
     assert 'addTab(positions_tab, "1 Artikel")' in source
     assert 'addTab(deposit_tab, "2 Pfand")' in source
-    assert 'addTab(details_tab, "3 Nummer/Text")' in source
+    assert 'details_tab_label = "3 Lieferscheinnummer/Hinweis"' in source
+    assert 'details_tab_label = "3 Rechnungsnummer/Zahlung"' in source
     assert 'addTab(output_tab, "4 Excel/PDF")' in source
     assert "document_layout.addWidget(total_bar)" in source
     assert "Nur PDF-Rechnung" in source
@@ -253,7 +380,7 @@ def test_document_workflow_uses_clearer_deposit_and_delivery_fee_labels():
     assert "Lieferpauschale hinzufuegen?" in source
     assert "Keine Pauschale" in source
     assert "3,90 EUR hinzufuegen" in source
-    assert "Nur Beleg-Korrektur" in source
+    assert "Aenderungen hier gelten nur fuer diesen Beleg. Die Bestellung bleibt unveraendert." in source
     assert "Lieferschein-Nummer" in source
     assert "Hinweis auf dem Lieferschein" in source
     assert "Zahlungshinweis auf Rechnung" in source
@@ -367,7 +494,7 @@ def test_order_panel_guides_next_step_after_successful_save():
 
     assert "def show_saved_order_next_steps" in source
     assert "Bestellung gespeichert" in source
-    assert "Was moechten Sie als Naechstes tun?" in source
+    assert "Was moechten Sie jetzt mit dieser Bestellung machen?" in source
     assert "Lieferschein erstellen" in source
     assert "Rechnung erstellen" in source
     assert "Weitere Bestellung" in source
@@ -379,19 +506,21 @@ def test_order_panel_warns_clearly_before_invalid_save():
     source = Path("src/getraenkeladen_tool/ui/order_panel.py").read_text(encoding="utf-8")
 
     assert "def warn_invalid_order_save" in source
-    assert "Bitte eine Bestellnummer eintragen." in source
+    assert "Bitte eine Bestellnummer eintragen." not in source
     assert "Bitte mindestens eine Position hinzufuegen." in source
     assert "QMessageBox.warning" in source
 
 
-def test_order_panel_uses_clearer_labels_for_less_technical_users():
+def test_order_panel_hides_internal_order_number_from_order_form():
     source = Path("src/getraenkeladen_tool/ui/order_panel.py").read_text(encoding="utf-8")
 
     assert '"copyOrderButton": "Markierte Bestellung kopieren"' in source
     assert '"addDepositReturnButton": "Pfand-Rueckgabe eintragen"' in source
     assert '"removeDepositReturnButton": "Pfand-Rueckgabe entfernen"' in source
     assert 'ORDER_LINE_COLUMNS = ("Produkt", "Menge", "Preis je Einheit EUR", "Pfand je Einheit EUR", "Summe EUR")' in source
-    assert 'customer_form.addRow("Bestellnummer", self.order_number)' in source
+    assert 'customer_form.addRow("Bestellnummer", self.order_number)' not in source
+    assert "self.order_number = QLineEdit()" not in source
+    assert "suggest_internal_order_number" in source
     assert "Auftragssumme" not in source
 
 
@@ -400,6 +529,9 @@ def test_order_panel_loads_customer_assortment_into_order_dialog():
 
     assert "list_customer_assortment" in source
     assert "ASSORTMENT_COLUMNS" in source
+    assert '"Zuletzt"' in source
+    assert '"Bisher"' in source
+    assert '"Verlauf"' in source
     assert "self.assortment_table = QTableWidget" in source
     assert "def refresh_customer_assortment" in source
     assert "self.customer_select.selection_changed.connect(self.apply_selected_customer)" in source
@@ -488,3 +620,13 @@ def test_order_context_archive_does_not_open_edit_dialog():
     assert "elif selected == archive_action:" in source
     assert "self.current_order_id = self._selected_order_id()" in source
     assert "self.load_selected_order_id()\n            self.archive_selected_order()" not in source
+
+
+def test_order_delete_requires_user_confirmation():
+    source = Path("src/getraenkeladen_tool/ui/order_panel.py").read_text(encoding="utf-8")
+
+    assert '"archive": "Bestellung loeschen"' in source
+    assert "def confirm_order_delete" in source
+    assert "Willst du diese Bestellung wirklich loeschen?" in source
+    assert "QMessageBox.question" in source
+    assert "if not self.confirm_order_delete" in source

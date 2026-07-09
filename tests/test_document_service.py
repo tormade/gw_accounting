@@ -1,11 +1,13 @@
 from pathlib import Path
 
 from openpyxl import load_workbook
+import pytest
 
-from getraenkeladen_tool.models import OpenItem
+from getraenkeladen_tool.models import DocumentLineSnapshot, OpenItem
 from getraenkeladen_tool.schemas import CustomerCreate, DepositReturnCreate, DocumentCreate, DocumentLineItem
 from getraenkeladen_tool.services.customer_service import create_customer
 from getraenkeladen_tool.services.document_service import create_document, latest_invoice_number
+from getraenkeladen_tool.services import document_service
 
 
 def test_document_outputs_use_shared_core_calculation():
@@ -64,6 +66,44 @@ def test_create_invoice_writes_excel_pdf_file_and_open_item(session, tmp_path: P
     assert open_item.amount_cents == 16290
     assert open_item.payment_method == "SEPA"
     assert open_item.status == "offen"
+
+
+def test_create_document_persists_line_and_deposit_snapshots(session, tmp_path: Path):
+    customer = create_customer(
+        session,
+        CustomerCreate(name="Snapshot Kunde", folder_path=str(tmp_path / "Kunden" / "Snapshot Kunde")),
+    )
+
+    document = create_document(
+        session,
+        DocumentCreate(
+            customer_id=customer.id,
+            document_type="Lieferschein",
+            document_number="LS-SNAP-1",
+            delivery_date="2026-06-24",
+            line_items=[
+                DocumentLineItem(name="Frucade Colamix 20x0,5", quantity=3, unit_price_cents=1048, deposit_cents=310),
+                DocumentLineItem(name="Wasser 12x0,7", quantity=2, unit_price_cents=899, deposit_cents=330),
+            ],
+            deposit_returns=[DepositReturnCreate(name="Leergut Kiste 3,10", quantity=1, deposit_cents=310)],
+        ),
+    )
+
+    snapshots = (
+        session.query(DocumentLineSnapshot)
+        .filter(DocumentLineSnapshot.document_id == document.id)
+        .order_by(DocumentLineSnapshot.sort_order)
+        .all()
+    )
+
+    assert [
+        (snapshot.kind, snapshot.name, snapshot.quantity, snapshot.unit_price_cents, snapshot.deposit_cents)
+        for snapshot in snapshots
+    ] == [
+        ("position", "Frucade Colamix 20x0,5", 3, 1048, 310),
+        ("position", "Wasser 12x0,7", 2, 899, 330),
+        ("deposit_return", "Leergut Kiste 3,10", 1, 0, 310),
+    ]
 
 
 def test_create_invoice_includes_optional_delivery_fee_and_document_texts(session, tmp_path: Path):
@@ -293,3 +333,28 @@ def test_create_document_can_generate_pdf_later_without_duplicate_invoice(sessio
     assert Path(pdf_document.excel_path).exists()
     assert Path(pdf_document.pdf_path).exists()
     assert session.query(OpenItem).count() == 1
+
+
+def test_create_document_removes_temporary_files_when_pdf_generation_fails(session, tmp_path: Path, monkeypatch):
+    customer_folder = tmp_path / "Kunden" / "Fehler Kunde"
+    customer = create_customer(session, CustomerCreate(name="Fehler Kunde", folder_path=str(customer_folder)))
+
+    def fail_pdf(*_args, **_kwargs):
+        raise OSError("PDF kann nicht geschrieben werden")
+
+    monkeypatch.setattr(document_service, "build_document_pdf", fail_pdf)
+
+    with pytest.raises(OSError, match="PDF kann nicht geschrieben werden"):
+        create_document(
+            session,
+            DocumentCreate(
+                customer_id=customer.id,
+                document_type="Rechnung",
+                document_number="RG-FAIL-1",
+                delivery_date="2026-06-21",
+                line_items=[DocumentLineItem(name="Wasser", quantity=1, unit_price_cents=1299)],
+            ),
+        )
+
+    assert list(customer_folder.glob("*")) == []
+    assert session.query(OpenItem).count() == 0

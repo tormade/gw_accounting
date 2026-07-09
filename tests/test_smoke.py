@@ -1,4 +1,5 @@
-from getraenkeladen_tool.app import configure_qt_plugin_path, create_app, create_runtime
+from getraenkeladen_tool.app import configure_qt_plugin_path, create_app, create_runtime, main
+from getraenkeladen_tool.errors import ApplicationStartupError
 
 
 class FakeApplication:
@@ -59,3 +60,16 @@ def test_create_runtime_bootstraps_local_database(tmp_path):
 
     assert runtime.config.database_path.exists()
     assert runtime.session_factory is not None
+
+
+def test_main_shows_a_clear_dialog_for_startup_storage_errors(monkeypatch):
+    messages = []
+    monkeypatch.setattr("getraenkeladen_tool.app.create_app", lambda: object())
+    monkeypatch.setattr(
+        "getraenkeladen_tool.app.create_runtime",
+        lambda: (_ for _ in ()).throw(ApplicationStartupError("Datenordner nicht verfuegbar")),
+    )
+    monkeypatch.setattr("getraenkeladen_tool.app.QMessageBox.critical", lambda *_args: messages.append(_args))
+
+    assert main() == 1
+    assert "Datenordner nicht verfuegbar" in messages[0][-1]

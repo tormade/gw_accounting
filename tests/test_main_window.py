@@ -8,14 +8,13 @@ def test_main_window_exposes_first_version_tabs():
         "Kundenordner",
         "Offene Posten",
         "Stammdaten",
-        "Pruefliste",
         "Einstellungen",
     )
 
 
 def test_main_window_uses_resizable_screen_friendly_size():
-    assert MAIN_WINDOW_INITIAL_SIZE == (1180, 760)
-    assert MAIN_WINDOW_MINIMUM_SIZE == (900, 560)
+    assert MAIN_WINDOW_INITIAL_SIZE == (1360, 860)
+    assert MAIN_WINDOW_MINIMUM_SIZE == (1024, 640)
 
 
 def test_main_window_wraps_large_tabs_in_scroll_areas():
@@ -48,13 +47,12 @@ def test_dashboard_quick_actions_open_customer_folder_workspace():
 
     assert "self.dashboard_panel.new_delivery_requested.connect(self.open_customer_folder_tab)" in source
     assert "self.dashboard_panel.open_items_requested.connect(self.open_open_items_tab)" in source
-    assert "self.dashboard_panel.checklist_requested.connect(self.open_checklist_tab)" in source
+    assert "self.dashboard_panel.checklist_requested.connect(self.open_checklist_tab)" not in source
     assert "def open_customer_folder_tab" in source
     assert "def open_open_items_tab" in source
-    assert "def open_checklist_tab" in source
+    assert "def open_checklist_tab" not in source
     assert 'MAIN_TABS.index("Kundenordner")' in source
     assert 'MAIN_TABS.index("Offene Posten")' in source
-    assert 'MAIN_TABS.index("Pruefliste")' in source
 
 
 def test_theme_uses_winklmeier_work_tool_direction():
@@ -67,7 +65,7 @@ def test_theme_uses_winklmeier_work_tool_direction():
     assert "sectionTitle" in APP_STYLESHEET
     assert "documentHeaderCard" in APP_STYLESHEET
     assert "QPushButton#newOrderButton" in APP_STYLESHEET
-    assert "QWidget#heroSearchPanel" in APP_STYLESHEET
+    assert "QWidget#heroSearchPanel" not in APP_STYLESHEET
     assert "QWidget#dailyCockpitCard" in APP_STYLESHEET
     assert "QWidget#liveSummaryCard" in APP_STYLESHEET
     assert "pageHeader" in APP_STYLESHEET
@@ -131,6 +129,16 @@ def test_shared_layout_widgets_are_available():
     assert 'setObjectName("workspaceCard")' in source
 
 
+def test_action_cards_do_not_push_buttons_to_bottom_of_empty_space():
+    from pathlib import Path
+
+    source = Path("src/getraenkeladen_tool/ui/layouts.py").read_text(encoding="utf-8")
+    action_card_source = source[source.index("class ActionCard") : source.index("class ResponsiveSplitter")]
+
+    assert "layout.addStretch()" not in action_card_source
+    assert "layout.setAlignment(Qt.AlignmentFlag.AlignTop)" in action_card_source
+
+
 def test_sidebar_navigation_is_named_for_keyboard_and_accessibility():
     from pathlib import Path
 
@@ -184,7 +192,7 @@ def test_dashboard_uses_modern_surface_and_action_grid():
     assert "QGridLayout" in source
     assert "quick_action_grid" in source
     assert "setColumnStretch" in source
-    assert "Demo-Beispiele" in source
+    assert "Demo-Beispiele" not in source
 
 
 def test_order_form_gives_selection_fields_room_to_grow():
@@ -204,7 +212,7 @@ def test_target_state_navigation_prioritizes_customer_folder_path():
     assert '"Heute"' in source
     assert '"Kundenordner"' in source
     assert '"Offene Posten"' in source
-    assert '"Pruefliste"' in source
+    assert '"Pruefliste"' not in source
     assert '"Kunde & Bestellung"' not in source
     assert '"Belege"' not in source
     assert '"Tagesliste"' not in source
@@ -213,15 +221,40 @@ def test_target_state_navigation_prioritizes_customer_folder_path():
     assert 'MAIN_TABS.index("Kundenordner")' in source
 
 
-def test_main_window_uses_real_checklist_panel_for_migration_conflicts():
+def test_customer_folder_can_open_selected_order_for_review():
     from pathlib import Path
 
     source = Path("src/getraenkeladen_tool/ui/main_window.py").read_text(encoding="utf-8")
 
-    assert "from .checklist_panel import ChecklistPanel" in source
-    assert "self.checklist_panel = ChecklistPanel(session_factory=session_factory)" in source
-    assert '"Pruefliste": (self.checklist_panel.refresh_issues,)' in source
-    assert 'self._panel(\n            "Pruefliste"' not in source
+    assert "self.customer_folder_panel.open_order_requested.connect(self.open_order_for_id)" in source
+    assert "def open_order_for_id" in source
+
+
+def test_customer_folder_refreshes_after_order_dialog_save():
+    from pathlib import Path
+
+    main_source = Path("src/getraenkeladen_tool/ui/main_window.py").read_text(encoding="utf-8")
+    order_source = Path("src/getraenkeladen_tool/ui/order_panel.py").read_text(encoding="utf-8")
+
+    assert "order_saved = Signal(int)" in order_source
+    assert "self.order_saved.emit(order.id)" in order_source
+    assert "self.order_panel.order_saved.connect(self.refresh_customer_folder_after_order_saved)" in main_source
+    assert "def refresh_customer_folder_after_order_saved" in main_source
+    assert "self.customer_folder_panel.load_selected_customer()" in main_source
+    assert "self.customer_folder_panel.select_order(order_id)" in main_source
+    assert order_source.index("self.show_saved_order_next_steps(order.id, order.order_number)") < order_source.index(
+        "self.order_saved.emit(order.id)"
+    )
+
+
+def test_main_window_hides_checklist_panel_from_daily_navigation():
+    from pathlib import Path
+
+    source = Path("src/getraenkeladen_tool/ui/main_window.py").read_text(encoding="utf-8")
+
+    assert "from .checklist_panel import ChecklistPanel" not in source
+    assert "self.checklist_panel = ChecklistPanel(session_factory=session_factory)" not in source
+    assert '"Pruefliste": (self.checklist_panel.refresh_issues,)' not in source
 
 
 def test_checklist_panel_exposes_concrete_resolution_actions():
@@ -252,6 +285,16 @@ def test_checklist_panel_explains_data_changing_actions_for_uncertain_users():
     assert "Erklaerung der Aktionen" in source
     assert "Aendert Stammdaten oder Kundensortiment" in source
     assert "Wenn die Artikelliste aktueller ist" in source
+
+
+def test_checklist_panel_uses_article_language_and_readable_table_columns():
+    from pathlib import Path
+
+    source = Path("src/getraenkeladen_tool/ui/checklist_panel.py").read_text(encoding="utf-8")
+
+    assert 'SearchableSelect("Zentralen Artikel suchen", list_label="Artikelliste")' in source
+    assert "setColumnWidth" in source
+    assert "item.setToolTip(value)" in source
 
 
 def test_date_fields_use_calendar_input():
@@ -322,7 +365,7 @@ def test_order_tab_exposes_guided_order_actions():
         "copy": "Als neue Bestellung kopieren",
         "create_delivery_note": "Lieferschein erstellen",
         "create_invoice": "Rechnung erstellen",
-        "archive": "Bestellung archivieren",
+        "archive": "Bestellung loeschen",
     }
 
 
@@ -362,6 +405,8 @@ def test_main_window_opens_document_workflows_as_visible_dialogs_from_customer_f
     assert "def _open_document_dialog" in source
     assert "dialog.show()" in source
     assert "panel.select_order(order_id)" in source
+    assert "self._document_dialog_closed(active_dialog)" in source
+    assert "self.customer_folder_panel.load_selected_customer()" in source
     assert "self._open_document_dialog(DeliveryNotePanel, order_id, \"Lieferschein erstellen\")" in source
     assert "self._open_document_dialog(InvoicePanel, order_id, \"Rechnung erstellen\")" in source
 
@@ -440,8 +485,50 @@ def test_settings_tab_focuses_on_master_data_import_without_number_sequences():
         "settingsHelpButton": "?",
         "chooseInputFolderButton": "Input-Ordner waehlen",
         "importMasterDataButton": "Stammdaten importieren",
+        "chooseCustomerFolderButton": "Kundenordner waehlen",
+        "importCustomerFolderButton": "Kundenordner importieren",
+        "openChecklistButton": "Pruefpunkte ansehen",
     }
-    assert SETTINGS_PANEL_SECTIONS == ("Stammdaten aus Excel importieren",)
+    assert SETTINGS_PANEL_SECTIONS == ("Stammdaten aus Excel importieren", "Kundenordner einlesen")
+
+
+def test_settings_tab_exposes_customer_folder_onboarding_action():
+    from pathlib import Path
+
+    source = Path("src/getraenkeladen_tool/ui/settings_panel.py").read_text(encoding="utf-8")
+
+    assert "onboard_customer_workbook_folder" in source
+    assert "CUSTOMER_FILE_NAME" in source
+    assert "self.customer_folder" in source
+    assert "def import_customer_folder" in source
+
+
+def test_settings_tab_opens_checklist_as_import_followup_not_main_navigation():
+    from pathlib import Path
+
+    settings_source = Path("src/getraenkeladen_tool/ui/settings_panel.py").read_text(encoding="utf-8")
+    main_source = Path("src/getraenkeladen_tool/ui/main_window.py").read_text(encoding="utf-8")
+
+    assert "from .checklist_panel import ChecklistPanel" in settings_source
+    assert "def open_checklist_dialog" in settings_source
+    assert "self.open_checklist_button.clicked.connect(self.open_checklist_dialog)" in settings_source
+    assert '"Pruefliste"' not in main_source
+
+
+def test_settings_tab_can_open_checklist_dialog_widget():
+    import os
+
+    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+    from PySide6.QtWidgets import QApplication
+    from getraenkeladen_tool.ui.settings_panel import SettingsPanel
+
+    QApplication.instance() or QApplication([])
+    panel = SettingsPanel(session_factory=None)
+
+    panel.open_checklist_dialog()
+
+    assert len(panel.checklist_dialogs) == 1
+    assert panel.checklist_dialogs[0].windowTitle() == "Pruefpunkte ansehen"
 
 
 def test_product_panel_hides_unit_maintenance_from_user():
@@ -480,11 +567,11 @@ def test_dashboard_uses_cockpit_quick_actions_without_calendar():
     assert "Kunde suchen" in source
     assert "Kundenordner oeffnen" in source
     assert "Offene Posten pruefen" in source
-    assert "Preis-/Importpruefung" in source
-    assert "heroSearchPanel" in source
-    assert "todayContactList" in source
-    assert "Heute starten" in source
-    assert "Im Kundenordner suchen Sie den Kunden" in source
+    assert "Preis-/Importpruefung" not in source
+    assert "heroSearchPanel" not in source
+    assert "todayContactList" not in source
+    assert "Heute starten" not in source
+    assert "Im Kundenordner suchen Sie den Kunden" not in source
     assert "Metz..." not in source
     assert "heroSearchQuery" not in source
     assert "Kunde & Bestellung" not in source
@@ -519,13 +606,13 @@ def test_dashboard_quick_actions_open_customer_folder_workspace_signals():
     main_source = Path("src/getraenkeladen_tool/ui/main_window.py").read_text(encoding="utf-8")
 
     assert "open_items_requested = Signal()" in dashboard_source
-    assert "checklist_requested = Signal()" in dashboard_source
+    assert "checklist_requested = Signal()" not in dashboard_source
     assert "self.open_items_card.button.clicked.connect(self.open_items_requested.emit)" in dashboard_source
-    assert "self.checklist_card.button.clicked.connect(self.checklist_requested.emit)" in dashboard_source
+    assert "self.checklist_card.button.clicked.connect(self.checklist_requested.emit)" not in dashboard_source
     assert "manage_orders_requested" not in dashboard_source
     assert "invoice_requested = Signal()" not in dashboard_source
     assert "open_items_requested.connect(self.open_open_items_tab)" in main_source
-    assert "checklist_requested.connect(self.open_checklist_tab)" in main_source
+    assert "checklist_requested.connect(self.open_checklist_tab)" not in main_source
     assert 'MAIN_TABS.index("Kundenordner")' in main_source
 
 

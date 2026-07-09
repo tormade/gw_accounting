@@ -3,17 +3,23 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy import inspect, text
 
 from .config import AppConfig
+from .errors import ApplicationStartupError
 from .models import Base
 from .services.settings_service import ensure_default_product_units
 
 
 def bootstrap_database(config: AppConfig) -> None:
-    db_path = config.database_path
-    db_path.parent.mkdir(parents=True, exist_ok=True)
-    engine = create_engine(f"sqlite:///{db_path}")
-    Base.metadata.create_all(engine)
-    _add_missing_columns(engine)
-    _seed_defaults(engine)
+    try:
+        db_path = config.database_path
+        db_path.parent.mkdir(parents=True, exist_ok=True)
+        engine = create_engine(f"sqlite:///{db_path}")
+        Base.metadata.create_all(engine)
+        _add_missing_columns(engine)
+        _seed_defaults(engine)
+    except OSError as error:
+        raise ApplicationStartupError(
+            f"Der Datenordner kann nicht vorbereitet werden: {config.database_path.parent}"
+        ) from error
 
 
 def create_session_factory(config: AppConfig) -> sessionmaker:

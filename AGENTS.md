@@ -59,3 +59,17 @@ Plan -> Entwickeln -> Testen -> Review -> Debuggen -> Anwender-Smoke -> Commit -
 - Erwartete Golden-Werte: Lieferwert 234,28 EUR, Pfand-Rueckgabe -47,90 EUR, Brutto 186,38 EUR, Netto 156,62 EUR, MwSt 29,76 EUR, Lieferpauschale 0.
 - Zeilenprobe: Frucade Colamix, Menge 3, Pfand 3,10 EUR, Preis 10,48 EUR -> 40,74 EUR.
 - Ueberweiser-Beispiel muss spaeter Fusstext Ueberweisung und Faelligkeit Datum + 7 erkennen.
+
+## Agent skills
+
+### Issue tracker
+
+GitHub Issues im Repository sind die Arbeitswarteschlange; externe Pull Requests werden nicht triagiert. Siehe `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Die Standardlabels `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human` und `wontfix` werden verwendet. Siehe `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Dieses Projekt hat eine gemeinsame Domain-Dokumentation in `CONTEXT.md` und Architekturentscheidungen unter `docs/adr/`. Siehe `docs/agents/domain.md`.

@@ -1,6 +1,7 @@
 from datetime import date
 
 from PySide6.QtWidgets import (
+    QApplication,
     QComboBox,
     QDialog,
     QFormLayout,
@@ -28,6 +29,7 @@ from ..services.order_service import (
     create_order,
     get_order,
     list_active_orders,
+    suggest_internal_order_number,
     update_order,
 )
 from ..services.product_service import list_active_products
@@ -53,7 +55,7 @@ ORDER_PANEL_ACTIONS = {
 }
 
 ORDER_LINE_COLUMNS = ("Produkt", "Menge", "Preis je Einheit EUR", "Pfand je Einheit EUR", "Summe EUR")
-ASSORTMENT_COLUMNS = ("Artikel", "Letzte Menge", "Preis aktuell", "Preis Excel", "Hinweis")
+ASSORTMENT_COLUMNS = ("Artikel", "Letzte Menge", "Zuletzt", "Bisher", "Preis aktuell", "Verlauf")
 DEPOSIT_RETURN_COLUMNS = ("Pfandart", "Menge", "Pfand EUR", "Gutschrift EUR")
 ORDER_COLUMNS = ("Bestellung", "Kunde", "Lieferdatum", "Zeitfenster", "Status")
 ORDER_PANEL_SECTIONS = (
@@ -62,9 +64,9 @@ ORDER_PANEL_SECTIONS = (
     "Bestellungen verwalten",
 )
 ORDER_HELP_TEXT = (
-    "Kundenkopf: Kunde, Lieferdatum, Zeitfenster und Bestellnummer pruefen.\n\n"
+    "Kundenkopf: Kunde, Lieferdatum und Zeitfenster pruefen.\n\n"
     "Kundensortiment: letzte Mengen sehen, neue Mengen eintragen und Artikel hinzufuegen.\n\n"
-    "Bestellungen: Vorhandene Bestellungen oeffnen, archivieren oder als Vorlage fuer eine neue Bestellung kopieren."
+    "Bestellungen: Vorhandene Bestellungen oeffnen, loeschen oder als Vorlage fuer eine neue Bestellung kopieren."
 )
 ORDER_GUIDANCE_STEPS = (
     "Kunde suchen und letzte Mengen als Vorlage sehen.",
@@ -76,12 +78,13 @@ ORDER_CONTEXT_ACTIONS = {
     "copy": "Als neue Bestellung kopieren",
     "create_delivery_note": "Lieferschein erstellen",
     "create_invoice": "Rechnung erstellen",
-    "archive": "Bestellung archivieren",
+    "archive": "Bestellung loeschen",
 }
 DATE_FIELD_WIDGETS = ("delivery_date",)
 
 
 class OrderPanel(QWidget):
+    order_saved = Signal(int)
     delivery_note_requested = Signal(int)
     invoice_requested = Signal(int)
 
@@ -95,6 +98,7 @@ class OrderPanel(QWidget):
         self.assortment_rows_by_row = {}
         self.current_order_id = None
         self.current_order_status = "geplant"
+        self.current_order_number = ""
 
         self.order_mode_label = QLabel("Neue Bestellung")
         self.order_mode_label.setObjectName("stepTitle")
@@ -111,8 +115,6 @@ class OrderPanel(QWidget):
         self.assortment_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.assortment_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.assortment_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-        self.order_number = QLineEdit()
-        self.order_number.setPlaceholderText("z. B. 2606196 oder LS-3001")
         self.delivery_date = DateInput(date.today().isoformat())
         self.delivery_slot = QComboBox()
         self.delivery_slot.addItems(["", "vormittag", "nachmittag", "ganztags"])
@@ -188,7 +190,6 @@ class OrderPanel(QWidget):
         customer_form = QFormLayout()
         configure_form_layout(customer_form)
         customer_form.addRow("Kunde", self.customer_select)
-        customer_form.addRow("Bestellnummer", self.order_number)
         customer_form.addRow("Lieferdatum", self.delivery_date)
         customer_form.addRow("Zeitfenster", self.delivery_slot)
         customer_layout.addLayout(customer_form)
@@ -382,7 +383,7 @@ class OrderPanel(QWidget):
         message.setIcon(QMessageBox.Icon.Information)
         message.setWindowTitle("Bestellung gespeichert")
         message.setText(f"Bestellung {order_number} wurde gespeichert.")
-        message.setInformativeText("Was moechten Sie als Naechstes tun?")
+        message.setInformativeText("Was moechten Sie jetzt mit dieser Bestellung machen?")
         delivery_button = message.addButton("Lieferschein erstellen", QMessageBox.ButtonRole.ActionRole)
         invoice_button = message.addButton("Rechnung erstellen", QMessageBox.ButtonRole.ActionRole)
         new_order_button = message.addButton("Weitere Bestellung", QMessageBox.ButtonRole.ActionRole)
@@ -399,8 +400,8 @@ class OrderPanel(QWidget):
     def reset_order_form(self) -> None:
         self.current_order_id = None
         self.current_order_status = "geplant"
+        self.current_order_number = ""
         self.order_mode_label.setText("Neue Bestellung")
-        self.order_number.clear()
         self.delivery_date.set_iso_date(date.today().isoformat())
         self.delivery_slot.setCurrentText("")
         self.order_lines_table.setRowCount(0)
@@ -409,7 +410,7 @@ class OrderPanel(QWidget):
         self.deposit_return_eur.clear()
         self.apply_selected_deposit_return()
         self.update_order_total()
-        self.status_label.setText("Neue Bestellung gestartet. Bitte Bestellnummer eintragen.")
+        self.status_label.setText("Neue Bestellung gestartet. Kunde und Mengen erfassen; die interne Nummer vergibt das Programm.")
 
     def confirm_documented_order_change(self) -> bool:
         if self.current_order_status == "geplant":
@@ -542,12 +543,20 @@ class OrderPanel(QWidget):
             values = (
                 row.product_name or row.source_product_name,
                 str(row.last_quantity),
+                to_display_date(getattr(row, "last_order_date", None)) if getattr(row, "last_order_date", None) else "-",
+                self._history_count_text(row),
                 self._format_euro_cents(row.current_price_cents),
-                self._format_euro_cents(row.excel_price_cents),
-                hint,
+                hint or getattr(row, "sales_hint", "") or "",
             )
             for column, value in enumerate(values):
                 self.assortment_table.setItem(row_index, column, QTableWidgetItem(value))
+
+    def _history_count_text(self, row) -> str:
+        order_count = getattr(row, "order_count", 0)
+        total_quantity = getattr(row, "total_quantity", 0)
+        if order_count <= 0:
+            return "-"
+        return f"{order_count}x / {total_quantity} gesamt"
 
     def prefill_order_lines_from_customer_assortment(self) -> None:
         self.order_lines_table.setRowCount(0)
@@ -580,7 +589,7 @@ class OrderPanel(QWidget):
             self.status_label.setText("Bitte zuerst einen Artikel aus dem Kundensortiment auswaehlen.")
             return
         if row.product_id is None:
-            self.status_label.setText("Artikel ist noch nicht sicher zugeordnet. Bitte zuerst in der Pruefliste klaeren.")
+            self.status_label.setText("Artikel ist noch nicht sicher zugeordnet. Bitte Artikel manuell aus der Produktliste waehlen.")
             return
         unit_price_cents = row.current_price_cents
         deposit_cents = row.current_deposit_cents
@@ -679,15 +688,13 @@ class OrderPanel(QWidget):
             self.update_order_total()
 
     def save_order(self) -> None:
+        self.commit_active_table_editor()
         if self.session_factory is None:
             self.warn_invalid_order_save("Keine Datenbankverbindung vorhanden.")
             return
         customer_id = self.customer_select.current_value()
         if customer_id is None:
             self.warn_invalid_order_save("Bitte zuerst einen Kunden auswaehlen.")
-            return
-        if not self.order_number.text().strip():
-            self.warn_invalid_order_save("Bitte eine Bestellnummer eintragen.")
             return
         order_lines = self._order_lines_from_table()
         if not order_lines:
@@ -699,7 +706,7 @@ class OrderPanel(QWidget):
         session = self.session_factory()
         try:
             payload = OrderCreate(
-                order_number=self.order_number.text().strip(),
+                order_number=self.current_order_number or suggest_internal_order_number(session),
                 customer_id=customer_id,
                 order_date=self.delivery_date.iso_date() or "ohne-datum",
                 delivery_date=self.delivery_date.iso_date() or "ohne-datum",
@@ -719,6 +726,7 @@ class OrderPanel(QWidget):
             self.show_orders(list_active_orders(session))
             self.close_order_dialog_after_success(order.order_number)
             self.show_saved_order_next_steps(order.id, order.order_number)
+            self.order_saved.emit(order.id)
         except Exception as error:
             self.status_label.setText(f"Bestellung konnte nicht gespeichert werden: {error}")
             QMessageBox.warning(
@@ -732,6 +740,21 @@ class OrderPanel(QWidget):
     def warn_invalid_order_save(self, message: str) -> None:
         self.status_label.setText(message)
         QMessageBox.warning(self, "Bestellung noch nicht gespeichert", message)
+
+    def commit_active_table_editor(self, active_editor: QLineEdit | None = None) -> None:
+        editor = active_editor or QApplication.focusWidget()
+        if not isinstance(editor, QLineEdit):
+            return
+        for table in (self.order_lines_table, self.deposit_returns_table):
+            if not table.isAncestorOf(editor) and editor.parent() is not table:
+                continue
+            current_item = table.currentItem()
+            if current_item is None:
+                continue
+            current_item.setText(editor.text().strip())
+            editor.clearFocus()
+            QApplication.processEvents()
+            return
 
     def refresh_orders(self) -> None:
         if self.session_factory is None:
@@ -797,7 +820,7 @@ class OrderPanel(QWidget):
     def populate_order_form(self, order) -> None:
         self.order_mode_label.setText(f"Bestellung bearbeiten: {order.order_number}")
         self.current_order_status = order.status
-        self.order_number.setText(order.order_number)
+        self.current_order_number = order.order_number
         self.customer_select.select_value(order.customer_id)
         self.delivery_date.set_iso_date(order.delivery_date)
         self.delivery_slot.setCurrentText(order.delivery_slot or "")
@@ -820,19 +843,31 @@ class OrderPanel(QWidget):
 
     def copy_selected_order_as_new(self) -> None:
         selected_order_id = self._selected_order_id()
-        if selected_order_id is not None and selected_order_id != self.current_order_id:
-            self.load_order_by_id(selected_order_id)
-        if self.current_order_id is None:
+        if selected_order_id is None:
             self.status_label.setText("Bitte zuerst eine Bestellung aus der Liste auswaehlen.")
             return
-        original_number = self.order_number.text().strip()
-        self.current_order_id = None
-        self.current_order_status = "geplant"
-        self.order_mode_label.setText(f"Kopie aus Bestellung {original_number}")
-        self.order_number.clear()
-        self.delivery_date.set_iso_date(date.today().isoformat())
-        self.open_order_dialog(f"Bestellung aus {original_number} kopieren")
-        self.status_label.setText("Bestellung kopiert. Bitte neue Bestellnummer und Datum pruefen.")
+        self.open_order_copy_from_existing(selected_order_id)
+
+    def open_order_copy_from_existing(self, order_id: int) -> None:
+        if self.session_factory is None:
+            self.status_label.setText("Keine Datenbankverbindung vorhanden.")
+            return
+        session = self.session_factory()
+        try:
+            order = get_order(session, order_id)
+            original_number = order.order_number
+            self.populate_order_form(order)
+            self.current_order_id = None
+            self.current_order_status = "geplant"
+            self.current_order_number = ""
+            self.order_mode_label.setText(f"Kopie aus Bestellung {original_number}")
+            self.delivery_date.set_iso_date(date.today().isoformat())
+            self.open_order_dialog(f"Bestellung aus {original_number} kopieren")
+            self.status_label.setText(
+                "Alte Bestellung wurde kopiert. Mengen anpassen; die interne Nummer vergibt das Programm."
+            )
+        finally:
+            session.close()
 
     def request_delivery_note_for_selected_order(self) -> None:
         order_id = self._selected_order_id()
@@ -857,15 +892,31 @@ class OrderPanel(QWidget):
         if self.current_order_id is None:
             self.status_label.setText("Bitte zuerst eine Bestellung auswaehlen.")
             return
+        if not self.confirm_order_delete():
+            return
 
         session = self.session_factory()
         try:
             order = archive_order(session, self.current_order_id)
             self.current_order_id = None
             self.show_orders(list_active_orders(session))
-            self.status_label.setText(f"Bestellung archiviert: {order.order_number}")
+            self.status_label.setText(f"Bestellung geloescht: {order.order_number}")
         finally:
             session.close()
+
+    def confirm_order_delete(self) -> bool:
+        answer = QMessageBox.question(
+            self,
+            "Bestellung loeschen",
+            "Willst du diese Bestellung wirklich loeschen?\n\n"
+            "Sie verschwindet danach aus den normalen Listen, auch wenn bereits ein Lieferschein oder eine Rechnung erstellt wurde.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if answer != QMessageBox.StandardButton.Yes:
+            self.status_label.setText("Loeschen abgebrochen.")
+            return False
+        return True
 
     def show_order_context_menu(self, position) -> None:
         if self.orders_table.currentRow() < 0:

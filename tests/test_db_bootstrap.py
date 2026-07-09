@@ -1,14 +1,29 @@
 from pathlib import Path
 import sqlite3
 
+import pytest
+
 from getraenkeladen_tool.config import AppConfig
 from getraenkeladen_tool.db import bootstrap_database
+from getraenkeladen_tool.errors import ApplicationStartupError
 
 
 def test_bootstrap_database_creates_sqlite_file(tmp_path: Path):
     config = AppConfig(base_dir=tmp_path)
     bootstrap_database(config)
     assert config.database_path.exists()
+
+
+def test_bootstrap_database_translates_storage_errors(monkeypatch, tmp_path: Path):
+    config = AppConfig(base_dir=tmp_path)
+
+    def fail_to_create_parent(*_args, **_kwargs):
+        raise OSError("storage unavailable")
+
+    monkeypatch.setattr(Path, "mkdir", fail_to_create_parent)
+
+    with pytest.raises(ApplicationStartupError, match="Datenordner"):
+        bootstrap_database(config)
 
 
 def test_bootstrap_database_adds_missing_document_columns(tmp_path: Path):
@@ -174,3 +189,27 @@ def test_bootstrap_database_creates_dropdown_options_with_units(tmp_path: Path):
 
     assert "dropdown_options" in tables
     assert units[:3] == ["Kiste", "Flasche", "Fass"]
+
+
+def test_bootstrap_database_creates_document_line_snapshot_table(tmp_path: Path):
+    config = AppConfig(base_dir=tmp_path)
+    bootstrap_database(config)
+
+    connection = sqlite3.connect(config.database_path)
+    tables = {row[0] for row in connection.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()}
+    columns = {
+        row[1]
+        for row in connection.execute("PRAGMA table_info(document_line_snapshots)").fetchall()
+    }
+    connection.close()
+
+    assert "document_line_snapshots" in tables
+    assert {
+        "document_id",
+        "kind",
+        "name",
+        "quantity",
+        "unit_price_cents",
+        "deposit_cents",
+        "sort_order",
+    }.issubset(columns)

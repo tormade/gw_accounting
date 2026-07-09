@@ -106,6 +106,12 @@ class FolderOnboardingResult:
     skipped_files: list[SkippedOnboardingFile] = field(default_factory=list)
 
 
+@dataclass(frozen=True, slots=True)
+class _AnalyzedWorkbook:
+    path: Path
+    snapshot: CustomerWorkbookSnapshot
+
+
 def analyze_customer_workbook(path: Path) -> CustomerWorkbookSnapshot:
     workbook = load_workbook(path, data_only=True)
     sheet = workbook.active
@@ -330,19 +336,48 @@ def onboard_customer_workbook_folder(
     folder_path: Path,
 ) -> FolderOnboardingResult:
     folder_result = FolderOnboardingResult(report=OnboardingReport())
+    workbooks_by_customer: dict[str, list[_AnalyzedWorkbook]] = {}
     for workbook_path in sorted(folder_path.rglob("*.xlsx")):
+        if _is_excel_lock_file(workbook_path):
+            folder_result.skipped_files.append(
+                SkippedOnboardingFile(
+                    path=workbook_path,
+                    message=f"{workbook_path.name}: Excel-Sperrdatei uebersprungen.",
+                )
+            )
+            continue
         try:
             snapshot = analyze_customer_workbook(workbook_path)
-            result = onboard_customer_from_sources(
-                session,
-                customer_name=snapshot.customer_name,
-                customer_list_path=customer_list_path,
-                workbook_path=workbook_path,
-            )
         except Exception as error:
             folder_result.report.unreadable_files += 1
             folder_result.skipped_files.append(
                 SkippedOnboardingFile(path=workbook_path, message=f"{workbook_path.name}: {error}")
+            )
+            continue
+        customer_key = _normalize_compare(snapshot.customer_name)
+        workbooks_by_customer.setdefault(customer_key, []).append(_AnalyzedWorkbook(workbook_path, snapshot))
+
+    latest_workbooks = _latest_workbook_per_customer(workbooks_by_customer)
+    for skipped in _older_workbooks(workbooks_by_customer, latest_workbooks):
+        folder_result.skipped_files.append(
+            SkippedOnboardingFile(
+                path=skipped.path,
+                message=f"{skipped.path.name}: aeltere Kundenordnerdatei uebersprungen.",
+            )
+        )
+
+    for workbook in latest_workbooks:
+        try:
+            result = onboard_customer_from_sources(
+                session,
+                customer_name=workbook.snapshot.customer_name,
+                customer_list_path=customer_list_path,
+                workbook_path=workbook.path,
+            )
+        except Exception as error:
+            folder_result.report.unreadable_files += 1
+            folder_result.skipped_files.append(
+                SkippedOnboardingFile(path=workbook.path, message=f"{workbook.path.name}: {error}")
             )
             continue
         folder_result.results.append(result)
@@ -351,6 +386,37 @@ def onboard_customer_workbook_folder(
         folder_result.report.conflicts += result.report.conflicts
         folder_result.report.unreadable_files += result.report.unreadable_files
     return folder_result
+
+
+def _is_excel_lock_file(path: Path) -> bool:
+    return path.name.startswith("~$")
+
+
+def _latest_workbook_per_customer(workbooks_by_customer: dict[str, list[_AnalyzedWorkbook]]) -> list[_AnalyzedWorkbook]:
+    latest = []
+    for workbooks in workbooks_by_customer.values():
+        latest.append(max(workbooks, key=_workbook_recency_key))
+    return sorted(latest, key=lambda workbook: workbook.path.as_posix().lower())
+
+
+def _older_workbooks(
+    workbooks_by_customer: dict[str, list[_AnalyzedWorkbook]],
+    latest_workbooks: list[_AnalyzedWorkbook],
+) -> list[_AnalyzedWorkbook]:
+    latest_paths = {workbook.path for workbook in latest_workbooks}
+    skipped = []
+    for workbooks in workbooks_by_customer.values():
+        skipped.extend(workbook for workbook in workbooks if workbook.path not in latest_paths)
+    return sorted(skipped, key=lambda workbook: workbook.path.as_posix().lower())
+
+
+def _workbook_recency_key(workbook: _AnalyzedWorkbook) -> tuple[str, float, str]:
+    document_date = workbook.snapshot.document_date or "0000-00-00"
+    try:
+        modified_at = workbook.path.stat().st_mtime
+    except OSError:
+        modified_at = 0
+    return (document_date, modified_at, workbook.path.name.lower())
 
 
 def read_customer_list_snapshot(path: Path, customer_name: str) -> CustomerListSnapshot:

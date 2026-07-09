@@ -5,10 +5,11 @@ from pathlib import Path
 from PySide6.QtCore import QCoreApplication, QTimer
 from PySide6.QtCore import QLibraryInfo
 from PySide6.QtGui import QColor, QPalette
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication, QMessageBox
 
 from .config import AppConfig
 from .db import bootstrap_database, create_session_factory
+from .errors import ApplicationStartupError
 from .ui.main_window import MainWindow
 from .ui.theme import APP_STYLESHEET
 
@@ -72,7 +73,16 @@ def create_main_window() -> MainWindow:
 
 def main() -> int:
     app = create_app()
-    runtime = create_runtime()
+    try:
+        runtime = create_runtime()
+    except ApplicationStartupError as error:
+        QMessageBox.critical(
+            None,
+            "Start nicht moeglich",
+            "Die lokalen Anwendungsdaten konnten nicht vorbereitet werden.\n\n"
+            f"Grund: {error}",
+        )
+        return 1
     window = MainWindow(session_factory=runtime.session_factory)
     window.show()
     QTimer.singleShot(0, window.raise_)

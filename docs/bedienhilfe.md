@@ -62,6 +62,10 @@ Zusaetzlich koennen Stammdaten manuell aus dem Input-Ordner importiert werden. E
 
 Beim Import werden neue Kunden und Produkte in die Datenbank uebernommen. Bereits vorhandene Kunden oder Produkte werden anhand des Namens aktualisiert. Archivierte Kunden und deaktivierte Produkte bleiben archiviert beziehungsweise deaktiviert.
 
+Der Bereich "Kundenordner einlesen" liest alte Rechnungs- und Lieferschein-Excel aus den Kundenordnern. Pro Kunde wird nur die neueste erkannte Belegdatei als letzte Menge genutzt. Aeltere Dateien bleiben im Ordner erhalten und werden nur als uebersprungen gemeldet.
+
+Typische Windows-/Excel-Sperrdateien mit `~$` am Anfang werden ignoriert. Unsichere Artikel-, Preis- oder Kundendaten-Treffer werden nicht automatisch entschieden, sondern als Pruefpunkte gespeichert.
+
 Preis-, Pfand- und Adressaenderungen werden als Aenderungshistorie gespeichert. Dadurch kann eine falsche Stammdatenkorrektur spaeter wieder nachvollzogen und gezielt zurueckgenommen werden.
 
 ## Listen bearbeiten

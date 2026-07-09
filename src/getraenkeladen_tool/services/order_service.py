@@ -12,7 +12,7 @@ def create_order(session: Session, payload: OrderCreate) -> Order:
     customer = session.get(Customer, payload.customer_id)
     if customer is None:
         raise ValueError("Kunde wurde nicht gefunden.")
-    order_number = payload.order_number.strip()
+    order_number = payload.order_number.strip() or suggest_internal_order_number(session)
     if _blocking_order_number_exists(session, order_number):
         raise ValueError("Auftragsnummer ist bereits vorhanden.")
 
@@ -95,7 +95,11 @@ def update_order(session: Session, order_id: int, payload: OrderCreate) -> Order
 def get_order(session: Session, order_id: int) -> Order:
     order = session.scalar(
         select(Order)
-        .options(selectinload(Order.lines), selectinload(Order.deposit_returns), selectinload(Order.customer))
+        .options(
+            selectinload(Order.lines).selectinload(OrderLine.product),
+            selectinload(Order.deposit_returns),
+            selectinload(Order.customer),
+        )
         .where(Order.id == order_id)
     )
     if order is None:
@@ -120,6 +124,18 @@ def archive_order(session: Session, order_id: int) -> Order:
     order.status = "archiviert"
     session.commit()
     return get_order(session, order_id)
+
+
+def suggest_internal_order_number(session: Session) -> str:
+    existing_numbers = session.scalars(select(Order.order_number)).all()
+    highest_number = 0
+    for order_number in existing_numbers:
+        if not order_number.startswith("AUF-"):
+            continue
+        suffix = order_number.removeprefix("AUF-")
+        if suffix.isdigit():
+            highest_number = max(highest_number, int(suffix))
+    return f"AUF-{highest_number + 1:06d}"
 
 
 def create_order_documents(
@@ -155,7 +171,10 @@ def create_order_delivery_order(
             document_number=delivery_order_number,
             delivery_date=order.delivery_date,
             delivery_slot=order.delivery_slot,
-            line_items=line_items if line_items is not None else _document_line_items(order),
+            line_items=_resolve_document_line_items(
+                session,
+                line_items if line_items is not None else document_line_items_for_order(order),
+            ),
             deposit_returns=deposit_returns if deposit_returns is not None else _document_deposit_returns(order),
             delivery_fee_enabled=delivery_fee_enabled,
             delivery_comment=delivery_comment,
@@ -191,7 +210,10 @@ def create_order_invoice(
             document_number=invoice_number,
             delivery_date=order.delivery_date,
             delivery_slot=order.delivery_slot,
-            line_items=line_items if line_items is not None else _document_line_items(order),
+            line_items=_resolve_document_line_items(
+                session,
+                line_items if line_items is not None else document_line_items_for_order(order),
+            ),
             deposit_returns=deposit_returns if deposit_returns is not None else _document_deposit_returns(order),
             delivery_fee_enabled=delivery_fee_enabled,
             footer_text=footer_text,
@@ -205,16 +227,40 @@ def create_order_invoice(
     return invoice
 
 
-def _document_line_items(order: Order) -> list[DocumentLineItem]:
+def document_line_items_for_order(order: Order) -> list[DocumentLineItem]:
     return [
         DocumentLineItem(
             name=line.product_name,
             quantity=line.quantity,
-            unit_price_cents=line.unit_price_cents,
-            deposit_cents=line.deposit_cents,
+            unit_price_cents=(
+                line.product.standard_price_cents if line.product is not None else line.unit_price_cents
+            ),
+            deposit_cents=(
+                line.product.default_deposit_cents if line.product is not None else line.deposit_cents
+            ),
+            product_id=line.product_id,
+            use_current_product_price=line.product_id is not None,
         )
         for line in order.lines
     ]
+
+
+def _resolve_document_line_items(session: Session, line_items: list[DocumentLineItem]) -> list[DocumentLineItem]:
+    resolved_items = []
+    for item in line_items:
+        product = session.get(Product, item.product_id) if item.use_current_product_price and item.product_id else None
+        resolved_items.append(
+            item.model_copy(
+                update={
+                    "name": product.name,
+                    "unit_price_cents": product.standard_price_cents,
+                    "deposit_cents": product.default_deposit_cents,
+                }
+            )
+            if product is not None
+            else item
+        )
+    return resolved_items
 
 
 def _document_deposit_returns(order: Order) -> list[DepositReturnCreate]:

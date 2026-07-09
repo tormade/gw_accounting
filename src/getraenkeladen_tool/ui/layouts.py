@@ -53,6 +53,7 @@ class ActionCard(QWidget):
         self.setObjectName("actionCard")
         layout = QVBoxLayout(self)
         layout.setSpacing(8)
+        layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
         title_label = QLabel(title)
         title_label.setObjectName("actionCardTitle")
@@ -63,7 +64,6 @@ class ActionCard(QWidget):
         subtitle_label.setObjectName("actionCardSubtitle")
         subtitle_label.setWordWrap(True)
         layout.addWidget(subtitle_label)
-        layout.addStretch()
 
         self.button = QPushButton(button_text or title)
         self.button.setObjectName("actionCardButton")

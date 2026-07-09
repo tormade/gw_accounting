@@ -88,8 +88,6 @@ QWidget#documentHeaderCard,
 QWidget#actionCard,
 QWidget#metricCard,
 QWidget#dailyCockpitCard,
-QWidget#heroSearchPanel,
-QWidget#todayContactList,
 QWidget#liveSummaryCard {
     background: #ffffff;
     border: 1px solid #e1ddd3;
@@ -180,45 +178,6 @@ QLabel#statusBox {
 QWidget#dailyCockpitCard {
     border-radius: 24px;
     min-height: 120px;
-}
-
-QWidget#heroSearchPanel {
-    background: transparent;
-    border: 0;
-    padding: 0;
-}
-
-QWidget#customerSearchHero {
-    background: #123326;
-    border-radius: 24px;
-    padding: 20px;
-}
-
-QLabel#heroTitle {
-    color: #ffffff;
-    font-size: 26px;
-    font-weight: 900;
-}
-
-QLabel#heroSearchQuery {
-    background: #ffffff;
-    border-radius: 16px;
-    color: #123326;
-    font-size: 20px;
-    font-weight: 900;
-    padding: 14px 16px;
-}
-
-QWidget#todayContactList {
-    border-radius: 24px;
-}
-
-QLabel#contactPreviewRow {
-    background: #fffdf8;
-    border: 1px solid #eee6d8;
-    border-radius: 14px;
-    color: #33443a;
-    padding: 10px 12px;
 }
 
 QWidget#liveSummaryCard {

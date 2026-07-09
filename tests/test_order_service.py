@@ -18,8 +18,10 @@ from getraenkeladen_tool.services.order_service import (
     create_order_delivery_order,
     create_order_documents,
     create_order_invoice,
+    document_line_items_for_order,
     get_order,
     list_active_orders,
+    suggest_internal_order_number,
     update_order,
 )
 from getraenkeladen_tool.services.product_service import create_product
@@ -58,6 +60,85 @@ def test_create_order_copies_product_prices_into_order_lines(session, tmp_path: 
     assert loaded.lines[0].product_name == "Wasser 12x0,7"
     assert loaded.lines[0].unit_price_cents == 1299
     assert loaded.lines[0].deposit_cents == 330
+
+
+def test_create_order_assigns_internal_order_number_when_user_does_not_enter_one(session, tmp_path: Path):
+    customer = create_customer(session, CustomerCreate(name="Cafe Intern", folder_path=str(tmp_path / "Cafe Intern")))
+    product = create_product(session, ProductCreate(name="Wasser", unit="Menge", standard_price_cents=1299))
+
+    first = create_order(
+        session,
+        OrderCreate(
+            customer_id=customer.id,
+            order_date="2026-06-21",
+            delivery_date="2026-06-22",
+            lines=[OrderLineCreate(product_id=product.id, quantity=1)],
+        ),
+    )
+    second = create_order(
+        session,
+        OrderCreate(
+            customer_id=customer.id,
+            order_date="2026-06-21",
+            delivery_date="2026-06-23",
+            lines=[OrderLineCreate(product_id=product.id, quantity=1)],
+        ),
+    )
+
+    assert first.order_number == "AUF-000001"
+    assert second.order_number == "AUF-000002"
+    assert suggest_internal_order_number(session) == "AUF-000003"
+
+
+def test_create_invoice_uses_current_central_price_after_order_was_saved(session, tmp_path: Path):
+    customer = create_customer(session, CustomerCreate(name="Preis Kunde", folder_path=str(tmp_path / "Preis Kunde")))
+    product = create_product(
+        session,
+        ProductCreate(name="Wasser", unit="Kiste", standard_price_cents=1000, default_deposit_cents=100),
+    )
+    order = create_order(
+        session,
+        OrderCreate(
+            customer_id=customer.id,
+            order_date="2026-07-09",
+            delivery_date="2026-07-10",
+            lines=[OrderLineCreate(product_id=product.id, quantity=2)],
+        ),
+    )
+
+    product.standard_price_cents = 1200
+    product.default_deposit_cents = 200
+    session.commit()
+
+    invoice = create_order_invoice(session, order.id, "RG-PREIS-1")
+
+    assert [(line.unit_price_cents, line.deposit_cents) for line in invoice.line_snapshots] == [(1200, 200)]
+
+
+def test_create_invoice_refreshes_an_unchanged_document_draft_from_central_prices(session, tmp_path: Path):
+    customer = create_customer(session, CustomerCreate(name="Entwurf Kunde", folder_path=str(tmp_path / "Entwurf Kunde")))
+    product = create_product(
+        session,
+        ProductCreate(name="Wasser", unit="Kiste", standard_price_cents=1000, default_deposit_cents=100),
+    )
+    order = create_order(
+        session,
+        OrderCreate(
+            customer_id=customer.id,
+            order_date="2026-07-09",
+            delivery_date="2026-07-10",
+            lines=[OrderLineCreate(product_id=product.id, quantity=2)],
+        ),
+    )
+    draft_lines = document_line_items_for_order(get_order(session, order.id))
+
+    product.standard_price_cents = 1200
+    product.default_deposit_cents = 200
+    session.commit()
+
+    invoice = create_order_invoice(session, order.id, "RG-ENTWURF-1", line_items=draft_lines)
+
+    assert [(line.unit_price_cents, line.deposit_cents) for line in invoice.line_snapshots] == [(1200, 200)]
 
 
 def test_create_order_allows_price_override(session, tmp_path: Path):
@@ -261,7 +342,7 @@ def test_create_order_invoice_generates_only_invoice_and_open_item(session, tmp_
     )
     product = create_product(
         session,
-        ProductCreate(name="Spezi 20x0,5", unit="Kiste", standard_price_cents=1599),
+        ProductCreate(name="Spezi 20x0,5", unit="Kiste", standard_price_cents=1599, default_deposit_cents=330),
     )
     order = create_order(
         session,

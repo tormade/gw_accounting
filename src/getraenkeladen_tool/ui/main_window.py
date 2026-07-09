@@ -15,7 +15,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from .checklist_panel import ChecklistPanel
+from ..resources import resource_path
 from .customer_folder_panel import CustomerFolderPanel
 from .customer_panel import CustomerPanel
 from .dashboard_panel import DashboardPanel
@@ -32,12 +32,11 @@ MAIN_TABS = (
     "Kundenordner",
     "Offene Posten",
     "Stammdaten",
-    "Pruefliste",
     "Einstellungen",
 )
-MAIN_WINDOW_INITIAL_SIZE = (1180, 760)
-MAIN_WINDOW_MINIMUM_SIZE = (900, 560)
-BRAND_DIR = Path(__file__).resolve().parents[3] / "assets" / "brand"
+MAIN_WINDOW_INITIAL_SIZE = (1360, 860)
+MAIN_WINDOW_MINIMUM_SIZE = (1024, 640)
+BRAND_DIR = resource_path("assets", "brand")
 LOGO_PATH = BRAND_DIR / "logo_winklmeier.png"
 CLAIM_PATH = BRAND_DIR / "wir-bringens-einfach-schwarz.png"
 
@@ -67,22 +66,22 @@ class MainWindow(QMainWindow):
         self.open_items_panel = ReportPanel(session_factory=session_factory)
         self.settings_panel = SettingsPanel(session_factory=session_factory)
         self.master_data_workspace = self._master_data_workspace()
-        self.checklist_panel = ChecklistPanel(session_factory=session_factory)
         self.refreshable_panels = {
             "Heute": (self.dashboard_panel.refresh_dashboard,),
             "Kundenordner": (self.customer_folder_panel.refresh_customers,),
             "Offene Posten": (self.open_items_panel.refresh_all_lists,),
             "Stammdaten": (self.customer_panel.refresh_customers, self.product_panel.refresh_products),
-            "Pruefliste": (self.checklist_panel.refresh_issues,),
             "Einstellungen": (),
         }
 
         self.dashboard_panel.new_delivery_requested.connect(self.open_customer_folder_tab)
         self.dashboard_panel.open_items_requested.connect(self.open_open_items_tab)
-        self.dashboard_panel.checklist_requested.connect(self.open_checklist_tab)
         self.customer_folder_panel.new_order_requested.connect(self.open_new_order_for_customer)
+        self.customer_folder_panel.open_order_requested.connect(self.open_order_for_id)
+        self.customer_folder_panel.copy_order_requested.connect(self.open_order_copy_from_existing)
         self.customer_folder_panel.delivery_note_requested.connect(self.open_delivery_note_for_order)
         self.customer_folder_panel.invoice_requested.connect(self.open_invoice_for_order)
+        self.order_panel.order_saved.connect(self.refresh_customer_folder_after_order_saved)
         self.order_panel.delivery_note_requested.connect(self.open_delivery_note_for_order)
         self.order_panel.invoice_requested.connect(self.open_invoice_for_order)
 
@@ -97,7 +96,6 @@ class MainWindow(QMainWindow):
         self.pages.addWidget(self._scrollable_tab(self.customer_folder_panel))
         self.pages.addWidget(self._scrollable_tab(self.open_items_panel))
         self.pages.addWidget(self._scrollable_tab(self.master_data_workspace))
-        self.pages.addWidget(self._scrollable_tab(self.checklist_panel))
         self.pages.addWidget(self._scrollable_tab(self.settings_panel))
         self.navigation.currentRowChanged.connect(self.pages.setCurrentIndex)
         self.navigation.currentRowChanged.connect(self.refresh_current_tab)
@@ -111,9 +109,6 @@ class MainWindow(QMainWindow):
 
     def open_open_items_tab(self) -> None:
         self.navigation.setCurrentRow(MAIN_TABS.index("Offene Posten"))
-
-    def open_checklist_tab(self) -> None:
-        self.navigation.setCurrentRow(MAIN_TABS.index("Pruefliste"))
 
     def open_orders_tab(self) -> None:
         self.open_customer_folder_tab()
@@ -129,6 +124,15 @@ class MainWindow(QMainWindow):
     def open_order_for_id(self, order_id: int) -> None:
         self.open_orders_tab()
         self.order_panel.load_order_by_id(order_id)
+
+    def open_order_copy_from_existing(self, order_id: int) -> None:
+        self.open_orders_tab()
+        self.order_panel.open_order_copy_from_existing(order_id)
+
+    def refresh_customer_folder_after_order_saved(self, order_id: int) -> None:
+        if self.customer_folder_panel.current_customer_id is not None:
+            self.customer_folder_panel.load_selected_customer()
+            self.customer_folder_panel.select_order(order_id)
 
     def open_invoices_tab(self) -> None:
         self.open_customer_folder_tab()
@@ -150,9 +154,14 @@ class MainWindow(QMainWindow):
         panel = panel_class(session_factory=self.session_factory)
         layout.addWidget(panel)
         panel.select_order(order_id)
-        dialog.finished.connect(lambda _result, active_dialog=dialog: self._forget_document_dialog(active_dialog))
+        dialog.finished.connect(lambda _result, active_dialog=dialog: self._document_dialog_closed(active_dialog))
         self.document_dialogs.append(dialog)
         dialog.show()
+
+    def _document_dialog_closed(self, dialog: QDialog) -> None:
+        self._forget_document_dialog(dialog)
+        if self.customer_folder_panel.current_customer_id is not None:
+            self.customer_folder_panel.load_selected_customer()
 
     def _forget_document_dialog(self, dialog: QDialog) -> None:
         if dialog in self.document_dialogs:

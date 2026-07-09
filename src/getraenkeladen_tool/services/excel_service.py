@@ -7,10 +7,11 @@ from xml.etree import ElementTree as ET
 from openpyxl import load_workbook
 
 from ..kern.regeln.beleg import BelegParameter, PfandRueckgabe, Position, berechne_beleg
+from ..resources import resource_path
 from .file_service import ensure_parent_folder
 
 
-TEMPLATE_PATH = Path(__file__).resolve().parents[3] / "templates" / "vorlage_liefern_bar.xlsx"
+TEMPLATE_PATH = resource_path("templates", "vorlage_liefern_bar.xlsx")
 FIRST_ITEM_ROW = 13
 MAX_ITEM_ROW = 30
 FIRST_RETURN_ROW = 34

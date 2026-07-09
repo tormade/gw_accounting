@@ -29,7 +29,6 @@ DASHBOARD_HELP_TEXT = (
 class DashboardPanel(QWidget):
     new_delivery_requested = Signal()
     open_items_requested = Signal()
-    checklist_requested = Signal()
 
     def __init__(self, session_factory=None) -> None:
         super().__init__()
@@ -58,12 +57,7 @@ class DashboardPanel(QWidget):
             "Zahlungen, SEPA und offene Rechnungen kontrollieren.",
             "Zu offenen Posten",
         )
-        self.checklist_card = ActionCard(
-            "Preis-/Importpruefung",
-            "Unklare Artikel, Preise und Kundenhinweise abarbeiten.",
-            "Zur Pruefliste",
-        )
-        self.quick_actions = [self.new_delivery_card, self.open_items_card, self.checklist_card]
+        self.quick_actions = [self.new_delivery_card, self.open_items_card]
         quick_action_grid = QGridLayout()
         quick_action_grid.setSpacing(14)
         for column, card in enumerate(self.quick_actions):
@@ -72,7 +66,6 @@ class DashboardPanel(QWidget):
         layout.addLayout(quick_action_grid)
 
         layout.addLayout(self._cards_grid())
-        layout.addWidget(self._daily_flow_preview())
 
         action_row = QHBoxLayout()
         self.refresh_button = QPushButton(DASHBOARD_ACTIONS["refreshDashboardButton"])
@@ -89,7 +82,6 @@ class DashboardPanel(QWidget):
 
         self.new_delivery_card.button.clicked.connect(self.new_delivery_requested.emit)
         self.open_items_card.button.clicked.connect(self.open_items_requested.emit)
-        self.checklist_card.button.clicked.connect(self.checklist_requested.emit)
         self.help_button.clicked.connect(self.show_help)
         self.refresh_button.clicked.connect(self.refresh_dashboard)
         self.refresh_dashboard()
@@ -131,57 +123,6 @@ class DashboardPanel(QWidget):
             card_layout.addWidget(label)
             grid.addWidget(card, 0, column)
         return grid
-
-    def _daily_flow_preview(self) -> QWidget:
-        box = QWidget()
-        box.setObjectName("heroSearchPanel")
-        layout = QGridLayout(box)
-        layout.setSpacing(16)
-
-        hero = QWidget()
-        hero.setObjectName("customerSearchHero")
-        hero_layout = QVBoxLayout(hero)
-        hero_layout.setSpacing(14)
-        hero_title = QLabel("Heute starten")
-        hero_title.setObjectName("heroTitle")
-        hero_title.setWordWrap(True)
-        hero_layout.addWidget(hero_title)
-        hero_text = QLabel(
-            "Im Kundenordner suchen Sie den Kunden, sehen alte Excel/PDF-Dateien "
-            "und starten aus den letzten Mengen eine neue Bestellung."
-        )
-        hero_text.setObjectName("sectionSubtitle")
-        hero_text.setWordWrap(True)
-        hero_layout.addWidget(hero_text)
-        hero_button = QPushButton("Kundenordner oeffnen")
-        hero_button.setObjectName("newDeliveryButton")
-        hero_layout.addWidget(hero_button)
-        hero_layout.addStretch()
-        hero_button.clicked.connect(self.new_delivery_requested.emit)
-
-        contacts = QWidget()
-        contacts.setObjectName("todayContactList")
-        contacts_layout = QVBoxLayout(contacts)
-        contacts_layout.setSpacing(10)
-        contacts_title = QLabel("Demo-Beispiele: Heute anrufen")
-        contacts_title.setObjectName("sectionTitle")
-        contacts_layout.addWidget(contacts_title)
-        for customer, note in (
-            ("Metzgerei Karl", "bis 13 Uhr und ab 15 Uhr, SEPA"),
-            ("ADC Distribution GmbH", "Rechnung per E-Mail pruefen"),
-            ("1. Poolbillardclub e.V.", "Pfand-Rueckgabe nachfragen"),
-        ):
-            row = QLabel(f"{customer}\n{note}")
-            row.setObjectName("contactPreviewRow")
-            row.setWordWrap(True)
-            contacts_layout.addWidget(row)
-        contacts_layout.addStretch()
-
-        layout.addWidget(hero, 0, 0)
-        layout.addWidget(contacts, 0, 1)
-        layout.setColumnStretch(0, 3)
-        layout.setColumnStretch(1, 2)
-        return box
 
     def refresh_dashboard(self) -> None:
         if self.session_factory is None:

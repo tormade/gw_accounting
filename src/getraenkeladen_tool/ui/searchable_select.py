@@ -23,13 +23,14 @@ class SearchableSelect(QWidget):
     selection_changed = Signal()
     DEFAULT_LIST_HEIGHT = 130
 
-    def __init__(self, placeholder: str = "Suchen") -> None:
+    def __init__(self, placeholder: str = "Suchen", list_label: str = "Kundenliste") -> None:
         super().__init__()
+        self.list_label = list_label
         self._items: list[SearchableSelectItem] = []
         self._current_value = None
         self.search_input = QLineEdit()
         self.search_input.setPlaceholderText(placeholder)
-        self.help_label = QLabel("Namen tippen, dann Treffer anklicken.")
+        self.help_label = QLabel("Liste scrollen oder oben Namen tippen.")
         self.help_label.setObjectName("sectionSubtitle")
         self.result_list = QListWidget()
         self.result_list.setMaximumHeight(self.DEFAULT_LIST_HEIGHT)
@@ -73,7 +74,7 @@ class SearchableSelect(QWidget):
                 self.search_input.blockSignals(False)
                 self.result_list.clear()
                 self.result_list.setMaximumHeight(0)
-                self.help_label.setText("Ausgewaehlt. Zum Aendern einfach neuen Namen tippen.")
+                self.help_label.setText(f"Ausgewaehlt: {searchable_item.label}")
                 self.selection_changed.emit()
                 return
         for row in range(self.result_list.count()):
@@ -95,35 +96,36 @@ class SearchableSelect(QWidget):
 
     def _filter_items(self, text: str) -> None:
         self.result_list.clear()
-        if not text.strip():
-            self._current_value = None
-            self.result_list.setMaximumHeight(0)
-            self.help_label.setText("Namen tippen, dann Treffer anklicken.")
-            self.selection_changed.emit()
-            return
-        self.result_list.setMaximumHeight(self.DEFAULT_LIST_HEIGHT)
-        self.help_label.setText("Treffer in der Liste anklicken.")
         matches = filter_searchable_items(self._items, text)
         for item in matches:
             list_item = QListWidgetItem(item.label)
             list_item.setToolTip(item.detail)
             list_item.setData(Qt.ItemDataRole.UserRole, item.value)
             self.result_list.addItem(list_item)
+
+        if not text.strip():
+            self._current_value = None
+            self.result_list.setMaximumHeight(self.DEFAULT_LIST_HEIGHT)
+            self.help_label.setText(f"{self.list_label} scrollen oder oben Namen tippen.")
+            self.selection_changed.emit()
+            return
+        self.help_label.setText("Treffer in der Liste anklicken.")
         if not matches and text.strip():
             empty_item = QListWidgetItem("Kein Treffer gefunden")
             empty_item.setFlags(empty_item.flags() & ~Qt.ItemFlag.ItemIsSelectable & ~Qt.ItemFlag.ItemIsEnabled)
             self.result_list.addItem(empty_item)
 
-        self._current_value = matches[0].value if len(matches) == 1 else None
-        if len(matches) == 1:
-            self.help_label.setText("Eindeutiger Treffer. Sie koennen direkt weiterarbeiten.")
+        self._current_value = None
+        self.result_list.setMaximumHeight(self.DEFAULT_LIST_HEIGHT)
         self.selection_changed.emit()
 
     def _select_item(self, item: QListWidgetItem) -> None:
+        selected_text = item.text()
         self._current_value = item.data(Qt.ItemDataRole.UserRole)
         self.search_input.blockSignals(True)
-        self.search_input.setText(item.text())
+        self.search_input.setText(selected_text)
         self.search_input.blockSignals(False)
+        self.result_list.clear()
         self.result_list.setMaximumHeight(0)
-        self.help_label.setText("Ausgewaehlt. Zum Aendern einfach neuen Namen tippen.")
+        self.help_label.setText(f"Ausgewaehlt: {selected_text}")
         self.selection_changed.emit()

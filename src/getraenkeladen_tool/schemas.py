@@ -34,6 +34,8 @@ class DocumentLineItem(BaseModel):
     quantity: int = Field(gt=0)
     unit_price_cents: int = Field(ge=0)
     deposit_cents: int = Field(ge=0, default=0)
+    product_id: int | None = Field(default=None, gt=0)
+    use_current_product_price: bool = False
 
 
 class DepositReturnCreate(BaseModel):
@@ -64,7 +66,7 @@ class OrderLineCreate(BaseModel):
 
 
 class OrderCreate(BaseModel):
-    order_number: str = Field(min_length=1)
+    order_number: str = ""
     customer_id: int = Field(gt=0)
     order_date: str = Field(min_length=1)
     delivery_date: str = Field(min_length=1)

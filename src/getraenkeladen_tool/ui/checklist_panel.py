@@ -1,5 +1,15 @@
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QHBoxLayout, QLabel, QMessageBox, QPushButton, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget
+from PySide6.QtWidgets import (
+    QHeaderView,
+    QHBoxLayout,
+    QLabel,
+    QMessageBox,
+    QPushButton,
+    QTableWidget,
+    QTableWidgetItem,
+    QVBoxLayout,
+    QWidget,
+)
 
 from ..services.checklist_service import (
     confirm_product_alias,
@@ -41,7 +51,11 @@ class ChecklistPanel(QWidget):
         self.issue_table.setAlternatingRowColors(True)
         self.issue_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.issue_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
-        self.issue_table.horizontalHeader().setStretchLastSection(True)
+        header = self.issue_table.horizontalHeader()
+        header.setStretchLastSection(True)
+        header.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
+        for column, width in enumerate((90, 170, 150, 120, 260, 260, 420)):
+            self.issue_table.setColumnWidth(column, width)
 
         self.refresh_button = QPushButton(CHECKLIST_ACTIONS["refreshChecklistButton"])
         self.resolve_button = QPushButton(CHECKLIST_ACTIONS["resolveChecklistButton"])
@@ -51,7 +65,7 @@ class ChecklistPanel(QWidget):
         self.confirm_product_alias_button = QPushButton(CHECKLIST_ACTIONS["confirmProductAliasButton"])
         self.use_list_value_button = QPushButton(CHECKLIST_ACTIONS["useListValueButton"])
         self.use_folder_value_button = QPushButton(CHECKLIST_ACTIONS["useFolderValueButton"])
-        self.product_select = SearchableSelect("Zentralen Artikel suchen")
+        self.product_select = SearchableSelect("Zentralen Artikel suchen", list_label="Artikelliste")
         self.product_select.setMinimumWidth(360)
         self.action_help_label = QLabel(
             "Erklaerung der Aktionen: Aendert Stammdaten oder Kundensortiment dauerhaft. "
@@ -158,6 +172,7 @@ class ChecklistPanel(QWidget):
             )
             for column, value in enumerate(values):
                 item = QTableWidgetItem(value)
+                item.setToolTip(value)
                 if column == 0 and row.status == "erledigt":
                     item.setForeground(Qt.GlobalColor.darkGreen)
                 self.issue_table.setItem(row_index, column, item)
